@@ -1,0 +1,279 @@
+import { Router } from "express";
+import db from "../db/database.js";
+import { requireAuth, requireRole } from "./auth.js";
+
+/**
+ * Orders router factory.
+ * Receives the Socket.IO `io` instance so it can emit real-time events.
+ */
+export default function createOrdersRouter(io) {
+  const router = Router();
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  function generateCode() {
+    const ts = Date.now().toString(36).toUpperCase().slice(-4);
+    return `ORD-${ts}${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
+  }
+
+  // ─── GET /api/orders ───────────────────────────────────────────────────────
+
+  router.get("/", requireAuth, (req, res) => {
+    const { role, id: userId } = req.user;
+
+    if (role === "admin") {
+      const { status } = req.query;
+      if (status) {
+        const orders = db
+          .prepare("SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC")
+          .all(status);
+        return res.json(orders);
+      }
+      const orders = db.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
+      return res.json(orders);
+    }
+
+    // Driver sees only their assigned orders
+    const orders = db
+      .prepare("SELECT * FROM orders WHERE driver_id = ? ORDER BY created_at DESC")
+      .all(userId);
+    res.json(orders);
+  });
+
+  // ─── GET /api/orders/stats ───────────────────────────────────────────────────
+  // NOTE: Must be defined BEFORE /:id to avoid "stats" being treated as an id
+
+  router.get("/stats", requireAuth, requireRole("admin"), (req, res) => {
+    const today = new Date().toISOString().slice(0, 10);
+
+    const ordersToday = db
+      .prepare("SELECT COUNT(*) as count FROM orders WHERE date(created_at) = ?")
+      .get(today).count;
+
+    const deliveriesToday = db
+      .prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'delivered' AND date(delivered_at) = ?")
+      .get(today).count;
+
+    const activeOrders = db
+      .prepare("SELECT COUNT(*) as count FROM orders WHERE status IN ('assigned', 'picked_up', 'on_the_way')")
+      .get().count;
+
+    const availableDrivers = db
+      .prepare("SELECT COUNT(*) as count FROM drivers WHERE status = 'available'")
+      .get().count;
+
+    const revenueToday = db
+      .prepare("SELECT COALESCE(SUM(amount), 0) as total FROM orders WHERE status = 'delivered' AND date(delivered_at) = ?")
+      .get(today).total;
+
+    res.json({
+      orders_today: ordersToday,
+      deliveries_today: deliveriesToday,
+      active_orders: activeOrders,
+      available_drivers: availableDrivers,
+      revenue_today: revenueToday,
+    });
+  });
+
+  // ─── GET /api/orders/:id ───────────────────────────────────────────────────
+
+  router.get("/:id", requireAuth, (req, res) => {
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+    res.json(order);
+  });
+
+  // ─── POST /api/orders ─────────────────────────────────────────────────────
+
+  router.post("/", requireAuth, requireRole("admin"), (req, res) => {
+    const {
+      customer_name,
+      customer_phone,
+      pickup_address,
+      pickup_lat,
+      pickup_lng,
+      dropoff_address,
+      dropoff_lat,
+      dropoff_lng,
+      items,
+      notes,
+      amount,
+      payment_method,
+    } = req.body || {};
+
+    if (!customer_name || !pickup_address || !dropoff_address) {
+      return res.status(400).json({ error: "customer_name, pickup_address y dropoff_address son obligatorios" });
+    }
+
+    const code = generateCode();
+
+    const info = db
+      .prepare(
+        `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
+                             dropoff_address, dropoff_lat, dropoff_lng, items, notes, amount, payment_method)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        code,
+        customer_name,
+        customer_phone || null,
+        pickup_address,
+        pickup_lat || null,
+        pickup_lng || null,
+        dropoff_address,
+        dropoff_lat || null,
+        dropoff_lng || null,
+        items || null,
+        notes || null,
+        amount || 0,
+        payment_method || "cash"
+      );
+
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(info.lastInsertRowid);
+
+    // Emit to admins
+    io.to("admins").emit("order:new", order);
+
+    res.status(201).json(order);
+  });
+
+  // ─── PUT /api/orders/:id ───────────────────────────────────────────────────
+
+  router.put("/:id", requireAuth, requireRole("admin"), (req, res) => {
+    const existing = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    if (!existing) return res.status(404).json({ error: "Orden no encontrada" });
+
+    const {
+      customer_name,
+      customer_phone,
+      pickup_address,
+      pickup_lat,
+      pickup_lng,
+      dropoff_address,
+      dropoff_lat,
+      dropoff_lng,
+      items,
+      notes,
+      amount,
+      payment_method,
+    } = req.body || {};
+
+    db.prepare(
+      `UPDATE orders SET
+         customer_name = COALESCE(?, customer_name),
+         customer_phone = COALESCE(?, customer_phone),
+         pickup_address = COALESCE(?, pickup_address),
+         pickup_lat = COALESCE(?, pickup_lat),
+         pickup_lng = COALESCE(?, pickup_lng),
+         dropoff_address = COALESCE(?, dropoff_address),
+         dropoff_lat = COALESCE(?, dropoff_lat),
+         dropoff_lng = COALESCE(?, dropoff_lng),
+         items = COALESCE(?, items),
+         notes = COALESCE(?, notes),
+         amount = COALESCE(?, amount),
+         payment_method = COALESCE(?, payment_method)
+       WHERE id = ?`
+    ).run(
+      customer_name || null,
+      customer_phone || null,
+      pickup_address || null,
+      pickup_lat || null,
+      pickup_lng || null,
+      dropoff_address || null,
+      dropoff_lat || null,
+      dropoff_lng || null,
+      items || null,
+      notes || null,
+      amount != null ? amount : null,
+      payment_method || null,
+      req.params.id
+    );
+
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    res.json(order);
+  });
+
+  // ─── POST /api/orders/:id/assign ───────────────────────────────────────────
+
+  router.post("/:id/assign", requireAuth, requireRole("admin"), (req, res) => {
+    const { driver_id } = req.body || {};
+    if (!driver_id) return res.status(400).json({ error: "driver_id es obligatorio" });
+
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    // Verify driver exists
+    const driver = db.prepare("SELECT user_id FROM drivers WHERE user_id = ?").get(driver_id);
+    if (!driver) return res.status(404).json({ error: "Conductor no encontrado" });
+
+    db.prepare(
+      `UPDATE orders SET driver_id = ?, status = 'assigned', assigned_at = datetime('now') WHERE id = ?`
+    ).run(driver_id, req.params.id);
+
+    const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+
+    // Notify admins and the assigned driver
+    io.to("admins").emit("order:assigned", updated);
+    io.to(`driver:${driver_id}`).emit("order:assigned", updated);
+
+    res.json(updated);
+  });
+
+  // ─── POST /api/orders/:id/status ───────────────────────────────────────────
+
+  router.post("/:id/status", requireAuth, (req, res) => {
+    const { status } = req.body || {};
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    // Drivers can only update their own orders
+    if (req.user.role === "driver" && order.driver_id !== req.user.id) {
+      return res.status(403).json({ error: "No autorizado para esta orden" });
+    }
+
+    const workflow = {
+      assigned: "picked_up",
+      picked_up: "on_the_way",
+      on_the_way: "delivered",
+    };
+
+    const nextAllowed = workflow[order.status];
+    if (!nextAllowed || nextAllowed !== status) {
+      return res.status(400).json({
+        error: `Transicion invalida: ${order.status} -> ${status}`,
+        allowed: nextAllowed || null,
+      });
+    }
+
+    if (status === "delivered") {
+      db.prepare(
+        `UPDATE orders SET status = ?, delivered_at = datetime('now') WHERE id = ?`
+      ).run(status, req.params.id);
+    } else {
+      db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, req.params.id);
+    }
+
+    const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+
+    // Notify admins
+    io.to("admins").emit("order:status", updated);
+
+    res.json(updated);
+  });
+
+  // ─── DELETE /api/orders/:id ────────────────────────────────────────────────
+
+  router.delete("/:id", requireAuth, requireRole("admin"), (req, res) => {
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    db.prepare("UPDATE orders SET status = 'cancelled' WHERE id = ?").run(req.params.id);
+
+    const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    io.to("admins").emit("order:status", updated);
+
+    res.json(updated);
+  });
+
+  return router;
+}

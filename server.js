@@ -1,8 +1,14 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+
+import db from "./db/database.js";
+import authRouter, { verifyToken } from "./src/auth.js";
+import driversRouter from "./src/drivers.js";
+import createOrdersRouter from "./src/orders.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -12,87 +18,127 @@ const io = new Server(httpServer);
 
 const PORT = process.env.PORT || 3000;
 
-// Serve the static frontend (dispatcher dashboard + driver page)
+// ─── Middleware ──────────────────────────────────────────────────────────────
+
+app.use(express.json());
+app.use(cookieParser());
 app.use(express.static(join(__dirname, "public")));
 
-/**
- * In-memory store of the latest known state for each vehicle/driver.
- * In production you'd persist this to a database (e.g. Redis/Postgres)
- * and add authentication so only authorized drivers/dispatchers connect.
- *
- * Shape: { [driverId]: { id, name, lat, lng, speed, heading, updatedAt } }
- */
-const vehicles = new Map();
+// Make io accessible to routes
+app.set("io", io);
 
-// Remove vehicles that haven't reported in for a while (considered offline).
-const OFFLINE_AFTER_MS = 30_000;
-setInterval(() => {
-  const now = Date.now();
-  let changed = false;
-  for (const [id, v] of vehicles) {
-    if (now - v.updatedAt > OFFLINE_AFTER_MS) {
-      vehicles.delete(id);
-      io.to("dispatchers").emit("vehicle:offline", { id });
-      changed = true;
-    }
-  }
-  if (changed) {
-    io.to("dispatchers").emit("vehicles:snapshot", [...vehicles.values()]);
-  }
-}, 10_000);
+// ─── Routes ──────────────────────────────────────────────────────────────────
+
+app.use("/api/auth", authRouter);
+app.use("/api/drivers", driversRouter);
+
+const ordersRouter = createOrdersRouter(io);
+app.use("/api/orders", ordersRouter);
+
+// Mount /api/stats as an alias - forward to ordersRouter's /stats handler
+app.use("/api/stats", (req, res, next) => {
+  req.url = "/stats";
+  ordersRouter(req, res, next);
+});
+
+// ─── Socket.IO Authentication Middleware ─────────────────────────────────────
+
+io.use((socket, next) => {
+  const token =
+    socket.handshake.auth?.token ||
+    (socket.handshake.headers.cookie &&
+      socket.handshake.headers.cookie
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith("token="))
+        ?.slice(6));
+
+  if (!token) return next(new Error("No autenticado"));
+
+  const user = verifyToken(token);
+  if (!user) return next(new Error("Token invalido"));
+
+  socket.data.user = user;
+  next();
+});
+
+// ─── Socket.IO Connection Handler ────────────────────────────────────────────
 
 io.on("connection", (socket) => {
-  // A dispatcher dashboard connects and gets the current snapshot of all vehicles.
-  socket.on("dispatcher:join", () => {
-    socket.join("dispatchers");
-    socket.emit("vehicles:snapshot", [...vehicles.values()]);
-  });
+  const user = socket.data.user;
 
-  // A driver app sends a location update (with the driver's consent).
+  // Join role-based rooms
+  if (user.role === "admin") {
+    socket.join("admins");
+  } else if (user.role === "driver") {
+    socket.join("drivers");
+    socket.join(`driver:${user.id}`);
+  }
+
+  // Driver location update
   socket.on("driver:update", (payload) => {
     if (!payload || typeof payload.lat !== "number" || typeof payload.lng !== "number") {
       return;
     }
+    if (user.role !== "driver") return;
 
-    const id = payload.id || socket.id;
-    const vehicle = {
-      id,
-      name: payload.name || `Vehículo ${id.slice(0, 4)}`,
+    const speed = typeof payload.speed === "number" ? payload.speed : 0;
+
+    db.prepare(
+      `UPDATE drivers SET lat = ?, lng = ?, speed = ?, last_seen = datetime('now'), status = 'available'
+       WHERE user_id = ?`
+    ).run(payload.lat, payload.lng, speed, user.id);
+
+    // Broadcast to admins
+    io.to("admins").emit("driver:location", {
+      id: user.id,
+      name: user.name,
       lat: payload.lat,
       lng: payload.lng,
-      speed: typeof payload.speed === "number" ? payload.speed : null,
-      heading: typeof payload.heading === "number" ? payload.heading : null,
-      accuracy: typeof payload.accuracy === "number" ? payload.accuracy : null,
-      updatedAt: Date.now(),
-    };
-
-    vehicles.set(id, vehicle);
-    socket.data.driverId = id;
-
-    // Broadcast the update to every connected dispatcher.
-    io.to("dispatchers").emit("vehicle:update", vehicle);
+      speed,
+      last_seen: new Date().toISOString(),
+    });
   });
 
-  // When a driver explicitly stops sharing.
+  // Driver stops sharing location
   socket.on("driver:stop", () => {
-    const id = socket.data.driverId;
-    if (id && vehicles.has(id)) {
-      vehicles.delete(id);
-      io.to("dispatchers").emit("vehicle:offline", { id });
-    }
+    if (user.role !== "driver") return;
+    db.prepare("UPDATE drivers SET status = 'offline', last_seen = datetime('now') WHERE user_id = ?").run(
+      user.id
+    );
+    io.to("admins").emit("driver:offline", { id: user.id });
   });
 
+  // Disconnect
   socket.on("disconnect", () => {
-    const id = socket.data.driverId;
-    if (id && vehicles.has(id)) {
-      vehicles.delete(id);
-      io.to("dispatchers").emit("vehicle:offline", { id });
+    if (user.role === "driver") {
+      db.prepare("UPDATE drivers SET status = 'offline', last_seen = datetime('now') WHERE user_id = ?").run(
+        user.id
+      );
+      io.to("admins").emit("driver:offline", { id: user.id });
     }
   });
 });
 
+// ─── Offline Detection Interval ──────────────────────────────────────────────
+
+const OFFLINE_AFTER_MS = 30_000;
+setInterval(() => {
+  const cutoff = new Date(Date.now() - OFFLINE_AFTER_MS).toISOString();
+  const stale = db
+    .prepare("SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < ?")
+    .all(cutoff);
+
+  for (const { user_id } of stale) {
+    db.prepare("UPDATE drivers SET status = 'offline' WHERE user_id = ?").run(user_id);
+    io.to("admins").emit("driver:offline", { id: user_id });
+  }
+}, 10_000);
+
+// ─── Start Server ────────────────────────────────────────────────────────────
+
 httpServer.listen(PORT, () => {
-  console.log(`\n  Fleet Tracker corriendo en http://localhost:${PORT}`);
-  console.log(`  Panel de control:  http://localhost:${PORT}/`);
+  console.log(`\n  Delivery Platform corriendo en http://localhost:${PORT}`);
+  console.log(`  Panel de control:   http://localhost:${PORT}/`);
   console.log(`  App del repartidor: http://localhost:${PORT}/driver.html\n`);
 });

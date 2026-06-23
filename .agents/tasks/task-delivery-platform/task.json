@@ -1,0 +1,7 @@
+{
+  "task_id": "task-delivery-platform",
+  "task_description": "Build a complete delivery agency (agencia de domicilios) platform: Orders API with status workflow, integrated server with Socket.IO real-time notifications, admin dashboard with login/orders/drivers/map/stats, and driver app with login/orders queue/status updates/location sharing. All in Spanish, vanilla HTML/CSS/JS frontend with Leaflet maps.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null
+}
