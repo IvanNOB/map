@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleet Tracker · Panel de Control</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="dispatcher-body">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">📍</span>
+      <h1>Fleet Tracker</h1>
+      <span class="tag">Panel de Control</span>
+    </div>
+    <div class="conn">
+      <span id="conn-dot" class="dot dot-off"></span>
+      <span id="conn-text">Conectando…</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <h2>Vehículos</h2>
+        <span id="count" class="badge">0</span>
+      </div>
+      <ul id="vehicle-list" class="vehicle-list">
+        <li class="empty">No hay vehículos en línea.</li>
+      </ul>
+      <a class="driver-link" href="/driver.html" target="_blank" rel="noopener">
+        Abrir app del repartidor →
+      </a>
+    </aside>
+
+    <div id="map" class="map"></div>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/dispatcher.js"></script>
+</body>
+</html>

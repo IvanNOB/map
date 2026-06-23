@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleet Tracker · Repartidor</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="driver-body">
+  <main class="driver-card">
+    <h1>🚚 App del Repartidor</h1>
+    <p class="subtitle">Comparte tu ubicación con el centro de despacho</p>
+
+    <label class="field">
+      <span>Tu nombre / vehículo</span>
+      <input id="name" type="text" placeholder="Ej. Camión 12 — Juan" />
+    </label>
+
+    <div class="consent">
+      <label>
+        <input id="consent" type="checkbox" />
+        Acepto compartir mi ubicación en tiempo real durante mi turno.
+      </label>
+    </div>
+
+    <button id="toggle" class="btn btn-primary" disabled>Empezar a compartir</button>
+
+    <div id="status" class="status status-idle">Sin compartir</div>
+
+    <dl class="readout">
+      <div><dt>Latitud</dt><dd id="lat">—</dd></div>
+      <div><dt>Longitud</dt><dd id="lng">—</dd></div>
+      <div><dt>Velocidad</dt><dd id="speed">—</dd></div>
+      <div><dt>Precisión</dt><dd id="acc">—</dd></div>
+      <div><dt>Última actualización</dt><dd id="time">—</dd></div>
+    </dl>
+
+    <p class="note">
+      Tu navegador te pedirá permiso para acceder a tu ubicación. Puedes dejar
+      de compartir en cualquier momento pulsando el botón.
+    </p>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/driver.js"></script>
+</body>
+</html>
