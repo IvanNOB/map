@@ -40,8 +40,10 @@
         <button class="tab-btn active" data-tab="pedidos">Pedidos</button>
         <button class="tab-btn" data-tab="mapa">Mapa</button>
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
+        <button class="tab-btn" data-tab="reportes">Reportes</button>
       </div>
       <div class="navbar-right">
+        <a href="/customer.html" class="navbar-link" title="Seguimiento de Pedido">Seguimiento</a>
         <span id="user-name" class="navbar-user"></span>
         <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
       </div>
@@ -96,6 +98,56 @@
           <button class="btn btn-primary btn-sm" id="btn-new-driver" style="margin-left:auto;">+ Nuevo Repartidor</button>
         </div>
         <div id="drivers-grid" class="drivers-grid"></div>
+      </section>
+
+      <!-- Reportes View -->
+      <section id="view-reportes" class="hidden">
+        <div class="toolbar">
+          <h2 style="font-size:1.1rem;">Reportes</h2>
+        </div>
+        <div class="reports-container">
+          <div class="date-range-row">
+            <div class="form-group">
+              <label for="report-from">Desde</label>
+              <input type="date" id="report-from">
+            </div>
+            <div class="form-group">
+              <label for="report-to">Hasta</label>
+              <input type="date" id="report-to">
+            </div>
+            <div class="report-actions">
+              <button class="btn btn-warning btn-sm" id="btn-export-csv">Exportar CSV</button>
+              <button class="btn btn-warning btn-sm" id="btn-export-pdf">Exportar PDF</button>
+              <button class="btn btn-primary btn-sm" id="btn-load-summary">Ver Resumen</button>
+            </div>
+          </div>
+          <div id="reports-summary" class="summary-grid hidden">
+            <div class="summary-card">
+              <div class="summary-value" id="summary-total-orders">0</div>
+              <div class="summary-label">Total Pedidos</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="summary-total-revenue">$0</div>
+              <div class="summary-label">Ingresos Totales</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="summary-avg-time">0</div>
+              <div class="summary-label">Tiempo Promedio (min)</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="summary-delivered">0</div>
+              <div class="summary-label">Entregados</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="summary-cancelled">0</div>
+              <div class="summary-label">Cancelados</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="summary-pending">0</div>
+              <div class="summary-label">Pendientes</div>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   </div>

@@ -50,6 +50,14 @@ router.get("/:code", (req, res) => {
     }
   }
 
+  // Fetch location history (route) for this order
+  const route = db
+    .prepare(
+      `SELECT lat, lng, timestamp FROM location_history
+       WHERE order_id = ? ORDER BY timestamp ASC`
+    )
+    .all(order.id);
+
   res.json({
     order: {
       id: order.id,
@@ -58,6 +66,8 @@ router.get("/:code", (req, res) => {
       status: order.status,
       pickup_address: order.pickup_address,
       dropoff_address: order.dropoff_address,
+      dropoff_lat: order.dropoff_lat,
+      dropoff_lng: order.dropoff_lng,
       estimated_distance_km: order.estimated_distance_km,
       estimated_minutes: order.estimated_minutes,
       amount: order.amount,
@@ -67,6 +77,7 @@ router.get("/:code", (req, res) => {
     },
     driver,
     eta_minutes: eta,
+    route,
   });
 });
 

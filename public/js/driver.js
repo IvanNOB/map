@@ -123,6 +123,10 @@
     loadOrders();
     initSocket();
     initMap();
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }
 
   loginForm.addEventListener('submit', async (e) => {
@@ -356,6 +360,23 @@
     socket.on('order:assigned', (order) => {
       showToast('Nuevo pedido asignado!', 'info');
       loadOrders();
+    });
+
+    socket.on('notification', (data) => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        let title = 'Notificacion';
+        let body = '';
+        switch (data.type) {
+          case 'order_assigned':
+            title = 'Nuevo pedido asignado!';
+            body = data.data && data.data.code ? data.data.code : '';
+            break;
+          default:
+            title = 'Notificacion';
+            body = data.type || '';
+        }
+        new Notification(title, { body: body });
+      }
     });
 
     socket.on('disconnect', () => {
