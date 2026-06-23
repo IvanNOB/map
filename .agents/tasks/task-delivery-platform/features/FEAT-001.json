@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Create the Orders API and rewrite server.js to integrate all backend modules (auth, drivers, orders, Socket.IO with auth, cookie-parser). Also add db/data.sqlite to .gitignore.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Add 'db/data.sqlite' to .gitignore (append a line)",
     "Create src/orders.js with a Router that provides: GET /api/orders (admin: all orders with filters by status; driver: only their assigned orders), GET /api/orders/:id (single order detail), POST /api/orders (admin: create order with auto-generated code ORD-XXXX), PUT /api/orders/:id (admin: update order details), POST /api/orders/:id/assign (admin: assign driver_id, set status=assigned, set assigned_at), POST /api/orders/:id/status (driver: update status through workflow pending->assigned->picked_up->on_the_way->delivered, set delivered_at when delivered), DELETE /api/orders/:id (admin: cancel order - sets status=cancelled). Also add GET /api/stats endpoint that returns: total orders today, deliveries completed today, active orders count, available drivers count, total revenue today.",
@@ -28,5 +28,5 @@
     "Kill server: kill %1"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All acceptance criteria verified. Stats route must be defined before :id routes in the orders router to avoid path conflict. Server background process management requires nohup or foreground with timeout for testing. Database re-seed cleans test data."
 }
