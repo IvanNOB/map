@@ -1,52 +1,217 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fleet Tracker · Panel de Control</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <link rel="stylesheet" href="/css/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agencia de Domicilios - Panel de Control</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
-<body class="dispatcher-body">
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo">📍</span>
-      <h1>Fleet Tracker</h1>
-      <span class="tag">Panel de Control</span>
-    </div>
-    <div class="conn">
-      <span id="conn-dot" class="dot dot-off"></span>
-      <span id="conn-text">Conectando…</span>
-    </div>
-  </header>
+<body>
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
 
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sidebar-head">
-        <h2>Vehículos</h2>
-        <span id="count" class="badge">0</span>
-      </div>
-      <ul id="vehicle-list" class="vehicle-list">
-        <li class="empty">No hay vehículos en línea.</li>
-      </ul>
-      <a class="driver-link" href="/driver.html" target="_blank" rel="noopener">
-        Abrir app del repartidor →
-      </a>
-    </aside>
-
-    <div id="map" class="map"></div>
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <h1>Agencia de Domicilios</h1>
+      <p>Panel de Administracion</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">Correo electronico</label>
+          <input type="email" id="login-email" placeholder="admin@agencia.com" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contrasena</label>
+          <input type="password" id="login-password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Iniciar Sesion</button>
+        <div id="login-error" class="login-error"></div>
+      </form>
+    </div>
   </div>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+  <!-- Main App (hidden until login) -->
+  <div id="app" class="app-container hidden">
+    <!-- Navbar -->
+    <nav class="navbar">
+      <span class="navbar-brand">Agencia de Domicilios</span>
+      <div class="navbar-tabs">
+        <button class="tab-btn active" data-tab="pedidos">Pedidos</button>
+        <button class="tab-btn" data-tab="mapa">Mapa</button>
+        <button class="tab-btn" data-tab="repartidores">Repartidores</button>
+      </div>
+      <div class="navbar-right">
+        <span id="user-name" class="navbar-user"></span>
+        <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
+      </div>
+    </nav>
+
+    <!-- Content Views -->
+    <main class="content">
+      <!-- Pedidos View -->
+      <section id="view-pedidos">
+        <div class="stats-row">
+          <div class="stat-card primary">
+            <div class="stat-value" id="stat-active">0</div>
+            <div class="stat-label">Pedidos Activos</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-value" id="stat-drivers">0</div>
+            <div class="stat-label">Repartidores Disponibles</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-value" id="stat-deliveries">0</div>
+            <div class="stat-label">Entregas Hoy</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-value" id="stat-revenue">$0</div>
+            <div class="stat-label">Ingresos Hoy</div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button class="filter-btn active" data-filter="">Todos</button>
+          <button class="filter-btn" data-filter="pending">Pendientes</button>
+          <button class="filter-btn" data-filter="assigned">Asignados</button>
+          <button class="filter-btn" data-filter="picked_up">Recogidos</button>
+          <button class="filter-btn" data-filter="on_the_way">En Camino</button>
+          <button class="filter-btn" data-filter="delivered">Entregados</button>
+          <button class="filter-btn" data-filter="cancelled">Cancelados</button>
+          <button class="btn btn-primary btn-sm" id="btn-new-order" style="margin-left:auto;">+ Nuevo Pedido</button>
+        </div>
+
+        <div id="orders-list" class="orders-list"></div>
+      </section>
+
+      <!-- Mapa View -->
+      <section id="view-mapa" class="hidden">
+        <div id="map" class="map-container"></div>
+      </section>
+
+      <!-- Repartidores View -->
+      <section id="view-repartidores" class="hidden">
+        <div class="toolbar">
+          <h2 style="font-size:1.1rem;">Repartidores</h2>
+          <button class="btn btn-primary btn-sm" id="btn-new-driver" style="margin-left:auto;">+ Nuevo Repartidor</button>
+        </div>
+        <div id="drivers-grid" class="drivers-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- New Order Modal -->
+  <div id="modal-new-order" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Nuevo Pedido</h2>
+      <form id="form-new-order">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del cliente</label>
+            <input type="text" name="customer_name" required>
+          </div>
+          <div class="form-group">
+            <label>Telefono</label>
+            <input type="tel" name="customer_phone">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Direccion de recogida</label>
+          <input type="text" name="pickup_address" required>
+        </div>
+        <div class="form-group">
+          <label>Direccion de entrega</label>
+          <input type="text" name="dropoff_address" required>
+        </div>
+        <div class="form-group">
+          <label>Articulos</label>
+          <textarea name="items" rows="2" placeholder="Descripcion de los articulos..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Monto ($)</label>
+            <input type="number" name="amount" step="0.01" min="0" value="0">
+          </div>
+          <div class="form-group">
+            <label>Metodo de pago</label>
+            <select name="payment_method">
+              <option value="cash">Efectivo</option>
+              <option value="card">Tarjeta</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notas</label>
+          <textarea name="notes" rows="2" placeholder="Notas adicionales..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Pedido</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- New Driver Modal -->
+  <div id="modal-new-driver" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Nuevo Repartidor</h2>
+      <form id="form-new-driver">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Contrasena</label>
+            <input type="password" name="password" required>
+          </div>
+          <div class="form-group">
+            <label>Telefono</label>
+            <input type="tel" name="phone">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Vehiculo</label>
+            <input type="text" name="vehicle" placeholder="Moto, Bicicleta, Carro...">
+          </div>
+          <div class="form-group">
+            <label>Placa</label>
+            <input type="text" name="plate">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btn-cancel-driver-form">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Repartidor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Assign Driver Modal -->
+  <div id="modal-assign-driver" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Asignar Repartidor</h2>
+      <div class="form-group">
+        <label>Seleccionar repartidor</label>
+        <select id="assign-driver-select" class="assign-select" style="width:100%;max-width:100%;padding:0.7rem 0.9rem;">
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="btn-cancel-assign">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-assign">Asignar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/dispatcher.js"></script>
 </body>
