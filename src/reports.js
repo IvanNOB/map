@@ -122,7 +122,11 @@ function generateCSV(res, orders) {
   ]);
 
   const csv =
-    headers.join(",") + "\n" + rows.map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    headers.join(",") +
+    "\n" +
+    rows
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
 
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=reporte_ordenes.csv");

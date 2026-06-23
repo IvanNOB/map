@@ -159,7 +159,7 @@ io.on("connection", (socket) => {
       user.id
     );
     io.to("admins").emit("driver:offline", { id: user.id });
-    notifyAdmins(io, "driver_offline", { id: user.id });
+    notifyAdmins(io, "driver_offline", { id: user.id, name: user.name });
   });
 
   // Disconnect
@@ -169,7 +169,7 @@ io.on("connection", (socket) => {
         user.id
       );
       io.to("admins").emit("driver:offline", { id: user.id });
-      notifyAdmins(io, "driver_offline", { id: user.id });
+      notifyAdmins(io, "driver_offline", { id: user.id, name: user.name });
     }
   });
 });

@@ -77,6 +77,21 @@ export default function createOrdersRouter(io) {
     });
   });
 
+  // ─── GET /api/orders/:id/route ─────────────────────────────────────────────
+
+  router.get("/:id/route", requireAuth, (req, res) => {
+    const order = db.prepare("SELECT id FROM orders WHERE id = ?").get(req.params.id);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    const route = db
+      .prepare(
+        "SELECT lat, lng, timestamp FROM location_history WHERE order_id = ? ORDER BY timestamp ASC"
+      )
+      .all(req.params.id);
+
+    res.json(route);
+  });
+
   // ─── GET /api/orders/:id ───────────────────────────────────────────────────
 
   router.get("/:id", requireAuth, (req, res) => {

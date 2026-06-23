@@ -14,7 +14,7 @@ router.get("/:code", (req, res) => {
               o.pickup_address, o.pickup_lat, o.pickup_lng,
               o.dropoff_address, o.dropoff_lat, o.dropoff_lng,
               o.estimated_distance_km, o.estimated_minutes,
-              o.amount, o.payment_method, o.created_at, o.delivered_at,
+              o.created_at, o.delivered_at,
               o.driver_id
        FROM orders o
        WHERE o.code = ?`
@@ -70,8 +70,6 @@ router.get("/:code", (req, res) => {
       dropoff_lng: order.dropoff_lng,
       estimated_distance_km: order.estimated_distance_km,
       estimated_minutes: order.estimated_minutes,
-      amount: order.amount,
-      payment_method: order.payment_method,
       created_at: order.created_at,
       delivered_at: order.delivered_at,
     },
