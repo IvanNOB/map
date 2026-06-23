@@ -1,0 +1,29 @@
+{
+  "project_type": "Node.js Express delivery agency platform with real-time tracking via Socket.IO",
+  "language": "JavaScript (ES modules)",
+  "build_system": "npm with no build step - vanilla HTML/CSS/JS frontend served statically",
+  "test_framework": "None - verification via curl and server start/stop",
+  "build_command": "N/A - no build step, just start server",
+  "test_command": "export NVM_DIR=\"$HOME/.nvm\"; . \"$NVM_DIR/nvm.sh\"; cd /projects/sandbox/map && node server.js & sleep 2 && curl -s http://localhost:3000/api/auth/login -X POST -H 'Content-Type: application/json' -d '{\"email\":\"admin@agencia.com\",\"password\":\"admin123\"}' && kill %1",
+  "verification_instructions": "1. Start server with 'node server.js'. 2. Test login: POST /api/auth/login with admin credentials. 3. Test orders API with auth token. 4. Test driver endpoints. 5. Check frontend pages load. 6. Kill server.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "Dependencies already installed. Database already seeded. Just run 'node server.js' to start.",
+  "environment_constraints": "Node.js v22 available via nvm. Network is OPEN_INTERNET. No Docker needed. Use: export NVM_DIR=\"$HOME/.nvm\"; . \"$NVM_DIR/nvm.sh\"; before node/npm commands.",
+  "contribution_requirements": "ES modules (type: module in package.json). Spanish UI text. Vanilla HTML/CSS/JS frontend. Leaflet + OpenStreetMap for maps. Socket.IO for real-time.",
+  "key_patterns": "Express Router pattern in src/ files. JWT auth via cookie or Bearer header. SQLite with better-sqlite3 (synchronous API). requireAuth and requireRole middleware from src/auth.js. Socket.IO rooms for role-based events.",
+  "relevant_files": [
+    "server.js",
+    "src/auth.js",
+    "src/drivers.js",
+    "db/database.js",
+    "db/seed.js",
+    "package.json",
+    ".gitignore",
+    "public/index.html",
+    "public/driver.html",
+    "public/css/style.css",
+    "public/js/dispatcher.js",
+    "public/js/driver.js"
+  ],
+  "directory_structure": "server.js (entry point), src/ (route modules: auth.js, drivers.js), db/ (database.js schema, seed.js, data.sqlite), public/ (static frontend: index.html admin dashboard, driver.html driver app, css/, js/)"
+}

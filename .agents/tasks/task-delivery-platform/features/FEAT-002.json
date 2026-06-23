@@ -1,0 +1,35 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Complete rewrite of the admin dashboard frontend (public/index.html, public/js/dispatcher.js, public/css/style.css) to be a full delivery agency admin panel with login, orders management, driver management, live map, and stats. Also rewrite the driver app (public/driver.html, public/js/driver.js) to include login, assigned orders queue, status updates, and location sharing.",
+  "status": "completed",
+  "steps": [
+    "Rewrite public/css/style.css to support both the admin dashboard and driver app layouts. Keep the dark theme (CSS variables already defined). Add styles for: login form/screen, orders table/list with status badges, order creation/edit modal/form, driver management panel, stats cards row, tab/nav system for switching between views (Pedidos, Mapa, Repartidores, Estadisticas), modal overlays, notification toasts, responsive design for mobile.",
+    "Rewrite public/index.html as the admin dashboard SPA. Structure: a login screen (shown first, hidden after auth), then the main app with a top nav bar (logo, nav tabs: Pedidos/Mapa/Repartidores, user info + logout button). Views managed by showing/hiding sections: (1) Pedidos view: stats summary cards at top (pedidos activos, repartidores disponibles, entregas hoy, ingresos hoy), filter buttons by status, orders table/list showing code/customer/address/status/driver/time with action buttons (assign, cancel), a 'Nuevo Pedido' button that opens a creation form. (2) Mapa view: full Leaflet map showing online drivers with markers and active order routes. (3) Repartidores view: list/grid of drivers with status indicators, add new driver form. Include Leaflet CSS/JS from unpkg CDN, Socket.IO client from /socket.io/socket.io.js.",
+    "Rewrite public/js/dispatcher.js as the admin dashboard JavaScript. Implement: auth state management (check cookie/token on load, show login or dashboard), login form submission (POST /api/auth/login, store token, show dashboard), logout, fetch and render orders (GET /api/orders with status filter), create order form (POST /api/orders), assign driver to order (POST /api/orders/:id/assign with driver selection), cancel order, fetch and render drivers (GET /api/drivers), create driver form (POST /api/drivers), fetch and display stats (GET /api/stats), Leaflet map initialization showing online drivers (markers updated via Socket.IO driver:location events) and active order pickup/dropoff markers, Socket.IO connection with auth token for real-time updates (order:new adds to list, order:status updates status badge, driver:location moves markers), notification toasts for events, tab navigation between views, auto-refresh data periodically.",
+    "Rewrite public/driver.html as the driver app SPA. Structure: login screen (email + password), then main app with: header showing driver name and status toggle (online/offline), assigned orders list (cards showing order code, customer, pickup/dropoff addresses, status, action buttons), location sharing section (consent + GPS readout), a mini-map showing current position and active order route. Include Leaflet CSS/JS and Socket.IO client.",
+    "Rewrite public/js/driver.js as the driver app JavaScript. Implement: login flow (POST /api/auth/login, store token), fetch assigned orders (GET /api/orders which returns only driver's orders), status update buttons on each order card (picked_up -> on_the_way -> delivered via POST /api/orders/:id/status), go online/offline toggle (updates driver status), GPS location sharing with consent (watchPosition, emit driver:update with auth), Socket.IO connection with auth token (receive order:assigned notification to refresh orders list, show toast), mini-map with Leaflet showing driver position and active order markers, logout button. All UI text in Spanish."
+  ],
+  "acceptance_criteria": [
+    "Loading http://localhost:3000/ shows the admin login screen",
+    "After logging in as admin, the dashboard shows with orders list, stats cards, and navigation tabs",
+    "Creating a new order from the admin dashboard succeeds and appears in the list",
+    "Assigning a driver to an order updates the order status",
+    "Loading http://localhost:3000/driver.html shows the driver login screen",
+    "After logging in as a driver, the app shows assigned orders and location sharing controls",
+    "Driver can update order status through the workflow (picked_up -> on_the_way -> delivered)",
+    "All UI text is in Spanish",
+    "Map displays correctly with Leaflet tiles from OpenStreetMap"
+  ],
+  "verification": [
+    "Start server: export NVM_DIR=\"$HOME/.nvm\"; . \"$NVM_DIR/nvm.sh\"; cd /projects/sandbox/map && node server.js &",
+    "Check admin page loads: curl -s http://localhost:3000/ | grep -q 'Agencia' && echo 'OK'",
+    "Check driver page loads: curl -s http://localhost:3000/driver.html | grep -q 'Repartidor' && echo 'OK'",
+    "Check CSS loads: curl -s http://localhost:3000/css/style.css | head -5",
+    "Check admin JS loads: curl -s http://localhost:3000/js/dispatcher.js | head -5",
+    "Check driver JS loads: curl -s http://localhost:3000/js/driver.js | head -5",
+    "Kill server: kill %1"
+  ],
+  "blocked_reason": null,
+  "findings": "All 5 frontend files rewritten successfully. CSS: 745 lines, dispatcher.js: 585 lines, driver.js: 359 lines. All verification checks pass - admin page shows login with Spanish UI, driver page shows Repartidor login. Server starts cleanly, login API works. Leaflet and Socket.IO correctly included from CDN and server respectively."
+}

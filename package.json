@@ -1,14 +1,16 @@
 {
-  "name": "fleet-tracker",
-  "version": "1.0.0",
-  "description": "App web de seguimiento de flota / repartidores en tiempo real con mapa",
+  "name": "agencia-domicilios",
+  "version": "2.0.0",
+  "description": "Plataforma de agencia de domicilios: pedidos, repartidores y seguimiento en tiempo real con mapa",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "seed": "node db/seed.js"
   },
   "keywords": [
+    "delivery",
     "fleet",
     "tracking",
     "realtime",
@@ -18,7 +20,11 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "cookie-parser": "^1.4.6",
     "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
     "socket.io": "^4.7.5"
   }
 }

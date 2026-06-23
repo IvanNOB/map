@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Create the Orders API and rewrite server.js to integrate all backend modules (auth, drivers, orders, Socket.IO with auth, cookie-parser). Also add db/data.sqlite to .gitignore.",
+  "status": "completed",
+  "steps": [
+    "Add 'db/data.sqlite' to .gitignore (append a line)",
+    "Create src/orders.js with a Router that provides: GET /api/orders (admin: all orders with filters by status; driver: only their assigned orders), GET /api/orders/:id (single order detail), POST /api/orders (admin: create order with auto-generated code ORD-XXXX), PUT /api/orders/:id (admin: update order details), POST /api/orders/:id/assign (admin: assign driver_id, set status=assigned, set assigned_at), POST /api/orders/:id/status (driver: update status through workflow pending->assigned->picked_up->on_the_way->delivered, set delivered_at when delivered), DELETE /api/orders/:id (admin: cancel order - sets status=cancelled). Also add GET /api/stats endpoint that returns: total orders today, deliveries completed today, active orders count, available drivers count, total revenue today.",
+    "Rewrite server.js to: import and mount all route modules (authRouter at /api/auth, driversRouter at /api/drivers, ordersRouter at /api/orders), add express.json() and cookieParser() middleware, serve static files from public/, set up Socket.IO with authentication (extract JWT from handshake auth or cookie, attach user data to socket), implement Socket.IO event handlers: driver:update (update driver location in DB and broadcast to admin room), driver:stop (mark driver offline), admin room joining on connection if role=admin, driver room joining if role=driver. Emit events: order:new (to admins when order created), order:assigned (to specific driver), order:status (to admins when driver updates status), driver:location (to admins with driver position updates). Keep the offline detection interval. Listen on PORT 3000.",
+    "Ensure the orders router emits Socket.IO events by accepting the io instance - export a function that takes io and returns the router, or attach io to app and access via req.app.get('io')"
+  ],
+  "acceptance_criteria": [
+    "Server starts without errors on port 3000",
+    "POST /api/auth/login returns a token for admin@agencia.com / admin123",
+    "GET /api/orders with admin token returns the 2 seeded orders",
+    "POST /api/orders with admin token creates a new order",
+    "POST /api/orders/:id/assign with admin token assigns a driver",
+    "GET /api/stats returns statistics object",
+    "GET /api/drivers with admin token returns driver list",
+    "Socket.IO connection works (server does not crash on ws connection)"
+  ],
+  "verification": [
+    "Start server: export NVM_DIR=\"$HOME/.nvm\"; . \"$NVM_DIR/nvm.sh\"; cd /projects/sandbox/map && node server.js &",
+    "Login: curl -s http://localhost:3000/api/auth/login -X POST -H 'Content-Type: application/json' -d '{\"email\":\"admin@agencia.com\",\"password\":\"admin123\"}'",
+    "Get orders: curl -s http://localhost:3000/api/orders -H 'Authorization: Bearer <token>'",
+    "Get stats: curl -s http://localhost:3000/api/stats -H 'Authorization: Bearer <token>'",
+    "Create order: curl -s http://localhost:3000/api/orders -X POST -H 'Content-Type: application/json' -H 'Authorization: Bearer <token>' -d '{\"customer_name\":\"Test\",\"customer_phone\":\"123\",\"pickup_address\":\"A\",\"dropoff_address\":\"B\"}'",
+    "Kill server: kill %1"
+  ],
+  "blocked_reason": null,
+  "findings": "All acceptance criteria verified. Stats route must be defined before :id routes in the orders router to avoid path conflict. Server background process management requires nohup or foreground with timeout for testing. Database re-seed cleans test data."
+}
