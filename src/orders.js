@@ -1,6 +1,8 @@
 import { Router } from "express";
 import db from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
+import { haversineDistance, estimateTime } from "./utils.js";
+import { notifyAdmins, notifyDriver } from "./notifications.js";
 
 /**
  * Orders router factory.
@@ -73,6 +75,21 @@ export default function createOrdersRouter(io) {
       available_drivers: availableDrivers,
       revenue_today: revenueToday,
     });
+  });
+
+  // ─── GET /api/orders/:id/route ─────────────────────────────────────────────
+
+  router.get("/:id/route", requireAuth, (req, res) => {
+    const order = db.prepare("SELECT id FROM orders WHERE id = ?").get(req.params.id);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    const route = db
+      .prepare(
+        "SELECT lat, lng, timestamp FROM location_history WHERE order_id = ? ORDER BY timestamp ASC"
+      )
+      .all(req.params.id);
+
+    res.json(route);
   });
 
   // ─── GET /api/orders/:id ───────────────────────────────────────────────────
@@ -153,8 +170,19 @@ export default function createOrdersRouter(io) {
       }
     }
 
+    // Calculate estimated distance and time if coordinates are provided
+    if (pickup_lat && pickup_lng && dropoff_lat && dropoff_lng) {
+      const distance = haversineDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+      const minutes = estimateTime(distance);
+      db.prepare(
+        "UPDATE orders SET estimated_distance_km = ?, estimated_minutes = ? WHERE id = ?"
+      ).run(Math.round(distance * 100) / 100, Math.round(minutes * 10) / 10, order.id);
+      order = db.prepare("SELECT * FROM orders WHERE id = ?").get(order.id);
+    }
+
     // Emit to admins
     io.to("admins").emit("order:new", order);
+    notifyAdmins(io, "order_new", order);
 
     res.status(201).json(order);
   });
@@ -237,6 +265,10 @@ export default function createOrdersRouter(io) {
     // Notify admins and the assigned driver
     io.to("admins").emit("order:assigned", updated);
     io.to(`driver:${driver_id}`).emit("order:assigned", updated);
+    notifyDriver(io, driver_id, "order_assigned", updated);
+
+    // Emit to tracking room
+    io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
 
     res.json(updated);
   });
@@ -279,6 +311,14 @@ export default function createOrdersRouter(io) {
 
     // Notify admins
     io.to("admins").emit("order:status", updated);
+
+    // Emit to tracking room
+    io.to(`tracking:${updated.code}`).emit("order:status", updated);
+
+    // Additional notifications for delivered status
+    if (status === "delivered") {
+      notifyAdmins(io, "order_delivered", updated);
+    }
 
     res.json(updated);
   });

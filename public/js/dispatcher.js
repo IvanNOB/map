@@ -27,6 +27,7 @@
   const viewPedidos = document.getElementById('view-pedidos');
   const viewMapa = document.getElementById('view-mapa');
   const viewRepartidores = document.getElementById('view-repartidores');
+  const viewReportes = document.getElementById('view-reportes');
 
   // Stats
   const statActive = document.getElementById('stat-active');
@@ -53,6 +54,17 @@
   const assignSelect = document.getElementById('assign-driver-select');
   const btnCancelAssign = document.getElementById('btn-cancel-assign');
   const btnConfirmAssign = document.getElementById('btn-confirm-assign');
+
+  // Reports
+  const btnExportCsv = document.getElementById('btn-export-csv');
+  const btnExportPdf = document.getElementById('btn-export-pdf');
+  const btnLoadSummary = document.getElementById('btn-load-summary');
+  const reportsSummary = document.getElementById('reports-summary');
+  const reportFrom = document.getElementById('report-from');
+  const reportTo = document.getElementById('report-to');
+
+  // Route polyline state
+  let currentRoutePolyline = null;
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -142,6 +154,10 @@
     userName.textContent = currentUser.name;
     loadData();
     initSocket();
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }
 
   loginForm.addEventListener('submit', async (e) => {
@@ -194,6 +210,7 @@
       viewPedidos.classList.toggle('hidden', tab !== 'pedidos');
       viewMapa.classList.toggle('hidden', tab !== 'mapa');
       viewRepartidores.classList.toggle('hidden', tab !== 'repartidores');
+      viewReportes.classList.toggle('hidden', tab !== 'reportes');
       if (tab === 'mapa') {
         initMap();
       }
@@ -273,6 +290,8 @@
         </div>
         <div class="order-actions">
           ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar Repartidor</button>' : ''}
+          ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-route="' + order.id + '">Ver Ruta</button>' : ''}
+          <button class="btn btn-outline btn-sm" data-copy-link="${escapeHtml(order.code)}">Copiar Link</button>
           ${['pending', 'assigned'].includes(order.status) ? '<button class="btn btn-danger btn-sm" data-cancel="' + order.id + '">Cancelar</button>' : ''}
         </div>
       `;
@@ -285,6 +304,12 @@
     });
     ordersList.querySelectorAll('[data-cancel]').forEach((btn) => {
       btn.addEventListener('click', () => cancelOrder(parseInt(btn.dataset.cancel)));
+    });
+    ordersList.querySelectorAll('[data-route]').forEach((btn) => {
+      btn.addEventListener('click', () => showOrderRoute(parseInt(btn.dataset.route)));
+    });
+    ordersList.querySelectorAll('[data-copy-link]').forEach((btn) => {
+      btn.addEventListener('click', () => copyTrackingLink(btn.dataset.copyLink));
     });
   }
 
@@ -576,10 +601,161 @@
       loadDrivers();
     });
 
+    socket.on('notification', (data) => {
+      // Show browser notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        let title = 'Notificacion';
+        let body = '';
+        switch (data.type) {
+          case 'order_new':
+            title = 'Nuevo Pedido';
+            body = data.data && data.data.code ? data.data.code : '';
+            break;
+          case 'order_delivered':
+            title = 'Pedido Entregado';
+            body = data.data && data.data.code ? data.data.code : '';
+            break;
+          case 'driver_offline':
+            title = 'Repartidor Desconectado';
+            body = data.data && data.data.name ? data.data.name : '';
+            break;
+          default:
+            title = 'Notificacion';
+            body = data.type || '';
+        }
+        new Notification(title, { body: body });
+      }
+    });
+
     socket.on('disconnect', () => {
       console.log('Socket desconectado');
     });
   }
+
+  // ─── Route Polyline ──────────────────────────────────────────────────────
+
+  async function showOrderRoute(orderId) {
+    try {
+      const res = await apiFetch('/api/orders/' + orderId + '/route');
+      if (res.ok) {
+        const points = await res.json();
+        if (points.length === 0) {
+          showToast('No hay datos de ruta para este pedido', 'warning');
+          return;
+        }
+        // Switch to map tab
+        tabBtns.forEach((b) => b.classList.remove('active'));
+        document.querySelector('[data-tab="mapa"]').classList.add('active');
+        viewPedidos.classList.add('hidden');
+        viewMapa.classList.remove('hidden');
+        viewRepartidores.classList.add('hidden');
+        viewReportes.classList.add('hidden');
+        initMap();
+
+        // Remove previous route polyline
+        if (currentRoutePolyline) {
+          map.removeLayer(currentRoutePolyline);
+        }
+
+        const latlngs = points.map((p) => [p.lat, p.lng]);
+        currentRoutePolyline = L.polyline(latlngs, {
+          color: '#3b82f6',
+          weight: 4,
+          opacity: 0.8,
+        }).addTo(map);
+
+        map.fitBounds(currentRoutePolyline.getBounds(), { padding: [30, 30] });
+      } else {
+        showToast('Error al cargar la ruta', 'error');
+      }
+    } catch {
+      showToast('Error de conexion', 'error');
+    }
+  }
+
+  // ─── Copy Tracking Link ────────────────────────────────────────────────────
+
+  function copyTrackingLink(code) {
+    const url = location.origin + '/customer.html?code=' + encodeURIComponent(code);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('Link de seguimiento copiado', 'success');
+      }).catch(() => {
+        showToast('No se pudo copiar el link', 'error');
+      });
+    } else {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Link de seguimiento copiado', 'success');
+    }
+  }
+
+  // ─── Reports ───────────────────────────────────────────────────────────────
+
+  btnExportCsv.addEventListener('click', () => {
+    let url = '/api/reports/orders?format=csv';
+    if (reportFrom.value) url += '&from=' + reportFrom.value;
+    if (reportTo.value) url += '&to=' + reportTo.value;
+    // Trigger download with auth
+    downloadReport(url, 'reporte-pedidos.csv');
+  });
+
+  btnExportPdf.addEventListener('click', () => {
+    let url = '/api/reports/orders?format=pdf';
+    if (reportFrom.value) url += '&from=' + reportFrom.value;
+    if (reportTo.value) url += '&to=' + reportTo.value;
+    downloadReport(url, 'reporte-pedidos.pdf');
+  });
+
+  async function downloadReport(url, filename) {
+    try {
+      const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) {
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        showToast('Reporte descargado', 'success');
+      } else {
+        showToast('Error al generar el reporte', 'error');
+      }
+    } catch {
+      showToast('Error de conexion', 'error');
+    }
+  }
+
+  btnLoadSummary.addEventListener('click', async () => {
+    let url = '/api/reports/summary?';
+    if (reportFrom.value) url += 'from=' + reportFrom.value + '&';
+    if (reportTo.value) url += 'to=' + reportTo.value + '&';
+    try {
+      const res = await apiFetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('summary-total-orders').textContent = data.total_orders || 0;
+        document.getElementById('summary-total-revenue').textContent = '$' + (data.total_revenue || 0).toLocaleString();
+        document.getElementById('summary-avg-time').textContent = data.avg_delivery_minutes ? Math.round(data.avg_delivery_minutes) : 0;
+        const byStatus = data.orders_by_status || {};
+        document.getElementById('summary-delivered').textContent = byStatus.delivered || 0;
+        document.getElementById('summary-cancelled').textContent = byStatus.cancelled || 0;
+        document.getElementById('summary-pending').textContent = byStatus.pending || 0;
+        reportsSummary.classList.remove('hidden');
+      } else {
+        showToast('Error al cargar el resumen', 'error');
+      }
+    } catch {
+      showToast('Error de conexion', 'error');
+    }
+  });
 
   // ─── Auto Refresh ──────────────────────────────────────────────────────────
 

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seguimiento de Pedido - Agencia de Domicilios</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="tracking-container">
+    <!-- Header -->
+    <div class="tracking-header">
+      <h1>Agencia de Domicilios</h1>
+      <p>Seguimiento de Pedido</p>
+    </div>
+
+    <!-- Search Form -->
+    <form id="search-form" class="search-form">
+      <div class="search-row">
+        <input type="text" id="order-code-input" placeholder="Ingresa el codigo del pedido (ej: ORD-XXXX)" required>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </div>
+    </form>
+
+    <!-- Error Message -->
+    <div id="tracking-error" class="tracking-error hidden">
+      <p>Pedido no encontrado. Verifica el codigo e intenta de nuevo.</p>
+    </div>
+
+    <!-- Results Section (hidden until search) -->
+    <div id="tracking-results" class="tracking-results hidden">
+      <!-- Order Info Card -->
+      <div class="tracking-card">
+        <div class="tracking-card-header">
+          <span class="order-code" id="track-code"></span>
+          <span id="track-status-badge" class="badge"></span>
+        </div>
+        <div class="tracking-info">
+          <div class="tracking-info-row">
+            <span class="tracking-label">Cliente:</span>
+            <span id="track-customer"></span>
+          </div>
+          <div class="tracking-info-row">
+            <span class="tracking-label">Recogida:</span>
+            <span id="track-pickup"></span>
+          </div>
+          <div class="tracking-info-row">
+            <span class="tracking-label">Entrega:</span>
+            <span id="track-dropoff"></span>
+          </div>
+          <div class="tracking-info-row">
+            <span class="tracking-label">Repartidor:</span>
+            <span id="track-driver"></span>
+          </div>
+          <div class="tracking-info-row">
+            <span class="tracking-label">Vehiculo:</span>
+            <span id="track-vehicle"></span>
+          </div>
+          <div class="tracking-info-row">
+            <span class="tracking-label">Distancia estimada:</span>
+            <span id="track-distance"></span>
+          </div>
+          <div class="tracking-info-row">
+            <span class="tracking-label">Tiempo estimado:</span>
+            <span id="track-time"></span>
+          </div>
+        </div>
+        <div class="tracking-eta" id="track-eta-container">
+          <div class="eta-label">Tiempo estimado de llegada</div>
+          <div class="eta-value" id="track-eta">--</div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="tracking-map-container">
+        <div id="tracking-map" class="tracking-map"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/customer.js"></script>
+</body>
+</html>
