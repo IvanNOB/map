@@ -80,6 +80,12 @@ export default function createOrdersRouter(io) {
   router.get("/:id", requireAuth, (req, res) => {
     const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
     if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    // Drivers can only view their own assigned orders
+    if (req.user.role === "driver" && order.driver_id !== req.user.id) {
+      return res.status(403).json({ error: "No autorizado para esta orden" });
+    }
+
     res.json(order);
   });
 
@@ -105,31 +111,47 @@ export default function createOrdersRouter(io) {
       return res.status(400).json({ error: "customer_name, pickup_address y dropoff_address son obligatorios" });
     }
 
-    const code = generateCode();
-
-    const info = db
-      .prepare(
-        `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
-                             dropoff_address, dropoff_lat, dropoff_lng, items, notes, amount, payment_method)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        code,
-        customer_name,
-        customer_phone || null,
-        pickup_address,
-        pickup_lat || null,
-        pickup_lng || null,
-        dropoff_address,
-        dropoff_lat || null,
-        dropoff_lng || null,
-        items || null,
-        notes || null,
-        amount || 0,
-        payment_method || "cash"
-      );
-
-    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(info.lastInsertRowid);
+    // Retry loop to handle code collisions (UNIQUE constraint on code)
+    const MAX_RETRIES = 5;
+    let order = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const code = generateCode();
+      try {
+        const info = db
+          .prepare(
+            `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
+                                 dropoff_address, dropoff_lat, dropoff_lng, items, notes, amount, payment_method)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            code,
+            customer_name,
+            customer_phone || null,
+            pickup_address,
+            pickup_lat || null,
+            pickup_lng || null,
+            dropoff_address,
+            dropoff_lat || null,
+            dropoff_lng || null,
+            items || null,
+            notes || null,
+            amount || 0,
+            payment_method || "cash"
+          );
+        order = db.prepare("SELECT * FROM orders WHERE id = ?").get(info.lastInsertRowid);
+        break;
+      } catch (err) {
+        // If it's a UNIQUE constraint error on code, retry with a new code
+        if (err.code === "SQLITE_CONSTRAINT_UNIQUE" || (err.message && err.message.includes("UNIQUE"))) {
+          if (attempt === MAX_RETRIES - 1) {
+            return res.status(500).json({ error: "No se pudo generar un codigo unico para la orden" });
+          }
+          continue;
+        }
+        // For any other DB error, return 500
+        return res.status(500).json({ error: "Error al crear la orden" });
+      }
+    }
 
     // Emit to admins
     io.to("admins").emit("order:new", order);

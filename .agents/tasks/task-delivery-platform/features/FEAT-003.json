@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-003",
+  "type": "fix",
+  "description": "Fix critical issues identified in code review: broken auth persistence, order access control, code collision handling, innerHTML XSS, and JWT secret warning.",
+  "status": "in_progress",
+  "steps": [
+    "Fix broken auth persistence - unwrap {user} from /api/auth/me in both dispatcher.js and driver.js",
+    "Add ownership check on GET /api/orders/:id for driver role",
+    "Add retry loop around order insert to handle code collisions",
+    "Add escapeHtml function to both frontend JS files and sanitize all dynamic user data in innerHTML",
+    "Add console.warn at startup if JWT_SECRET env var is not set in src/auth.js"
+  ],
+  "acceptance_criteria": [
+    "Page refresh with valid token keeps user logged in on both apps",
+    "Driver cannot access orders assigned to other drivers via GET /api/orders/:id",
+    "Order creation handles code collision gracefully with retry",
+    "All user-provided data in innerHTML is HTML-escaped",
+    "Server logs warning at startup when JWT_SECRET env var is not set"
+  ],
+  "verification": [
+    "Start server and check JWT warning appears",
+    "Login as driver juan, try GET /api/orders/2 - should get 403 if not assigned to juan",
+    "Verify escapeHtml is used for all dynamic data in innerHTML"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}

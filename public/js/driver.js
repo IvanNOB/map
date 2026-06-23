@@ -77,6 +77,16 @@
     return actions[status] || null;
   }
 
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // ─── Auth ───────────────────────────────────────────────────────────────────
 
   async function checkAuth() {
@@ -87,7 +97,7 @@
     try {
       const res = await fetch('/api/auth/me', { headers: apiHeaders() });
       if (res.ok) {
-        currentUser = await res.json();
+        currentUser = (await res.json()).user;
         if (currentUser.role !== 'driver') {
           showLogin();
           return;
@@ -198,15 +208,15 @@
     const action = nextAction(order.status);
     card.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-        <span class="order-code">${order.code}</span>
-        <span class="badge badge-${order.status}">${statusLabelText(order.status)}</span>
+        <span class="order-code">${escapeHtml(order.code)}</span>
+        <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(statusLabelText(order.status))}</span>
       </div>
-      <div class="order-detail"><strong>Cliente:</strong> ${order.customer_name}</div>
-      <div class="order-detail"><strong>Recogida:</strong> ${order.pickup_address || '-'}</div>
-      <div class="order-detail"><strong>Entrega:</strong> ${order.dropoff_address || '-'}</div>
-      ${order.items ? '<div class="order-detail"><strong>Articulos:</strong> ' + order.items + '</div>' : ''}
-      ${order.amount ? '<div class="order-detail"><strong>Monto:</strong> $' + order.amount + '</div>' : ''}
-      ${action ? '<div style="margin-top:0.8rem;"><button class="btn btn-success btn-sm" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + action.label + '</button></div>' : ''}
+      <div class="order-detail"><strong>Cliente:</strong> ${escapeHtml(order.customer_name)}</div>
+      <div class="order-detail"><strong>Recogida:</strong> ${escapeHtml(order.pickup_address || '-')}</div>
+      <div class="order-detail"><strong>Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}</div>
+      ${order.items ? '<div class="order-detail"><strong>Articulos:</strong> ' + escapeHtml(order.items) + '</div>' : ''}
+      ${order.amount ? '<div class="order-detail"><strong>Monto:</strong> $' + escapeHtml(String(order.amount)) + '</div>' : ''}
+      ${action ? '<div style="margin-top:0.8rem;"><button class="btn btn-success btn-sm" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + escapeHtml(action.label) + '</button></div>' : ''}
       ${order.status === 'delivered' ? '<div style="margin-top:0.5rem;"><span class="badge badge-delivered">Completado</span></div>' : ''}
     `;
     driverOrders.appendChild(card);

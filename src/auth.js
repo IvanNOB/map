@@ -6,6 +6,10 @@ import db from "../db/database.js";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const TOKEN_TTL = "12h";
 
+if (!process.env.JWT_SECRET) {
+  console.warn("[WARN] JWT_SECRET env var is not set. Using insecure default secret. Set JWT_SECRET in production.");
+}
+
 export function signToken(user) {
   return jwt.sign(
     { id: user.id, name: user.name, email: user.email, role: user.role },

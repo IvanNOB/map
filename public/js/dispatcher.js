@@ -101,6 +101,16 @@
     return d.toLocaleString('es-CO', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
   }
 
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // ─── Auth ───────────────────────────────────────────────────────────────────
 
   async function checkAuth() {
@@ -111,7 +121,7 @@
     try {
       const res = await fetch('/api/auth/me', { headers: apiHeaders() });
       if (res.ok) {
-        currentUser = await res.json();
+        currentUser = (await res.json()).user;
         showApp();
       } else {
         showLogin();
@@ -242,23 +252,23 @@
       return;
     }
     orders.forEach((order) => {
-      const driverName = getDriverName(order.driver_id);
+      const dName = getDriverName(order.driver_id);
       const card = document.createElement('div');
       card.className = 'order-card';
       card.innerHTML = `
         <div>
-          <span class="order-code">${order.code}</span>
-          <span class="badge badge-${order.status}">${statusLabel(order.status)}</span>
+          <span class="order-code">${escapeHtml(order.code)}</span>
+          <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(statusLabel(order.status))}</span>
         </div>
         <div class="order-info">
-          <div class="order-customer">${order.customer_name}</div>
+          <div class="order-customer">${escapeHtml(order.customer_name)}</div>
           <div class="order-addresses">
-            <strong>Recogida:</strong> ${order.pickup_address || '-'} &rarr; <strong>Entrega:</strong> ${order.dropoff_address || '-'}
+            <strong>Recogida:</strong> ${escapeHtml(order.pickup_address || '-')} &rarr; <strong>Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}
           </div>
           <div class="order-meta">
-            ${driverName ? '<span>Repartidor: ' + driverName + '</span>' : ''}
-            <span>${formatTime(order.created_at)}</span>
-            ${order.amount ? '<span>$' + order.amount + '</span>' : ''}
+            ${dName ? '<span>Repartidor: ' + escapeHtml(dName) + '</span>' : ''}
+            <span>${escapeHtml(formatTime(order.created_at))}</span>
+            ${order.amount ? '<span>$' + escapeHtml(String(order.amount)) + '</span>' : ''}
           </div>
         </div>
         <div class="order-actions">
@@ -405,16 +415,16 @@
       card.className = 'driver-card';
       card.innerHTML = `
         <div class="driver-card-header">
-          <h3>${d.name}</h3>
+          <h3>${escapeHtml(d.name)}</h3>
           <span class="badge badge-${d.status === 'available' ? 'delivered' : d.status === 'busy' ? 'assigned' : 'cancelled'}">
-            <span class="status-dot ${statusClass}"></span> ${statusText}
+            <span class="status-dot ${statusClass}"></span> ${escapeHtml(statusText)}
           </span>
         </div>
         <div class="driver-card-details">
-          ${d.vehicle ? '<div>Vehiculo: ' + d.vehicle + '</div>' : ''}
-          ${d.plate ? '<div>Placa: ' + d.plate + '</div>' : ''}
-          ${d.phone ? '<div>Tel: ' + d.phone + '</div>' : ''}
-          ${d.email ? '<div>Email: ' + d.email + '</div>' : ''}
+          ${d.vehicle ? '<div>Vehiculo: ' + escapeHtml(d.vehicle) + '</div>' : ''}
+          ${d.plate ? '<div>Placa: ' + escapeHtml(d.plate) + '</div>' : ''}
+          ${d.phone ? '<div>Tel: ' + escapeHtml(d.phone) + '</div>' : ''}
+          ${d.email ? '<div>Email: ' + escapeHtml(d.email) + '</div>' : ''}
         </div>
       `;
       driversGrid.appendChild(card);
@@ -480,12 +490,12 @@
       if (['assigned', 'picked_up', 'on_the_way'].includes(o.status)) {
         if (o.pickup_lat && o.pickup_lng) {
           L.circleMarker([o.pickup_lat, o.pickup_lng], { radius: 6, color: '#3b82f6', fillOpacity: 0.8 })
-            .bindPopup('Recogida: ' + (o.pickup_address || o.code))
+            .bindPopup('Recogida: ' + escapeHtml(o.pickup_address || o.code))
             .addTo(map);
         }
         if (o.dropoff_lat && o.dropoff_lng) {
           L.circleMarker([o.dropoff_lat, o.dropoff_lng], { radius: 6, color: '#ef4444', fillOpacity: 0.8 })
-            .bindPopup('Entrega: ' + (o.dropoff_address || o.code))
+            .bindPopup('Entrega: ' + escapeHtml(o.dropoff_address || o.code))
             .addTo(map);
         }
       }
@@ -499,7 +509,7 @@
       color: '#22c55e',
       fillColor: '#22c55e',
       fillOpacity: 0.8,
-    }).bindPopup(`<strong>${d.name}</strong><br>Vehiculo: ${d.vehicle || '-'}<br>Velocidad: ${d.speed || 0} km/h`);
+    }).bindPopup(`<strong>${escapeHtml(d.name)}</strong><br>Vehiculo: ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${d.speed || 0} km/h`);
     marker.addTo(map);
     driverMarkers[d.id] = marker;
   }
@@ -509,7 +519,7 @@
     if (driverMarkers[data.id]) {
       driverMarkers[data.id].setLatLng([data.lat, data.lng]);
       driverMarkers[data.id].setPopupContent(
-        `<strong>${data.name}</strong><br>Velocidad: ${data.speed || 0} km/h`
+        `<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${data.speed || 0} km/h`
       );
     } else {
       const marker = L.circleMarker([data.lat, data.lng], {
@@ -517,7 +527,7 @@
         color: '#22c55e',
         fillColor: '#22c55e',
         fillOpacity: 0.8,
-      }).bindPopup(`<strong>${data.name}</strong><br>Velocidad: ${data.speed || 0} km/h`);
+      }).bindPopup(`<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${data.speed || 0} km/h`);
       marker.addTo(map);
       driverMarkers[data.id] = marker;
     }
