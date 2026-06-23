@@ -9,6 +9,10 @@ import db from "./db/database.js";
 import authRouter, { verifyToken } from "./src/auth.js";
 import driversRouter from "./src/drivers.js";
 import createOrdersRouter from "./src/orders.js";
+import createLocationRouter from "./src/location.js";
+import trackingRouter from "./src/tracking.js";
+import reportsRouter from "./src/reports.js";
+import { notifyAdmins } from "./src/notifications.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -41,9 +45,27 @@ app.use("/api/stats", (req, res, next) => {
   ordersRouter(req, res, next);
 });
 
+// Location history routes
+const locationRouter = createLocationRouter(io);
+app.use("/api/location", locationRouter);
+
+// Public tracking (no auth)
+app.use("/api/track", trackingRouter);
+
+// Reports (admin only)
+app.use("/api/reports", reportsRouter);
+
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 
 io.use((socket, next) => {
+  // Allow unauthenticated connections for order tracking
+  const orderCode = socket.handshake.query?.order_code;
+  if (orderCode) {
+    socket.data.trackingCode = orderCode;
+    socket.data.user = null;
+    return next();
+  }
+
   const token =
     socket.handshake.auth?.token ||
     (socket.handshake.headers.cookie &&
@@ -66,6 +88,14 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const user = socket.data.user;
+
+  // Handle tracking-only connections (unauthenticated customers)
+  if (socket.data.trackingCode) {
+    socket.join(`tracking:${socket.data.trackingCode}`);
+    return;
+  }
+
+  if (!user) return;
 
   // Join role-based rooms
   if (user.role === "admin") {
@@ -98,6 +128,28 @@ io.on("connection", (socket) => {
       speed,
       last_seen: new Date().toISOString(),
     });
+
+    // Insert into location_history for active orders
+    const activeOrders = db
+      .prepare(
+        "SELECT id, code FROM orders WHERE driver_id = ? AND status IN ('assigned', 'picked_up', 'on_the_way')"
+      )
+      .all(user.id);
+
+    for (const order of activeOrders) {
+      db.prepare(
+        "INSERT INTO location_history (driver_id, order_id, lat, lng) VALUES (?, ?, ?, ?)"
+      ).run(user.id, order.id, payload.lat, payload.lng);
+
+      // Emit to tracking rooms for this order
+      io.to(`tracking:${order.code}`).emit("driver:location", {
+        id: user.id,
+        name: user.name,
+        lat: payload.lat,
+        lng: payload.lng,
+        speed,
+      });
+    }
   });
 
   // Driver stops sharing location
@@ -107,6 +159,7 @@ io.on("connection", (socket) => {
       user.id
     );
     io.to("admins").emit("driver:offline", { id: user.id });
+    notifyAdmins(io, "driver_offline", { id: user.id });
   });
 
   // Disconnect
@@ -116,6 +169,7 @@ io.on("connection", (socket) => {
         user.id
       );
       io.to("admins").emit("driver:offline", { id: user.id });
+      notifyAdmins(io, "driver_offline", { id: user.id });
     }
   });
 });

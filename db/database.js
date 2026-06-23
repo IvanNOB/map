@@ -66,6 +66,29 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
   CREATE INDEX IF NOT EXISTS idx_orders_driver ON orders(driver_id);
+
+  CREATE TABLE IF NOT EXISTS location_history (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver_id  INTEGER,
+    order_id   INTEGER,
+    lat        REAL,
+    lng        REAL,
+    timestamp  TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_location_history_order ON location_history(order_id);
+  CREATE INDEX IF NOT EXISTS idx_location_history_driver ON location_history(driver_id);
 `);
+
+// Add estimated columns to orders (ALTER TABLE doesn't support IF NOT EXISTS in SQLite)
+try {
+  db.exec("ALTER TABLE orders ADD COLUMN estimated_distance_km REAL");
+} catch (_) { /* column already exists */ }
+
+try {
+  db.exec("ALTER TABLE orders ADD COLUMN estimated_minutes REAL");
+} catch (_) { /* column already exists */ }
 
 export default db;
