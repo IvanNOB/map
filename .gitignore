@@ -7,3 +7,5 @@ yarn-error.log*
 .env.local
 *.log
 db/data.sqlite
+db/data.sqlite-shm
+db/data.sqlite-wal
