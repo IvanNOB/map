@@ -221,6 +221,8 @@ export async function init() {
       CREATE INDEX IF NOT EXISTS idx_lh_order ON location_history(order_id);
       CREATE INDEX IF NOT EXISTS idx_lh_driver ON location_history(driver_id);
     `);
+    // rating column (safe add for existing tables)
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rating INTEGER"); } catch (_) {}
   } else {
     await impl.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -287,6 +289,8 @@ export async function init() {
       CREATE INDEX IF NOT EXISTS idx_lh_order ON location_history(order_id);
       CREATE INDEX IF NOT EXISTS idx_lh_driver ON location_history(driver_id);
     `);
+    // rating column (safe add for existing sqlite tables)
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN rating INTEGER"); } catch (_) {}
     impl._save();
   }
 }

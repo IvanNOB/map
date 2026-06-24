@@ -12,6 +12,34 @@
   let positionMarker = null;
   let watchId = null;
   let sharing = false;
+  let orderMarkers = [];
+  let baseLayers = null;
+
+  // ─── Pin icons ──────────────────────────────────────────────────────────────
+  function pinIcon(kind, emoji) {
+    return L.divIcon({
+      className: '',
+      html: '<div class="pin pin-' + kind + '"><span>' + emoji + '</span></div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, kind === 'driver' ? 14 : 28],
+      popupAnchor: [0, kind === 'driver' ? -14 : -28],
+    });
+  }
+
+  // ─── Theme ────────────────────────────────────────────────────────────────
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const btn = document.getElementById('btn-theme');
+    if (btn) btn.textContent = theme === 'light' ? '☀️' : '🌙';
+  }
+  applyTheme(localStorage.getItem('theme') || 'dark');
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'btn-theme') {
+      const cur = document.documentElement.getAttribute('data-theme');
+      applyTheme(cur === 'light' ? 'dark' : 'light');
+    }
+  });
 
   // ─── DOM References ─────────────────────────────────────────────────────────
   const loginScreen = document.getElementById('login-screen');
@@ -204,24 +232,40 @@
       driverOrders.appendChild(divider);
       delivered.slice(0, 5).forEach((order) => renderOrderCard(order));
     }
+
+    renderOrderMarkers();
   }
 
   function renderOrderCard(order) {
     const card = document.createElement('div');
     card.className = 'driver-order-card';
     const action = nextAction(order.status);
+
+    // Navigation target: go to pickup while assigned, to dropoff once picked up
+    let navBtn = '';
+    const toPickup = order.status === 'assigned';
+    const navLat = toPickup ? order.pickup_lat : order.dropoff_lat;
+    const navLng = toPickup ? order.pickup_lng : order.dropoff_lng;
+    if (navLat && navLng) {
+      const navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + navLat + ',' + navLng + '&travelmode=driving';
+      navBtn = '<a class="btn btn-nav btn-sm" href="' + navUrl + '" target="_blank" rel="noopener">🧭 Navegar ' + (toPickup ? 'a recogida' : 'a entrega') + '</a>';
+    }
+
     card.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
         <span class="order-code">${escapeHtml(order.code)}</span>
         <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(statusLabelText(order.status))}</span>
       </div>
       <div class="order-detail"><strong>Cliente:</strong> ${escapeHtml(order.customer_name)}</div>
-      <div class="order-detail"><strong>Recogida:</strong> ${escapeHtml(order.pickup_address || '-')}</div>
-      <div class="order-detail"><strong>Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}</div>
+      <div class="order-detail"><strong>🟢 Recogida:</strong> ${escapeHtml(order.pickup_address || '-')}</div>
+      <div class="order-detail"><strong>🔴 Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}</div>
       ${order.items ? '<div class="order-detail"><strong>Articulos:</strong> ' + escapeHtml(order.items) + '</div>' : ''}
       ${order.amount ? '<div class="order-detail"><strong>Monto:</strong> $' + escapeHtml(String(order.amount)) + '</div>' : ''}
-      ${action ? '<div style="margin-top:0.8rem;"><button class="btn btn-success btn-sm" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + escapeHtml(action.label) + '</button></div>' : ''}
-      ${order.status === 'delivered' ? '<div style="margin-top:0.5rem;"><span class="badge badge-delivered">Completado</span></div>' : ''}
+      <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        ${action ? '<button class="btn btn-success btn-sm" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + escapeHtml(action.label) + '</button>' : ''}
+        ${navBtn}
+        ${order.status === 'delivered' ? '<span class="badge badge-delivered">Completado</span>' : ''}
+      </div>
     `;
     driverOrders.appendChild(card);
 
@@ -295,12 +339,7 @@
           if (positionMarker) {
             positionMarker.setLatLng(latlng);
           } else {
-            positionMarker = L.circleMarker(latlng, {
-              radius: 10,
-              color: '#3b82f6',
-              fillColor: '#3b82f6',
-              fillOpacity: 0.8,
-            }).addTo(map);
+            positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
           }
           map.setView(latlng, 15);
         }
@@ -342,9 +381,38 @@
   function initMap() {
     if (map) return;
     map = L.map('driver-map').setView([4.6097, -74.0817], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap', maxZoom: 19,
+    });
+    const satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+    );
+    satellite.addTo(map);
+    L.control.layers({ 'Satelital': satellite, 'Calles': streets }, null, { position: 'topright' }).addTo(map);
+    renderOrderMarkers();
+  }
+
+  // Show pickup (green) and dropoff (red) markers for active orders
+  function renderOrderMarkers() {
+    if (!map) return;
+    orderMarkers.forEach((m) => map.removeLayer(m));
+    orderMarkers = [];
+    const bounds = [];
+    orders.forEach((o) => {
+      if (!['assigned', 'picked_up', 'on_the_way'].includes(o.status)) return;
+      if (o.pickup_lat && o.pickup_lng) {
+        const m = L.marker([o.pickup_lat, o.pickup_lng], { icon: pinIcon('pickup', '🟢') })
+          .bindPopup('🟢 Recogida ' + escapeHtml(o.code) + '<br>' + escapeHtml(o.pickup_address || '')).addTo(map);
+        orderMarkers.push(m); bounds.push([o.pickup_lat, o.pickup_lng]);
+      }
+      if (o.dropoff_lat && o.dropoff_lng) {
+        const m = L.marker([o.dropoff_lat, o.dropoff_lng], { icon: pinIcon('dropoff', '🔴') })
+          .bindPopup('🔴 Entrega ' + escapeHtml(o.code) + '<br>' + escapeHtml(o.dropoff_address || '')).addTo(map);
+        orderMarkers.push(m); bounds.push([o.dropoff_lat, o.dropoff_lng]);
+      }
+    });
+    if (bounds.length) { try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }); } catch (e) {} }
   }
 
   // ─── Socket.IO ──────────────────────────────────────────────────────────────
