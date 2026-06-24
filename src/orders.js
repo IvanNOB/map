@@ -172,6 +172,7 @@ export default function createOrdersRouter(io) {
       notes,
       amount,
       payment_method,
+      scheduled_at,
     } = req.body || {};
 
     if (!customer_name || !pickup_address || !dropoff_address) {
@@ -231,6 +232,12 @@ export default function createOrdersRouter(io) {
         Math.round(minutes * 10) / 10,
         order.id,
       ]);
+      order = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
+    }
+
+    // Optional scheduled time
+    if (scheduled_at) {
+      await db.run("UPDATE orders SET scheduled_at = ? WHERE id = ?", [scheduled_at, order.id]);
       order = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
     }
 
