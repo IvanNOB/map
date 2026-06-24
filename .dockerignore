@@ -1,0 +1,6 @@
+node_modules
+db/data.sqlite
+db/data.sqlite-shm
+db/data.sqlite-wal
+.git
+.agents

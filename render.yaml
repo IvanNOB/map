@@ -1,0 +1,14 @@
+# Render.com Blueprint - deploy automático
+services:
+  - type: web
+    name: agencia-domicilios
+    runtime: node
+    buildCommand: npm install && npm run seed
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: "3000"
