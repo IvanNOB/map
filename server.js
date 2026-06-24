@@ -12,6 +12,7 @@ import createOrdersRouter from "./src/orders.js";
 import createLocationRouter from "./src/location.js";
 import trackingRouter from "./src/tracking.js";
 import reportsRouter from "./src/reports.js";
+import chatRouter from "./src/chat.js";
 import { notifyAdmins } from "./src/notifications.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -54,6 +55,9 @@ app.use("/api/track", trackingRouter);
 
 // Reports (admin only)
 app.use("/api/reports", reportsRouter);
+
+// Chat history
+app.use("/api/chat", chatRouter);
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 
@@ -151,6 +155,35 @@ io.on("connection", (socket) => {
         speed,
       });
     }
+  });
+
+  // ─── Chat: send a message (admin <-> driver) ────────────────────────────────
+  socket.on("chat:send", async (payload) => {
+    if (!payload || !payload.body || !String(payload.body).trim()) return;
+    const body = String(payload.body).trim().slice(0, 1000);
+
+    // Driver can only message in their own thread; admin chooses driverId
+    const driverId = user.role === "driver" ? user.id : parseInt(payload.driverId, 10);
+    if (!driverId) return;
+
+    const info = await db.run(
+      "INSERT INTO messages (driver_id, sender_id, sender_role, body) VALUES (?, ?, ?, ?)",
+      [driverId, user.id, user.role, body]
+    );
+
+    const msg = {
+      id: info.lastInsertRowid,
+      driver_id: driverId,
+      sender_id: user.id,
+      sender_role: user.role,
+      sender_name: user.name,
+      body,
+      created_at: new Date().toISOString(),
+    };
+
+    // Deliver to all admins and to the specific driver
+    io.to("admins").emit("chat:message", msg);
+    io.to(`driver:${driverId}`).emit("chat:message", msg);
   });
 
   // Driver stops sharing location

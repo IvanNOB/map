@@ -322,6 +322,16 @@ export default function createOrdersRouter(io) {
         status,
         req.params.id,
       ]);
+    } else if (status === "picked_up") {
+      await db.run("UPDATE orders SET status = ?, picked_up_at = datetime('now') WHERE id = ?", [
+        status,
+        req.params.id,
+      ]);
+    } else if (status === "on_the_way") {
+      await db.run("UPDATE orders SET status = ?, on_the_way_at = datetime('now') WHERE id = ?", [
+        status,
+        req.params.id,
+      ]);
     } else {
       await db.run("UPDATE orders SET status = ? WHERE id = ?", [status, req.params.id]);
     }

@@ -269,13 +269,87 @@
       viewMapa.classList.toggle('hidden', tab !== 'mapa');
       viewRepartidores.classList.toggle('hidden', tab !== 'repartidores');
       viewReportes.classList.toggle('hidden', tab !== 'reportes');
+      const viewChat = document.getElementById('view-chat');
+      if (viewChat) viewChat.classList.toggle('hidden', tab !== 'chat');
       if (tab === 'mapa') {
         initMap();
       }
       if (tab === 'repartidores') {
         loadDrivers();
       }
+      if (tab === 'chat') {
+        renderChatContacts();
+      }
     });
+  });
+
+  // ─── Chat (admin <-> drivers) ───────────────────────────────────────────────
+  let chatActiveDriver = null;
+  const chatThreads = {}; // driverId -> [messages]
+
+  function renderChatContacts() {
+    const box = document.getElementById('chat-contacts');
+    if (!box) return;
+    if (drivers.length === 0) {
+      box.innerHTML = '<div class="chat-empty">No hay repartidores</div>';
+      return;
+    }
+    box.innerHTML = drivers.map((d) => {
+      const online = d.status !== 'offline' ? 'online' : '';
+      const active = chatActiveDriver === d.id ? 'active' : '';
+      return '<div class="chat-contact ' + active + '" data-driver="' + d.id + '">' +
+        '<span class="cc-dot ' + online + '"></span>' + escapeHtml(d.name) + '</div>';
+    }).join('');
+    box.querySelectorAll('[data-driver]').forEach((el) => {
+      el.addEventListener('click', () => openChat(parseInt(el.dataset.driver)));
+    });
+  }
+
+  async function openChat(driverId) {
+    chatActiveDriver = driverId;
+    renderChatContacts();
+    const d = drivers.find((x) => x.id === driverId);
+    document.getElementById('chat-header').textContent = d ? d.name : 'Repartidor';
+    const input = document.getElementById('chat-input');
+    const send = document.getElementById('chat-send');
+    input.disabled = false; send.disabled = false;
+
+    try {
+      const res = await apiFetch('/api/chat/' + driverId);
+      if (res.ok) {
+        chatThreads[driverId] = await res.json();
+        renderChatMessages(driverId);
+      }
+    } catch {}
+  }
+
+  function renderChatMessages(driverId) {
+    const box = document.getElementById('chat-messages');
+    const msgs = chatThreads[driverId] || [];
+    if (msgs.length === 0) {
+      box.innerHTML = '<div class="chat-empty">No hay mensajes. Saluda 👋</div>';
+      return;
+    }
+    box.innerHTML = msgs.map((m) => {
+      const mine = m.sender_role === 'admin';
+      return '<div class="chat-msg ' + (mine ? 'mine' : 'theirs') + '">' +
+        escapeHtml(m.body) +
+        '<span class="cm-time">' + formatTime(m.created_at) + '</span></div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function sendChat() {
+    const input = document.getElementById('chat-input');
+    const body = input.value.trim();
+    if (!body || !chatActiveDriver) return;
+    socket.emit('chat:send', { driverId: chatActiveDriver, body });
+    input.value = '';
+  }
+
+  document.getElementById('chat-send').addEventListener('click', sendChat);
+  document.getElementById('chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendChat();
   });
 
   // ─── Data Loading ───────────────────────────────────────────────────────────
@@ -655,6 +729,8 @@
           </span>
         </div>
         <div class="driver-card-details">
+          ${d.avg_rating ? '<div class="driver-rating">⭐ ' + escapeHtml(String(d.avg_rating)) + ' / 5</div>' : '<div style="color:var(--text-muted);font-size:0.8rem;">Sin calificaciones</div>'}
+          ${d.deliveries != null ? '<div>📦 Entregas: ' + escapeHtml(String(d.deliveries)) + '</div>' : ''}
           ${d.vehicle ? '<div>Vehiculo: ' + escapeHtml(d.vehicle) + '</div>' : ''}
           ${d.plate ? '<div>Placa: ' + escapeHtml(d.plate) + '</div>' : ''}
           ${d.phone ? '<div>Tel: ' + escapeHtml(d.phone) + '</div>' : ''}
@@ -822,6 +898,17 @@
       playBeep();
       loadOrders();
       loadStats();
+    });
+
+    socket.on('chat:message', (msg) => {
+      if (!chatThreads[msg.driver_id]) chatThreads[msg.driver_id] = [];
+      chatThreads[msg.driver_id].push(msg);
+      if (chatActiveDriver === msg.driver_id) {
+        renderChatMessages(msg.driver_id);
+      } else if (msg.sender_role === 'driver') {
+        playBeep();
+        showToast('Mensaje de ' + (getDriverName(msg.driver_id) || 'repartidor'), 'info');
+      }
     });
 
     socket.on('order:status', (order) => {

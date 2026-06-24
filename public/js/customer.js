@@ -264,8 +264,49 @@
       drawRoute(data.route);
     }
 
-    // Rating box (only when delivered)
+    // Timeline + Rating
+    renderTimeline(order);
     handleRating(order);
+  }
+
+  // ─── Timeline ─────────────────────────────────────────────────────────────
+  function fmt(ts) {
+    if (!ts) return '';
+    var d = new Date(ts.indexOf('T') === -1 ? ts.replace(' ', 'T') + 'Z' : ts);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderTimeline(order) {
+    var el = document.getElementById('timeline');
+    if (!el) return;
+    if (order.status === 'cancelled') {
+      el.classList.remove('hidden');
+      el.innerHTML = '<div class="tl-cancelled">Pedido cancelado</div>';
+      return;
+    }
+    var steps = [
+      { key: 'created', label: 'Pedido recibido', icon: '📝', at: order.created_at },
+      { key: 'assigned', label: 'Repartidor asignado', icon: '🧑‍🦱', at: order.assigned_at },
+      { key: 'picked_up', label: 'Pedido recogido', icon: '📦', at: order.picked_up_at },
+      { key: 'on_the_way', label: 'En camino', icon: '🛵', at: order.on_the_way_at },
+      { key: 'delivered', label: 'Entregado', icon: '✅', at: order.delivered_at },
+    ];
+    var order_idx = ['pending', 'assigned', 'picked_up', 'on_the_way', 'delivered'];
+    var current = order_idx.indexOf(order.status);
+    if (order.status === 'pending') current = 0;
+
+    var html = '';
+    steps.forEach(function (s, i) {
+      var done = i <= current;
+      var active = i === current;
+      html += '<div class="tl-step ' + (done ? 'done' : '') + (active ? ' active' : '') + '">' +
+        '<div class="tl-dot">' + s.icon + '</div>' +
+        '<div class="tl-body"><div class="tl-label">' + s.label + '</div>' +
+        (s.at ? '<div class="tl-time">' + fmt(s.at) + '</div>' : '') + '</div></div>';
+    });
+    el.innerHTML = html;
+    el.classList.remove('hidden');
   }
 
   // ─── Rating ─────────────────────────────────────────────────────────────────
@@ -379,10 +420,17 @@
         trackStatusBadge.className = 'badge badge-' + data.status;
         showToast('Estado actualizado: ' + statusLabel(data.status), 'info');
 
-        if (data.status === 'delivered') {
-          trackEta.textContent = 'Entregado';
-          if (currentOrder) { currentOrder.status = 'delivered'; handleRating(currentOrder); }
+        if (currentOrder) {
+          currentOrder.status = data.status;
+          var now = new Date().toISOString();
+          if (data.status === 'assigned' && !currentOrder.assigned_at) currentOrder.assigned_at = now;
+          if (data.status === 'picked_up') currentOrder.picked_up_at = now;
+          if (data.status === 'on_the_way') currentOrder.on_the_way_at = now;
+          if (data.status === 'delivered') currentOrder.delivered_at = now;
+          renderTimeline(currentOrder);
+          handleRating(currentOrder);
         }
+        if (data.status === 'delivered') trackEta.textContent = 'Entregado';
       }
     });
 

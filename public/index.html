@@ -46,6 +46,7 @@
         <button class="tab-btn active" data-tab="pedidos">Pedidos</button>
         <button class="tab-btn" data-tab="mapa">Mapa</button>
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
+        <button class="tab-btn" data-tab="chat">Chat</button>
         <button class="tab-btn" data-tab="reportes">Reportes</button>
       </div>
       <div class="navbar-right">
@@ -166,6 +167,23 @@
             <div class="chart-card">
               <h3>Resumen financiero</h3>
               <canvas id="chart-revenue"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chat View -->
+      <section id="view-chat" class="hidden">
+        <div class="chat-layout">
+          <div class="chat-contacts" id="chat-contacts"></div>
+          <div class="chat-panel">
+            <div class="chat-header" id="chat-header">Selecciona un repartidor</div>
+            <div class="chat-messages" id="chat-messages">
+              <div class="chat-empty">Elige un repartidor para chatear</div>
+            </div>
+            <div class="chat-input-row">
+              <input type="text" id="chat-input" placeholder="Escribe un mensaje..." disabled>
+              <button class="btn btn-primary btn-sm" id="chat-send" disabled>Enviar</button>
             </div>
           </div>
         </div>
@@ -302,10 +320,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/dispatcher.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-    }
-  </script>
+  <script src="/js/pwa.js"></script>
 </body>
 </html>

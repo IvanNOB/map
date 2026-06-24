@@ -14,6 +14,7 @@
   let sharing = false;
   let orderMarkers = [];
   let baseLayers = null;
+  let dchatMessages = [];
 
   // ─── Pin icons ──────────────────────────────────────────────────────────────
   function pinIcon(kind, emoji) {
@@ -151,6 +152,7 @@
     loadOrders();
     initSocket();
     initMap();
+    loadDriverChat();
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -417,10 +419,57 @@
 
   // ─── Socket.IO ──────────────────────────────────────────────────────────────
 
+  // ─── Chat with dispatch ─────────────────────────────────────────────────────
+  function dtime(ts) {
+    if (!ts) return '';
+    var d = new Date(ts.indexOf && ts.indexOf('T') === -1 ? ts.replace(' ', 'T') + 'Z' : ts);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderDriverChat() {
+    var box = document.getElementById('dchat-messages');
+    if (!box) return;
+    if (dchatMessages.length === 0) {
+      box.innerHTML = '<div class="chat-empty">Escribe a tu central de despacho</div>';
+      return;
+    }
+    box.innerHTML = dchatMessages.map(function (m) {
+      var mine = m.sender_role === 'driver';
+      return '<div class="chat-msg ' + (mine ? 'mine' : 'theirs') + '">' +
+        escapeHtml(m.body) + '<span class="cm-time">' + dtime(m.created_at) + '</span></div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function loadDriverChat() {
+    if (!currentUser) return;
+    try {
+      var res = await fetch('/api/chat/' + currentUser.id, { headers: apiHeaders() });
+      if (res.ok) {
+        dchatMessages = await res.json();
+        renderDriverChat();
+      }
+    } catch (e) {}
+  }
+
+  function sendDriverChat() {
+    var input = document.getElementById('dchat-input');
+    var body = input.value.trim();
+    if (!body || !socket) return;
+    socket.emit('chat:send', { body: body });
+    input.value = '';
+  }
+
+  (function bindDriverChat() {
+    var sendBtn = document.getElementById('dchat-send');
+    var input = document.getElementById('dchat-input');
+    if (sendBtn) sendBtn.addEventListener('click', sendDriverChat);
+    if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendDriverChat(); });
+  })();
+
   function initSocket() {
     if (socket) return;
     socket = io({ auth: { token } });
-
     socket.on('connect', () => {
       console.log('Socket conectado (repartidor)');
     });
@@ -428,6 +477,14 @@
     socket.on('order:assigned', (order) => {
       showToast('Nuevo pedido asignado!', 'info');
       loadOrders();
+    });
+
+    socket.on('chat:message', (msg) => {
+      dchatMessages.push(msg);
+      renderDriverChat();
+      if (msg.sender_role === 'admin') {
+        showToast('Mensaje de Despacho', 'info');
+      }
     });
 
     socket.on('notification', (data) => {

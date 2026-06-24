@@ -26,7 +26,7 @@ export const isPostgres = !!DATABASE_URL;
  */
 
 // Tables that have an auto-increment `id` column (need RETURNING id on pg).
-const ID_TABLES = new Set(["users", "orders", "location_history"]);
+const ID_TABLES = new Set(["users", "orders", "location_history", "messages"]);
 
 function insertTable(sql) {
   const m = /^\s*insert\s+into\s+["`\[]?(\w+)/i.exec(sql);
@@ -220,9 +220,21 @@ export async function init() {
       CREATE INDEX IF NOT EXISTS idx_orders_driver ON orders(driver_id);
       CREATE INDEX IF NOT EXISTS idx_lh_order ON location_history(order_id);
       CREATE INDEX IF NOT EXISTS idx_lh_driver ON location_history(driver_id);
+
+      CREATE TABLE IF NOT EXISTS messages (
+        id          SERIAL PRIMARY KEY,
+        driver_id   INTEGER NOT NULL,
+        sender_id   INTEGER NOT NULL,
+        sender_role TEXT NOT NULL,
+        body        TEXT NOT NULL,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_messages_driver ON messages(driver_id);
     `);
     // rating column (safe add for existing tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rating INTEGER"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS picked_up_at TIMESTAMP"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS on_the_way_at TIMESTAMP"); } catch (_) {}
   } else {
     await impl.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -288,9 +300,21 @@ export async function init() {
       CREATE INDEX IF NOT EXISTS idx_orders_driver ON orders(driver_id);
       CREATE INDEX IF NOT EXISTS idx_lh_order ON location_history(order_id);
       CREATE INDEX IF NOT EXISTS idx_lh_driver ON location_history(driver_id);
+
+      CREATE TABLE IF NOT EXISTS messages (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        driver_id   INTEGER NOT NULL,
+        sender_id   INTEGER NOT NULL,
+        sender_role TEXT NOT NULL,
+        body        TEXT NOT NULL,
+        created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_messages_driver ON messages(driver_id);
     `);
     // rating column (safe add for existing sqlite tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN rating INTEGER"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN picked_up_at TEXT"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN on_the_way_at TEXT"); } catch (_) {}
     impl._save();
   }
 }

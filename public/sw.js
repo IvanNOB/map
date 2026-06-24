@@ -1,5 +1,5 @@
 /* Service Worker - Agencia de Domicilios PWA */
-const CACHE = "domicilios-v1";
+const CACHE = "domicilios-v2";
 const ASSETS = [
   "/",
   "/index.html",
@@ -9,6 +9,7 @@ const ASSETS = [
   "/js/dispatcher.js",
   "/js/driver.js",
   "/js/customer.js",
+  "/js/pwa.js",
   "/manifest.json",
   "/icon.svg",
 ];
