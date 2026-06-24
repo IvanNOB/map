@@ -1370,3 +1370,45 @@ html, body { transition: background 0.3s ease, color 0.3s ease; }
   .chat-contacts { max-height: 120px; display: flex; flex-wrap: wrap; gap: 0.3rem; }
   .chat-panel { height: 60vh; }
 }
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEJORAS v5: configuracion, cierre de caja, ganancias
+   ═══════════════════════════════════════════════════════════════════════════ */
+.config-card {
+  max-width: 480px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+.cash-section { margin-top: 2rem; }
+.cash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.cash-table th, .cash-table td {
+  padding: 0.6rem 0.8rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+.cash-table th { background: var(--bg-alt); color: var(--text-muted); font-weight: 600; }
+.cash-table th:first-child, .cash-table td:first-child { text-align: left; }
+.cash-table tr.total-row td { font-weight: 700; background: var(--bg-alt); border-top: 2px solid var(--border); }
+
+.earnings-card {
+  background: linear-gradient(135deg, var(--success), #16a34a);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.3rem;
+  margin-bottom: 1rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.earnings-card .e-value { font-size: 1.6rem; font-weight: 700; }
+.earnings-card .e-label { font-size: 0.8rem; opacity: 0.9; }
+.earnings-card .e-sub { font-size: 0.78rem; opacity: 0.85; text-align: right; }

@@ -48,6 +48,7 @@
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
         <button class="tab-btn" data-tab="chat">Chat</button>
         <button class="tab-btn" data-tab="reportes">Reportes</button>
+        <button class="tab-btn" data-tab="config">Config</button>
       </div>
       <div class="navbar-right">
         <span class="conn-indicator" id="conn-dot" title="Estado de conexion"></span>
@@ -169,6 +170,16 @@
               <canvas id="chart-revenue"></canvas>
             </div>
           </div>
+
+          <!-- Cierre de caja -->
+          <div class="cash-section">
+            <div class="toolbar">
+              <h2 style="font-size:1.05rem;">📒 Cierre de caja diario</h2>
+              <input type="date" id="cash-date" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);">
+              <button class="btn btn-primary btn-sm" id="btn-load-cash">Ver caja</button>
+            </div>
+            <div id="cash-table"></div>
+          </div>
         </div>
       </section>
 
@@ -186,6 +197,31 @@
               <button class="btn btn-primary btn-sm" id="chat-send" disabled>Enviar</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Config View -->
+      <section id="view-config" class="hidden">
+        <div class="config-card">
+          <h2 style="font-size:1.1rem;margin-bottom:1rem;">⚙️ Configuracion</h2>
+          <div class="form-group">
+            <label>Nombre de la agencia</label>
+            <input type="text" id="cfg-agency_name">
+          </div>
+          <div class="form-group">
+            <label>Tarifa base (COP)</label>
+            <input type="number" id="cfg-fare_base" min="0">
+          </div>
+          <div class="form-group">
+            <label>Tarifa por km (COP)</label>
+            <input type="number" id="cfg-fare_per_km" min="0">
+          </div>
+          <div class="form-group">
+            <label>Comision del repartidor (%)</label>
+            <input type="number" id="cfg-driver_commission_pct" min="0" max="100">
+            <small style="color:var(--text-muted);">Porcentaje del valor del pedido que gana el repartidor. El resto queda para la agencia.</small>
+          </div>
+          <button class="btn btn-primary" id="btn-save-config">Guardar configuracion</button>
         </div>
       </section>
     </main>
