@@ -439,7 +439,8 @@
           </div>
         </div>
         <div class="order-actions">
-          ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar Repartidor</button>' : ''}
+          ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar</button>' : ''}
+          ${order.status === 'pending' ? '<button class="btn btn-outline btn-sm" data-auto="' + order.id + '" title="Asignar al repartidor disponible mas cercano">⚡ Auto-asignar</button>' : ''}
           ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-route="' + order.id + '">Ver Ruta</button>' : ''}
           <button class="btn btn-outline btn-sm" data-copy-link="${escapeHtml(order.code)}">Copiar Link</button>
           ${waBtn}
@@ -452,6 +453,9 @@
     // Event delegation for order actions
     ordersList.querySelectorAll('[data-assign]').forEach((btn) => {
       btn.addEventListener('click', () => openAssignModal(parseInt(btn.dataset.assign)));
+    });
+    ordersList.querySelectorAll('[data-auto]').forEach((btn) => {
+      btn.addEventListener('click', () => autoAssign(parseInt(btn.dataset.auto)));
     });
     ordersList.querySelectorAll('[data-cancel]').forEach((btn) => {
       btn.addEventListener('click', () => cancelOrder(parseInt(btn.dataset.cancel)));
@@ -574,6 +578,7 @@
   function openOrderModal() {
     modalNewOrder.classList.remove('hidden');
     resetPicker();
+    loadCustomers();
     setTimeout(() => {
       if (!pickerMap) {
         pickerMap = L.map('picker-map').setView([4.6097, -74.0817], 12);
@@ -591,6 +596,39 @@
 
   btnNewOrder.addEventListener('click', openOrderModal);
   btnCancelOrderForm.addEventListener('click', () => modalNewOrder.classList.add('hidden'));
+
+  // ─── Customer autocomplete ──────────────────────────────────────────────────
+  let customersCache = [];
+  async function loadCustomers() {
+    try {
+      const res = await apiFetch('/api/customers');
+      if (!res.ok) return;
+      customersCache = await res.json();
+      const dl = document.getElementById('customers-list');
+      if (dl) {
+        dl.innerHTML = customersCache.map((c) =>
+          '<option value="' + escapeHtml(c.name) + '"></option>'
+        ).join('');
+      }
+    } catch {}
+  }
+  (function bindCustomerAutofill() {
+    const nameInput = document.getElementById('customer_name');
+    if (!nameInput) return;
+    nameInput.addEventListener('change', () => {
+      const match = customersCache.find(
+        (c) => c.name.trim().toLowerCase() === nameInput.value.trim().toLowerCase()
+      );
+      if (!match) return;
+      const phone = document.getElementById('customer_phone');
+      const drop = document.getElementById('dropoff_address');
+      const pick = document.getElementById('pickup_address');
+      if (phone && !phone.value) phone.value = match.phone || '';
+      if (drop && !drop.value) drop.value = match.last_dropoff || '';
+      if (pick && !pick.value) pick.value = match.last_pickup || '';
+      if ((pick && pick.value) || (drop && drop.value)) showToast('Datos del cliente autocompletados', 'info');
+    });
+  })();
 
   document.getElementById('btn-reset-pins').addEventListener('click', resetPicker);
   document.getElementById('btn-geocode').addEventListener('click', async () => {
@@ -670,14 +708,20 @@
   btnConfirmAssign.addEventListener('click', async () => {
     const driverId = parseInt(assignSelect.value);
     if (!driverId || !assigningOrderId) return;
+    const notifyWa = document.getElementById('notify-wa');
+    const wantWa = notifyWa ? notifyWa.checked : false;
+    const orderId = assigningOrderId;
     try {
-      const res = await apiFetch('/api/orders/' + assigningOrderId + '/assign', {
+      const res = await apiFetch('/api/orders/' + orderId + '/assign', {
         method: 'POST',
         body: JSON.stringify({ driver_id: driverId }),
       });
       if (res.ok) {
+        const order = await res.json();
+        const driver = drivers.find((d) => d.id === driverId);
         showToast('Repartidor asignado', 'success');
         modalAssign.classList.add('hidden');
+        if (wantWa) notifyCustomerWhatsApp(order, driver ? driver.name : '');
         loadOrders();
         loadStats();
       } else {
@@ -688,6 +732,36 @@
       showToast('Error de conexion', 'error');
     }
   });
+
+  // Auto-assign to nearest available driver
+  async function autoAssign(orderId) {
+    try {
+      const res = await apiFetch('/api/orders/' + orderId + '/auto-assign', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Asignado automaticamente a ' + (data.driver_name || 'repartidor'), 'success');
+        notifyCustomerWhatsApp(data.order, data.driver_name || '');
+        loadOrders();
+        loadStats();
+      } else {
+        showToast(data.error || 'No se pudo auto-asignar', 'warning');
+      }
+    } catch {
+      showToast('Error de conexion', 'error');
+    }
+  }
+
+  // Open WhatsApp compose with tracking link (customer notification)
+  function notifyCustomerWhatsApp(order, driverName) {
+    if (!order || !order.customer_phone) return;
+    const digits = String(order.customer_phone).replace(/[^0-9]/g, '');
+    if (!digits) return;
+    const url = location.origin + '/customer.html?code=' + encodeURIComponent(order.code);
+    let msg = 'Hola! Tu pedido ' + order.code + ' ya tiene repartidor';
+    if (driverName) msg += ' (' + driverName + ')';
+    msg += '. Sigue tu entrega en tiempo real aqui: ' + url;
+    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(msg), '_blank');
+  }
 
   // ─── Cancel Order ──────────────────────────────────────────────────────────
 
