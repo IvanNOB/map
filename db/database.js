@@ -26,7 +26,7 @@ export const isPostgres = !!DATABASE_URL;
  */
 
 // Tables that have an auto-increment `id` column (need RETURNING id on pg).
-const ID_TABLES = new Set(["users", "orders", "location_history", "messages"]);
+const ID_TABLES = new Set(["users", "orders", "location_history", "messages", "zones"]);
 
 function insertTable(sql) {
   const m = /^\s*insert\s+into\s+["`\[]?(\w+)/i.exec(sql);
@@ -252,10 +252,20 @@ export async function init() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_log(created_at);
+
+      CREATE TABLE IF NOT EXISTS zones (
+        id         SERIAL PRIMARY KEY,
+        name       TEXT NOT NULL,
+        lat        DOUBLE PRECISION NOT NULL,
+        lng        DOUBLE PRECISION NOT NULL,
+        radius_km  DOUBLE PRECISION NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     // rating column (safe add for existing tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rating INTEGER"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS review TEXT"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS picked_up_at TIMESTAMP"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS on_the_way_at TIMESTAMP"); } catch (_) {}
   } else {
@@ -355,10 +365,20 @@ export async function init() {
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
       CREATE INDEX IF NOT EXISTS idx_activity_created ON activity_log(created_at);
+
+      CREATE TABLE IF NOT EXISTS zones (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        name       TEXT NOT NULL,
+        lat        REAL NOT NULL,
+        lng        REAL NOT NULL,
+        radius_km  REAL NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
     `);
     // rating column (safe add for existing sqlite tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN rating INTEGER"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN review TEXT"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN scheduled_at TEXT"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN picked_up_at TEXT"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN on_the_way_at TEXT"); } catch (_) {}
     impl._save();

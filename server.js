@@ -16,6 +16,7 @@ import chatRouter from "./src/chat.js";
 import customersRouter from "./src/customers.js";
 import settingsRouter from "./src/settings.js";
 import activityRouter from "./src/activity.js";
+import zonesRouter from "./src/zones.js";
 import { notifyAdmins } from "./src/notifications.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -70,6 +71,9 @@ app.use("/api/settings", settingsRouter);
 
 // Activity log (auditoria)
 app.use("/api/activity", activityRouter);
+
+// Coverage zones
+app.use("/api/zones", zonesRouter);
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 

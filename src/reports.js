@@ -9,6 +9,45 @@ const router = Router();
 // date(col) = ?  vs  col::date = ?::date
 const dateEq = (col) => (db.isPostgres ? `${col}::date = ?::date` : `date(${col}) = ?`);
 
+// ─── GET /api/reports/dashboard - advanced stats (admin) ────────────────────
+router.get("/dashboard", requireAuth, requireRole("admin"), async (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Orders per hour (today)
+  const hourExpr = db.isPostgres
+    ? "EXTRACT(HOUR FROM created_at)::int"
+    : "CAST(strftime('%H', created_at) AS INTEGER)";
+  const hourRows = await db.all(
+    `SELECT ${hourExpr} AS hour, ${COUNT_INT} AS count
+     FROM orders WHERE ${dateEq("created_at")}
+     GROUP BY ${hourExpr} ORDER BY hour`,
+    [today]
+  );
+  const ordersByHour = Array(24).fill(0);
+  for (const r of hourRows) {
+    const h = Number(r.hour);
+    if (h >= 0 && h < 24) ordersByHour[h] = Number(r.count);
+  }
+
+  // Driver ranking (by deliveries, all time)
+  const ranking = await db.all(
+    `SELECT u.name,
+            (SELECT ${COUNT_INT} FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered') AS deliveries,
+            (SELECT ROUND(AVG(rating), 1) FROM orders o WHERE o.driver_id = u.id AND o.rating IS NOT NULL) AS avg_rating
+     FROM users u WHERE u.role = 'driver'
+     ORDER BY deliveries DESC`
+  );
+
+  res.json({
+    orders_by_hour: ordersByHour,
+    driver_ranking: ranking.map((r) => ({
+      name: r.name,
+      deliveries: Number(r.deliveries) || 0,
+      avg_rating: r.avg_rating != null ? Number(r.avg_rating) : null,
+    })),
+  });
+});
+
 // ─── GET /api/reports/cash?date=YYYY-MM-DD ── daily cash reconciliation (admin)
 router.get("/cash", requireAuth, requireRole("admin"), async (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);

@@ -24,6 +24,8 @@
   // Charts
   let chartStatus = null;
   let chartRevenue = null;
+  let chartHours = null;
+  let chartRanking = null;
   let searchTerm = '';
 
   // ─── Pin icon helpers (colored pickup/dropoff/driver markers) ───────────────
@@ -286,12 +288,117 @@
       }
       if (tab === 'config') {
         loadConfig();
+        initZoneMap();
+        loadZones();
       }
       if (tab === 'actividad') {
         loadActivity();
       }
     });
   });
+
+  // ─── Coverage zones ─────────────────────────────────────────────────────────
+  let zones = [];
+  let zoneMap = null;
+  let zoneNewMarker = null;
+  let zoneNewCenter = null;
+  let zoneCircles = [];
+
+  function initZoneMap() {
+    if (zoneMap) { zoneMap.invalidateSize(); return; }
+    zoneMap = L.map('zone-map').setView([4.6097, -74.0817], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(zoneMap);
+    zoneMap.on('click', (e) => {
+      zoneNewCenter = e.latlng;
+      if (zoneNewMarker) zoneNewMarker.setLatLng(e.latlng);
+      else zoneNewMarker = L.marker(e.latlng).addTo(zoneMap);
+    });
+    setTimeout(() => zoneMap.invalidateSize(), 200);
+  }
+
+  async function loadZones() {
+    try {
+      const res = await apiFetch('/api/zones');
+      if (!res.ok) return;
+      zones = await res.json();
+      renderZoneList();
+      drawZoneCircles();
+      drawZonesOnMainMap();
+    } catch {}
+  }
+
+  function renderZoneList() {
+    const box = document.getElementById('zone-list');
+    if (!box) return;
+    if (zones.length === 0) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;">Sin zonas. La cobertura no se valida.</p>'; return; }
+    box.innerHTML = zones.map((z) =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
+      '<span>📍 ' + escapeHtml(z.name) + ' (' + z.radius_km + ' km)</span>' +
+      '<button class="btn btn-danger btn-sm" data-zone-del="' + z.id + '">Eliminar</button></div>'
+    ).join('');
+    box.querySelectorAll('[data-zone-del]').forEach((b) => {
+      b.addEventListener('click', () => deleteZone(parseInt(b.dataset.zoneDel)));
+    });
+  }
+
+  function drawZoneCircles() {
+    if (!zoneMap) return;
+    zoneCircles.forEach((c) => zoneMap.removeLayer(c));
+    zoneCircles = [];
+    zones.forEach((z) => {
+      const c = L.circle([z.lat, z.lng], { radius: z.radius_km * 1000, color: '#22c55e', fillOpacity: 0.08 })
+        .bindPopup(escapeHtml(z.name)).addTo(zoneMap);
+      zoneCircles.push(c);
+    });
+  }
+
+  let mainMapZoneCircles = [];
+  function drawZonesOnMainMap() {
+    if (!map) return;
+    mainMapZoneCircles.forEach((c) => map.removeLayer(c));
+    mainMapZoneCircles = [];
+    zones.forEach((z) => {
+      const c = L.circle([z.lat, z.lng], { radius: z.radius_km * 1000, color: '#22c55e', weight: 1, fillOpacity: 0.05, dashArray: '4,6' }).addTo(map);
+      mainMapZoneCircles.push(c);
+    });
+  }
+
+  const btnAddZone = document.getElementById('btn-add-zone');
+  if (btnAddZone) {
+    btnAddZone.addEventListener('click', async () => {
+      const name = document.getElementById('zone-name').value.trim();
+      const radius = parseFloat(document.getElementById('zone-radius').value);
+      if (!name) { showToast('Escribe un nombre de zona', 'warning'); return; }
+      if (!zoneNewCenter) { showToast('Haz clic en el mapa para fijar el centro', 'warning'); return; }
+      if (!radius || radius <= 0) { showToast('Radio invalido', 'warning'); return; }
+      try {
+        const res = await apiFetch('/api/zones', {
+          method: 'POST',
+          body: JSON.stringify({ name, lat: zoneNewCenter.lat, lng: zoneNewCenter.lng, radius_km: radius }),
+        });
+        if (res.ok) {
+          showToast('Zona agregada', 'success');
+          document.getElementById('zone-name').value = '';
+          if (zoneNewMarker) { zoneMap.removeLayer(zoneNewMarker); zoneNewMarker = null; }
+          zoneNewCenter = null;
+          loadZones();
+        } else showToast('Error al agregar zona', 'error');
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
+  async function deleteZone(id) {
+    try {
+      const res = await apiFetch('/api/zones/' + id, { method: 'DELETE' });
+      if (res.ok) { showToast('Zona eliminada', 'success'); loadZones(); }
+    } catch {}
+  }
+
+  // Coverage check used by the order picker
+  function isWithinCoverage(lat, lng) {
+    if (zones.length === 0) return true; // no zones defined => no restriction
+    return zones.some((z) => haversineKm(lat, lng, z.lat, z.lng) <= z.radius_km);
+  }
 
   // ─── Activity log ───────────────────────────────────────────────────────────
   async function loadActivity() {
@@ -475,7 +582,7 @@
   // ─── Data Loading ───────────────────────────────────────────────────────────
 
   async function loadData() {
-    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings()]);
+    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones()]);
   }
 
   async function loadStats() {
@@ -556,6 +663,7 @@
             <span>${escapeHtml(formatTime(order.created_at))}</span>
             ${order.amount ? '<span>$' + escapeHtml(String(order.amount)) + '</span>' : ''}
             ${order.estimated_distance_km ? '<span>📏 ' + escapeHtml(String(order.estimated_distance_km)) + ' km</span>' : ''}
+            ${order.scheduled_at ? '<span title="Programado">📅 ' + escapeHtml(formatTime(order.scheduled_at)) + '</span>' : ''}
           </div>
         </div>
         <div class="order-actions">
@@ -664,6 +772,9 @@
       const amountInput = formNewOrder.querySelector('[name="amount"]');
       if (amountInput && (!amountInput.value || amountInput.value === '0')) amountInput.value = fare;
       pickerLine = L.polyline([[plat, plng], [dlat, dlng]], { color: '#f59e0b', weight: 2, dashArray: '6,8' }).addTo(pickerMap);
+      if (!isWithinCoverage(dlat, dlng)) {
+        hint.innerHTML += '<div style="color:var(--danger);margin-top:4px;">⚠️ La entrega esta fuera de las zonas de cobertura.</div>';
+      }
     } else {
       hint.textContent = '';
     }
@@ -793,6 +904,7 @@
       notes: fd.get('notes'),
       amount: parseFloat(fd.get('amount')) || 0,
       payment_method: fd.get('payment_method'),
+      scheduled_at: fd.get('scheduled_at') ? fd.get('scheduled_at').replace('T', ' ') + ':00' : undefined,
     };
     try {
       const res = await apiFetch('/api/orders', {
@@ -1022,6 +1134,7 @@
     });
 
     renderOrderPins();
+    if (typeof drawZonesOnMainMap === 'function') drawZonesOnMainMap();
   }
 
   // Draw pickup (green) + dropoff (red) markers and a connecting line for active orders
@@ -1329,6 +1442,53 @@
         },
       },
     });
+
+    renderDashboardCharts(textColor);
+  }
+
+  // Advanced dashboard charts: orders by hour + driver ranking
+  async function renderDashboardCharts(textColor) {
+    if (typeof Chart === 'undefined') return;
+    try {
+      const res = await apiFetch('/api/reports/dashboard');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const hours = data.orders_by_hour || [];
+      if (chartHours) chartHours.destroy();
+      chartHours = new Chart(document.getElementById('chart-hours'), {
+        type: 'bar',
+        data: {
+          labels: hours.map((_, i) => i + 'h'),
+          datasets: [{ label: 'Pedidos', data: hours, backgroundColor: '#3b82f6', borderRadius: 3 }],
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, grid: { display: false } },
+            y: { ticks: { color: textColor, precision: 0 }, grid: { color: 'rgba(128,128,128,0.15)' } },
+          },
+        },
+      });
+
+      const rank = (data.driver_ranking || []).slice(0, 8);
+      if (chartRanking) chartRanking.destroy();
+      chartRanking = new Chart(document.getElementById('chart-ranking'), {
+        type: 'bar',
+        data: {
+          labels: rank.map((r) => r.name),
+          datasets: [{ label: 'Entregas', data: rank.map((r) => r.deliveries), backgroundColor: '#22c55e', borderRadius: 4 }],
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor, precision: 0 }, grid: { color: 'rgba(128,128,128,0.15)' } },
+            y: { ticks: { color: textColor }, grid: { display: false } },
+          },
+        },
+      });
+    } catch {}
   }
 
   // ─── Auto Refresh ──────────────────────────────────────────────────────────
