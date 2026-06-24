@@ -53,5 +53,44 @@ router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
   res.status(201).json({ id, name, email: normalizedEmail, role: "driver", phone, vehicle, plate, status: "offline" });
 });
 
+// PUT /api/drivers/:id  (admin only) — edit a driver (and optional password)
+router.put("/:id", requireAuth, requireRole("admin"), async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { name, phone, vehicle, plate, password } = req.body || {};
+
+  const user = await db.get("SELECT id, role FROM users WHERE id = ?", [id]);
+  if (!user || user.role !== "driver") return res.status(404).json({ error: "Repartidor no encontrado" });
+
+  if (name) await db.run("UPDATE users SET name = ? WHERE id = ?", [name.trim(), id]);
+  if (password) await db.run("UPDATE users SET password = ? WHERE id = ?", [bcrypt.hashSync(password, 10), id]);
+  await db.run(
+    `UPDATE drivers SET
+       phone = COALESCE(?, phone),
+       vehicle = COALESCE(?, vehicle),
+       plate = COALESCE(?, plate)
+     WHERE user_id = ?`,
+    [phone ?? null, vehicle ?? null, plate ?? null, id]
+  );
+
+  logActivity(req.user, "driver_updated", "Repartidor #" + id + " actualizado");
+  res.json({ ok: true });
+});
+
+// DELETE /api/drivers/:id  (admin only) — delete a driver
+router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const user = await db.get("SELECT id, role, name FROM users WHERE id = ?", [id]);
+  if (!user || user.role !== "driver") return res.status(404).json({ error: "Repartidor no encontrado" });
+
+  // Explicit cleanup (sql.js doesn't enforce FK cascade/set-null)
+  await db.run("UPDATE orders SET driver_id = NULL WHERE driver_id = ?", [id]);
+  await db.run("DELETE FROM drivers WHERE user_id = ?", [id]);
+  await db.run("DELETE FROM push_subscriptions WHERE user_id = ?", [id]);
+  await db.run("DELETE FROM messages WHERE driver_id = ?", [id]);
+  await db.run("DELETE FROM users WHERE id = ?", [id]);
+  logActivity(req.user, "driver_deleted", "Repartidor eliminado: " + user.name);
+  res.json({ ok: true });
+});
+
 export { listDrivers };
 export default router;

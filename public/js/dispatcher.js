@@ -214,10 +214,11 @@
     userName.textContent = currentUser.name;
     loadData();
     initSocket();
-    // Request notification permission
+    // Request notification permission + subscribe to push
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+    if (window.enablePush) window.enablePush(token);
   }
 
   loginForm.addEventListener('submit', async (e) => {
@@ -1048,10 +1049,66 @@
           ${d.phone ? '<div>Tel: ' + escapeHtml(d.phone) + '</div>' : ''}
           ${d.email ? '<div>Email: ' + escapeHtml(d.email) + '</div>' : ''}
         </div>
+        <div class="order-actions" style="margin-top:0.6rem;">
+          <button class="btn btn-outline btn-sm" data-edit-driver="${d.id}">Editar</button>
+          <button class="btn btn-danger btn-sm" data-del-driver="${d.id}">Eliminar</button>
+        </div>
       `;
       driversGrid.appendChild(card);
     });
+
+    driversGrid.querySelectorAll('[data-edit-driver]').forEach((b) => {
+      b.addEventListener('click', () => openEditDriver(parseInt(b.dataset.editDriver)));
+    });
+    driversGrid.querySelectorAll('[data-del-driver]').forEach((b) => {
+      b.addEventListener('click', () => deleteDriver(parseInt(b.dataset.delDriver)));
+    });
   }
+
+  // ─── Edit / Delete driver ───────────────────────────────────────────────────
+  function openEditDriver(id) {
+    const d = drivers.find((x) => x.id === id);
+    if (!d) return;
+    document.getElementById('edit-driver-id').value = id;
+    document.getElementById('edit-driver-name').value = d.name || '';
+    document.getElementById('edit-driver-phone').value = d.phone || '';
+    document.getElementById('edit-driver-vehicle').value = d.vehicle || '';
+    document.getElementById('edit-driver-plate').value = d.plate || '';
+    document.getElementById('edit-driver-password').value = '';
+    document.getElementById('modal-edit-driver').classList.remove('hidden');
+  }
+
+  async function deleteDriver(id) {
+    const d = drivers.find((x) => x.id === id);
+    if (!confirm('¿Eliminar al repartidor ' + (d ? d.name : '') + '? Esta accion no se puede deshacer.')) return;
+    try {
+      const res = await apiFetch('/api/drivers/' + id, { method: 'DELETE' });
+      if (res.ok) { showToast('Repartidor eliminado', 'success'); loadDrivers(); }
+      else { const e = await res.json(); showToast(e.error || 'Error al eliminar', 'error'); }
+    } catch { showToast('Error de conexion', 'error'); }
+  }
+
+  (function bindEditDriver() {
+    const modal = document.getElementById('modal-edit-driver');
+    if (!modal) return;
+    document.getElementById('btn-cancel-edit-driver').addEventListener('click', () => modal.classList.add('hidden'));
+    document.getElementById('btn-save-edit-driver').addEventListener('click', async () => {
+      const id = document.getElementById('edit-driver-id').value;
+      const body = {
+        name: document.getElementById('edit-driver-name').value,
+        phone: document.getElementById('edit-driver-phone').value,
+        vehicle: document.getElementById('edit-driver-vehicle').value,
+        plate: document.getElementById('edit-driver-plate').value,
+      };
+      const pwd = document.getElementById('edit-driver-password').value;
+      if (pwd) body.password = pwd;
+      try {
+        const res = await apiFetch('/api/drivers/' + id, { method: 'PUT', body: JSON.stringify(body) });
+        if (res.ok) { showToast('Repartidor actualizado', 'success'); modal.classList.add('hidden'); loadDrivers(); }
+        else showToast('Error al actualizar', 'error');
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  })();
 
   // ─── Create Driver ─────────────────────────────────────────────────────────
 

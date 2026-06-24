@@ -17,6 +17,7 @@ import customersRouter from "./src/customers.js";
 import settingsRouter from "./src/settings.js";
 import activityRouter from "./src/activity.js";
 import zonesRouter from "./src/zones.js";
+import pushRouter, { initPush } from "./src/push.js";
 import { notifyAdmins } from "./src/notifications.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -74,6 +75,9 @@ app.use("/api/activity", activityRouter);
 
 // Coverage zones
 app.use("/api/zones", zonesRouter);
+
+// Web Push notifications
+app.use("/api/push", pushRouter);
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 
@@ -247,6 +251,7 @@ setInterval(async () => {
 // ─── Start Server ────────────────────────────────────────────────────────────
 
 await init();
+await initPush();
 
 httpServer.listen(PORT, () => {
   console.log(`\n  Delivery Platform corriendo en http://localhost:${PORT}`);

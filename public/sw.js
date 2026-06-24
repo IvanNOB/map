@@ -1,5 +1,5 @@
 /* Service Worker - Agencia de Domicilios PWA */
-const CACHE = "domicilios-v3";
+const CACHE = "domicilios-v4";
 const ASSETS = [
   "/",
   "/index.html",
@@ -46,5 +46,34 @@ self.addEventListener("fetch", (event) => {
         return res;
       })
       .catch(() => caches.match(request).then((r) => r || caches.match("/")))
+  );
+});
+
+// ─── Push notifications ──────────────────────────────────────────────────────
+self.addEventListener("push", (event) => {
+  let data = { title: "Agencia de Domicilios", body: "Tienes una notificacion", url: "/" };
+  try {
+    if (event.data) data = Object.assign(data, event.data.json());
+  } catch (e) {}
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: data.url || "/" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.includes(url) && "focus" in c) return c.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
   );
 });

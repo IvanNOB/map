@@ -381,6 +381,25 @@
     </div>
   </div>
 
+  <!-- Edit Driver Modal -->
+  <div id="modal-edit-driver" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Editar Repartidor</h2>
+      <input type="hidden" id="edit-driver-id">
+      <div class="form-group"><label>Nombre</label><input type="text" id="edit-driver-name"></div>
+      <div class="form-group"><label>Telefono</label><input type="text" id="edit-driver-phone"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Vehiculo</label><input type="text" id="edit-driver-vehicle"></div>
+        <div class="form-group"><label>Placa</label><input type="text" id="edit-driver-plate"></div>
+      </div>
+      <div class="form-group"><label>Nueva contraseña (opcional)</label><input type="password" id="edit-driver-password" placeholder="Dejar vacio para no cambiar"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="btn-cancel-edit-driver">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-save-edit-driver">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Proof Image Modal -->
   <div id="modal-proof" class="modal-overlay hidden">
     <div class="modal" style="max-width:520px;">
