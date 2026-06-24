@@ -159,13 +159,14 @@ export default function createOrdersRouter(io) {
         break;
       } catch (err) {
         // If it's a UNIQUE constraint error on code, retry with a new code
-        if (err.code === "SQLITE_CONSTRAINT_UNIQUE" || (err.message && err.message.includes("UNIQUE"))) {
+        if (err.message && (err.message.includes("UNIQUE") || err.message.includes("unique"))) {
           if (attempt === MAX_RETRIES - 1) {
             return res.status(500).json({ error: "No se pudo generar un codigo unico para la orden" });
           }
           continue;
         }
         // For any other DB error, return 500
+        console.error("Error creating order:", err.message);
         return res.status(500).json({ error: "Error al crear la orden" });
       }
     }

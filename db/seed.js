@@ -8,20 +8,26 @@ import db from "./database.js";
 function seed() {
   const hash = (pwd) => bcrypt.hashSync(pwd, 10);
 
-  const upsertUser = db.prepare(`
-    INSERT INTO users (name, email, password, role)
-    VALUES (@name, @email, @password, @role)
-    ON CONFLICT(email) DO NOTHING
-  `);
-  const getUserByEmail = db.prepare(`SELECT * FROM users WHERE email = ?`);
-  const upsertDriver = db.prepare(`
-    INSERT INTO drivers (user_id, phone, vehicle, plate, status)
-    VALUES (@user_id, @phone, @vehicle, @plate, 'offline')
-    ON CONFLICT(user_id) DO NOTHING
-  `);
+  function upsertUser({ name, email, password, role }) {
+    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+    if (existing) return;
+    db.prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)")
+      .run(name, email, password, role);
+  }
+
+  function getUserByEmail(email) {
+    return db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+  }
+
+  function upsertDriver({ user_id, phone, vehicle, plate }) {
+    const existing = db.prepare("SELECT user_id FROM drivers WHERE user_id = ?").get(user_id);
+    if (existing) return;
+    db.prepare("INSERT INTO drivers (user_id, phone, vehicle, plate, status) VALUES (?, ?, ?, ?, 'offline')")
+      .run(user_id, phone, vehicle, plate);
+  }
 
   // Admin / dispatcher
-  upsertUser.run({
+  upsertUser({
     name: "Administrador",
     email: "admin@agencia.com",
     password: hash("admin123"),
@@ -36,52 +42,47 @@ function seed() {
   ];
 
   for (const d of drivers) {
-    upsertUser.run({
+    upsertUser({
       name: d.name,
       email: d.email,
       password: hash("driver123"),
       role: "driver",
     });
-    const user = getUserByEmail.get(d.email);
-    upsertDriver.run({
-      user_id: user.id,
-      phone: d.phone,
-      vehicle: d.vehicle,
-      plate: d.plate,
-    });
+    const user = getUserByEmail(d.email);
+    if (user) {
+      upsertDriver({
+        user_id: user.id,
+        phone: d.phone,
+        vehicle: d.vehicle,
+        plate: d.plate,
+      });
+    }
   }
 
   // A couple of demo orders (pending, unassigned) around Bogotá.
-  const orderCount = db.prepare(`SELECT COUNT(*) AS c FROM orders`).get().c;
+  const orderCount = db.prepare("SELECT COUNT(*) AS c FROM orders").get().c;
   if (orderCount === 0) {
-    const insertOrder = db.prepare(`
-      INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
+    db.prepare(
+      `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
                           dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
-      VALUES (@code, @customer_name, @customer_phone, @pickup_address, @pickup_lat, @pickup_lng,
-              @dropoff_address, @dropoff_lat, @dropoff_lng, @items, @amount, @payment_method, 'pending')
-    `);
-    insertOrder.run({
-      code: "ORD-1001",
-      customer_name: "Laura Martínez",
-      customer_phone: "311 555 7788",
-      pickup_address: "Restaurante El Sabor, Cra 7 #45-12",
-      pickup_lat: 4.6285, pickup_lng: -74.0646,
-      dropoff_address: "Calle 53 #10-20, Apto 302",
-      dropoff_lat: 4.6431, dropoff_lng: -74.0628,
-      items: "1 almuerzo ejecutivo, 1 jugo natural",
-      amount: 28000, payment_method: "cash",
-    });
-    insertOrder.run({
-      code: "ORD-1002",
-      customer_name: "Andrés Torres",
-      customer_phone: "312 444 9900",
-      pickup_address: "Farmacia Central, Av. 19 #120-30",
-      pickup_lat: 4.6951, pickup_lng: -74.0360,
-      dropoff_address: "Calle 134 #15-40",
-      dropoff_lat: 4.7110, dropoff_lng: -74.0410,
-      items: "Medicamentos (1 bolsa)",
-      amount: 15000, payment_method: "card",
-    });
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+    ).run(
+      "ORD-1001", "Laura Martínez", "311 555 7788",
+      "Restaurante El Sabor, Cra 7 #45-12", 4.6285, -74.0646,
+      "Calle 53 #10-20, Apto 302", 4.6431, -74.0628,
+      "1 almuerzo ejecutivo, 1 jugo natural", 28000, "cash"
+    );
+
+    db.prepare(
+      `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
+                          dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+    ).run(
+      "ORD-1002", "Andrés Torres", "312 444 9900",
+      "Farmacia Central, Av. 19 #120-30", 4.6951, -74.0360,
+      "Calle 134 #15-40", 4.7110, -74.0410,
+      "Medicamentos (1 bolsa)", 15000, "card"
+    );
   }
 
   console.log("Seed completado.");
@@ -92,3 +93,6 @@ function seed() {
 }
 
 seed();
+
+// Force exit since the database wrapper keeps a timer alive
+setTimeout(() => process.exit(0), 500);
