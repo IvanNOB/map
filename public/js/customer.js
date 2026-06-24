@@ -310,10 +310,15 @@
   }
 
   // ─── Rating ─────────────────────────────────────────────────────────────────
+  let selectedRating = 0;
+
   function handleRating(order) {
     var box = document.getElementById('rating-box');
     var starsWrap = document.getElementById('rating-stars');
     var thanks = document.getElementById('rating-thanks');
+    var comment = document.getElementById('rating-comment');
+    var sendBtn = document.getElementById('btn-send-rating');
+    var proofBtn = document.getElementById('btn-view-proof');
     if (!box) return;
 
     if (order.status !== 'delivered') {
@@ -324,41 +329,63 @@
     var stars = starsWrap.querySelectorAll('.star');
 
     function paint(v) {
-      stars.forEach(function (s) {
-        s.classList.toggle('on', parseInt(s.dataset.v) <= v);
-      });
+      stars.forEach(function (s) { s.classList.toggle('on', parseInt(s.dataset.v) <= v); });
     }
 
+    // Proof of delivery button
+    if (order.has_proof && proofBtn) {
+      proofBtn.classList.remove('hidden');
+      proofBtn.onclick = async function () {
+        try {
+          var res = await fetch('/api/track/' + encodeURIComponent(currentCode) + '/proof');
+          if (res.ok) {
+            var d = await res.json();
+            var img = document.getElementById('cust-proof-img');
+            img.src = d.image; img.style.display = 'block';
+          }
+        } catch (e) {}
+      };
+    } else if (proofBtn) {
+      proofBtn.classList.add('hidden');
+    }
+
+    // Already rated
     if (order.rating) {
       paint(order.rating);
+      if (comment) { comment.value = order.review || ''; comment.disabled = true; }
+      if (sendBtn) sendBtn.style.display = 'none';
       thanks.classList.remove('hidden');
       starsWrap.style.pointerEvents = 'none';
       return;
     }
 
     thanks.classList.add('hidden');
+    if (sendBtn) sendBtn.style.display = '';
+    if (comment) comment.disabled = false;
     starsWrap.style.pointerEvents = 'auto';
+    selectedRating = 0;
     stars.forEach(function (s) {
       s.onmouseenter = function () { paint(parseInt(s.dataset.v)); };
-      s.onclick = function () { submitRating(parseInt(s.dataset.v)); };
+      s.onclick = function () { selectedRating = parseInt(s.dataset.v); paint(selectedRating); };
     });
-    starsWrap.onmouseleave = function () { paint(0); };
+    starsWrap.onmouseleave = function () { paint(selectedRating); };
+    if (sendBtn) sendBtn.onclick = function () { submitRating(selectedRating); };
   }
 
   async function submitRating(value) {
     if (!currentCode) return;
+    if (!value || value < 1) { showToast('Selecciona una calificacion', 'warning'); return; }
+    var comment = document.getElementById('rating-comment');
     try {
       var res = await fetch('/api/track/' + encodeURIComponent(currentCode) + '/rating', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: value }),
+        body: JSON.stringify({ rating: value, comment: comment ? comment.value : '' }),
       });
       if (res.ok) {
-        var starsWrap = document.getElementById('rating-stars');
-        starsWrap.querySelectorAll('.star').forEach(function (s) {
-          s.classList.toggle('on', parseInt(s.dataset.v) <= value);
-        });
-        starsWrap.style.pointerEvents = 'none';
+        document.getElementById('btn-send-rating').style.display = 'none';
+        document.getElementById('rating-stars').style.pointerEvents = 'none';
+        if (comment) comment.disabled = true;
         document.getElementById('rating-thanks').classList.remove('hidden');
         showToast('Gracias por tu calificacion', 'success');
       } else {

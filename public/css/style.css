@@ -1412,3 +1412,39 @@ html, body { transition: background 0.3s ease, color 0.3s ease; }
 .earnings-card .e-value { font-size: 1.6rem; font-weight: 700; }
 .earnings-card .e-label { font-size: 0.8rem; opacity: 0.9; }
 .earnings-card .e-sub { font-size: 0.78rem; opacity: 0.85; text-align: right; }
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEJORAS v6: actividad, prueba de entrega, reseñas
+   ═══════════════════════════════════════════════════════════════════════════ */
+.activity-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.activity-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.84rem;
+  display: flex; gap: 0.6rem; align-items: baseline;
+}
+.activity-item .ai-action {
+  font-weight: 600; color: var(--primary);
+  font-size: 0.72rem; text-transform: uppercase;
+  background: var(--bg-alt); padding: 2px 8px; border-radius: 6px; white-space: nowrap;
+}
+.activity-item .ai-detail { flex: 1; color: var(--text); }
+.activity-item .ai-meta { color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; }
+
+.review-box {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.proof-thumb-btn { display: inline-flex; align-items: center; gap: 4px; }
+
+.rating-comment {
+  width: 100%; margin-top: 0.6rem; padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-alt); color: var(--text); font-size: 0.85rem; resize: vertical;
+}

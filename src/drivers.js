@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import db from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
+import { logActivity } from "./activity.js";
 
 const router = Router();
 
@@ -46,6 +47,8 @@ router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
     "INSERT INTO drivers (user_id, phone, vehicle, plate, status) VALUES (?, ?, ?, ?, 'offline')",
     [id, phone || null, vehicle || null, plate || null]
   );
+
+  logActivity(req.user, "driver_created", "Repartidor creado: " + name);
 
   res.status(201).json({ id, name, email: normalizedEmail, role: "driver", phone, vehicle, plate, status: "offline" });
 });

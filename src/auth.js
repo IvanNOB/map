@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../db/database.js";
+import { logActivity } from "./activity.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const TOKEN_TTL = "12h";
@@ -73,6 +74,8 @@ router.post("/login", async (req, res) => {
     sameSite: "lax",
     maxAge: 12 * 60 * 60 * 1000,
   });
+
+  logActivity(user, "login", user.role + " inicio sesion");
 
   res.json({
     token,

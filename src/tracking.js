@@ -14,7 +14,7 @@ router.get("/:code", async (req, res) => {
             o.dropoff_address, o.dropoff_lat, o.dropoff_lng,
             o.estimated_distance_km, o.estimated_minutes,
             o.created_at, o.assigned_at, o.picked_up_at, o.on_the_way_at, o.delivered_at,
-            o.rating, o.driver_id
+            o.rating, o.review, o.driver_id
      FROM orders o
      WHERE o.code = ?`,
     [code]
@@ -55,6 +55,8 @@ router.get("/:code", async (req, res) => {
     [order.id]
   );
 
+  const proof = await db.get("SELECT order_id FROM order_proofs WHERE order_id = ?", [order.id]);
+
   res.json({
     order: {
       id: order.id,
@@ -75,6 +77,8 @@ router.get("/:code", async (req, res) => {
       on_the_way_at: order.on_the_way_at,
       delivered_at: order.delivered_at,
       rating: order.rating,
+      review: order.review,
+      has_proof: !!proof,
     },
     driver,
     eta_minutes: eta,
@@ -82,9 +86,18 @@ router.get("/:code", async (req, res) => {
   });
 });
 
+// GET /api/track/:code/proof - public proof image by order code
+router.get("/:code/proof", async (req, res) => {
+  const order = await db.get("SELECT id FROM orders WHERE code = ?", [req.params.code]);
+  if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+  const proof = await db.get("SELECT image, created_at FROM order_proofs WHERE order_id = ?", [order.id]);
+  if (!proof) return res.status(404).json({ error: "Sin prueba" });
+  res.json(proof);
+});
+
 // POST /api/track/:code/rating - customer rates a delivered order (public)
 router.post("/:code/rating", async (req, res) => {
-  const { rating } = req.body || {};
+  const { rating, comment } = req.body || {};
   const r = parseInt(rating, 10);
   if (!r || r < 1 || r > 5) {
     return res.status(400).json({ error: "La calificacion debe ser entre 1 y 5" });
@@ -96,7 +109,8 @@ router.post("/:code/rating", async (req, res) => {
     return res.status(400).json({ error: "Solo se pueden calificar pedidos entregados" });
   }
 
-  await db.run("UPDATE orders SET rating = ? WHERE id = ?", [r, order.id]);
+  const review = comment ? String(comment).slice(0, 500) : null;
+  await db.run("UPDATE orders SET rating = ?, review = ? WHERE id = ?", [r, review, order.id]);
   res.json({ ok: true, rating: r });
 });
 
