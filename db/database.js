@@ -261,6 +261,13 @@ export async function init() {
         radius_km  DOUBLE PRECISION NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        endpoint   TEXT PRIMARY KEY,
+        user_id    INTEGER,
+        subscription TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     // rating column (safe add for existing tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rating INTEGER"); } catch (_) {}
@@ -372,6 +379,13 @@ export async function init() {
         lat        REAL NOT NULL,
         lng        REAL NOT NULL,
         radius_km  REAL NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        endpoint   TEXT PRIMARY KEY,
+        user_id    INTEGER,
+        subscription TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
     `);

@@ -154,10 +154,11 @@
     initMap();
     loadDriverChat();
     loadEarnings();
-    // Request notification permission
+    // Request notification permission + subscribe to push
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+    if (window.enablePush) window.enablePush(token);
   }
 
   loginForm.addEventListener('submit', async (e) => {

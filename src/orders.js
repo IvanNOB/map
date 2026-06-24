@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from "./auth.js";
 import { haversineDistance, estimateTime } from "./utils.js";
 import { notifyAdmins, notifyDriver } from "./notifications.js";
 import { logActivity } from "./activity.js";
+import { sendPush } from "./push.js";
 
 /**
  * Orders router factory.
@@ -245,6 +246,10 @@ export default function createOrdersRouter(io) {
     io.to("admins").emit("order:new", order);
     notifyAdmins(io, "order_new", order);
     logActivity(req.user, "order_created", "Pedido " + order.code + " creado");
+    // Push to all admins
+    db.all("SELECT id FROM users WHERE role = 'admin'").then((admins) => {
+      admins.forEach((a) => sendPush(a.id, { title: "Nuevo pedido", body: order.code + " - " + order.customer_name, url: "/" }));
+    }).catch(() => {});
 
     res.status(201).json(order);
   });
@@ -335,6 +340,7 @@ export default function createOrdersRouter(io) {
     io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
 
     logActivity(req.user, "order_assigned", "Pedido " + updated.code + " asignado a repartidor " + driver_id);
+    sendPush(driver_id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
 
     res.json(updated);
   });
@@ -380,6 +386,7 @@ export default function createOrdersRouter(io) {
     io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
 
     logActivity(req.user, "order_auto_assigned", "Pedido " + updated.code + " auto-asignado a " + chosen.name);
+    sendPush(chosen.id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
 
     res.json({ order: updated, driver_name: chosen.name });
   });
