@@ -5,21 +5,20 @@ import { dynamicETA } from "./utils.js";
 const router = Router();
 
 // GET /api/track/:code - public tracking by order code (no auth required)
-router.get("/:code", (req, res) => {
+router.get("/:code", async (req, res) => {
   const code = req.params.code;
 
-  const order = db
-    .prepare(
-      `SELECT o.id, o.code, o.customer_name, o.status,
-              o.pickup_address, o.pickup_lat, o.pickup_lng,
-              o.dropoff_address, o.dropoff_lat, o.dropoff_lng,
-              o.estimated_distance_km, o.estimated_minutes,
-              o.created_at, o.delivered_at,
-              o.driver_id
-       FROM orders o
-       WHERE o.code = ?`
-    )
-    .get(code);
+  const order = await db.get(
+    `SELECT o.id, o.code, o.customer_name, o.status,
+            o.pickup_address, o.pickup_lat, o.pickup_lng,
+            o.dropoff_address, o.dropoff_lat, o.dropoff_lng,
+            o.estimated_distance_km, o.estimated_minutes,
+            o.created_at, o.delivered_at,
+            o.driver_id
+     FROM orders o
+     WHERE o.code = ?`,
+    [code]
+  );
 
   if (!order) {
     return res.status(404).json({ error: "Orden no encontrada" });
@@ -29,14 +28,13 @@ router.get("/:code", (req, res) => {
   let eta = null;
 
   if (order.driver_id) {
-    driver = db
-      .prepare(
-        `SELECT u.name, d.vehicle, d.plate, d.lat, d.lng
-         FROM users u
-         JOIN drivers d ON d.user_id = u.id
-         WHERE u.id = ?`
-      )
-      .get(order.driver_id);
+    driver = await db.get(
+      `SELECT u.name, d.vehicle, d.plate, d.lat, d.lng
+       FROM users u
+       JOIN drivers d ON d.user_id = u.id
+       WHERE u.id = ?`,
+      [order.driver_id]
+    );
 
     // Calculate dynamic ETA if driver has a position and order has dropoff coordinates
     if (
@@ -51,12 +49,11 @@ router.get("/:code", (req, res) => {
   }
 
   // Fetch location history (route) for this order
-  const route = db
-    .prepare(
-      `SELECT lat, lng, timestamp FROM location_history
-       WHERE order_id = ? ORDER BY timestamp ASC`
-    )
-    .all(order.id);
+  const route = await db.all(
+    `SELECT lat, lng, timestamp FROM location_history
+     WHERE order_id = ? ORDER BY timestamp ASC`,
+    [order.id]
+  );
 
   res.json({
     order: {

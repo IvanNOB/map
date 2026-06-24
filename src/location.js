@@ -11,7 +11,7 @@ export default function createLocationRouter(io) {
   const router = Router();
 
   // POST /api/location - driver reports their location
-  router.post("/", requireAuth, (req, res) => {
+  router.post("/", requireAuth, async (req, res) => {
     if (req.user.role !== "driver") {
       return res.status(403).json({ error: "Solo repartidores pueden reportar ubicacion" });
     }
@@ -23,21 +23,21 @@ export default function createLocationRouter(io) {
 
     // Insert into location_history if order_id is provided
     if (order_id) {
-      db.prepare(
-        "INSERT INTO location_history (driver_id, order_id, lat, lng) VALUES (?, ?, ?, ?)"
-      ).run(req.user.id, order_id, lat, lng);
+      await db.run(
+        "INSERT INTO location_history (driver_id, order_id, lat, lng) VALUES (?, ?, ?, ?)",
+        [req.user.id, order_id, lat, lng]
+      );
     }
 
     res.json({ ok: true });
   });
 
   // GET /api/orders/:id/route - get location history for an order
-  router.get("/orders/:id/route", requireAuth, (req, res) => {
-    const points = db
-      .prepare(
-        "SELECT lat, lng, timestamp FROM location_history WHERE order_id = ? ORDER BY timestamp ASC"
-      )
-      .all(req.params.id);
+  router.get("/orders/:id/route", requireAuth, async (req, res) => {
+    const points = await db.all(
+      "SELECT lat, lng, timestamp FROM location_history WHERE order_id = ? ORDER BY timestamp ASC",
+      [req.params.id]
+    );
 
     res.json(points);
   });

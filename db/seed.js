@@ -1,33 +1,42 @@
 import bcrypt from "bcryptjs";
-import db from "./database.js";
+import db, { init } from "./database.js";
 
 /**
- * Seeds the database with a demo admin/dispatcher and a few drivers.
- * Safe to run multiple times: it skips users that already exist.
+ * Seeds the database with a demo admin and a few drivers.
+ * Idempotent: skips users/drivers/orders that already exist, so it is safe
+ * to run on every deploy WITHOUT wiping real data.
  */
-function seed() {
+async function seed() {
+  await init();
+
   const hash = (pwd) => bcrypt.hashSync(pwd, 10);
 
-  function upsertUser({ name, email, password, role }) {
-    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+  async function upsertUser({ name, email, password, role }) {
+    const existing = await db.get("SELECT id FROM users WHERE email = ?", [email]);
     if (existing) return;
-    db.prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)")
-      .run(name, email, password, role);
+    await db.run("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)", [
+      name,
+      email,
+      password,
+      role,
+    ]);
   }
 
-  function getUserByEmail(email) {
-    return db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+  async function getUserByEmail(email) {
+    return db.get("SELECT * FROM users WHERE email = ?", [email]);
   }
 
-  function upsertDriver({ user_id, phone, vehicle, plate }) {
-    const existing = db.prepare("SELECT user_id FROM drivers WHERE user_id = ?").get(user_id);
+  async function upsertDriver({ user_id, phone, vehicle, plate }) {
+    const existing = await db.get("SELECT user_id FROM drivers WHERE user_id = ?", [user_id]);
     if (existing) return;
-    db.prepare("INSERT INTO drivers (user_id, phone, vehicle, plate, status) VALUES (?, ?, ?, ?, 'offline')")
-      .run(user_id, phone, vehicle, plate);
+    await db.run(
+      "INSERT INTO drivers (user_id, phone, vehicle, plate, status) VALUES (?, ?, ?, ?, 'offline')",
+      [user_id, phone, vehicle, plate]
+    );
   }
 
   // Admin / dispatcher
-  upsertUser({
+  await upsertUser({
     name: "Administrador",
     email: "admin@agencia.com",
     password: hash("admin123"),
@@ -42,15 +51,15 @@ function seed() {
   ];
 
   for (const d of drivers) {
-    upsertUser({
+    await upsertUser({
       name: d.name,
       email: d.email,
       password: hash("driver123"),
       role: "driver",
     });
-    const user = getUserByEmail(d.email);
+    const user = await getUserByEmail(d.email);
     if (user) {
-      upsertDriver({
+      await upsertDriver({
         user_id: user.id,
         phone: d.phone,
         vehicle: d.vehicle,
@@ -59,29 +68,31 @@ function seed() {
     }
   }
 
-  // A couple of demo orders (pending, unassigned) around Bogotá.
-  const orderCount = db.prepare("SELECT COUNT(*) AS c FROM orders").get().c;
-  if (orderCount === 0) {
-    db.prepare(
+  // Demo orders (only if the orders table is empty).
+  const { c } = await db.get("SELECT COUNT(*) AS c FROM orders");
+  if (Number(c) === 0) {
+    await db.run(
       `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
                           dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
-    ).run(
-      "ORD-1001", "Laura Martínez", "311 555 7788",
-      "Restaurante El Sabor, Cra 7 #45-12", 4.6285, -74.0646,
-      "Calle 53 #10-20, Apto 302", 4.6431, -74.0628,
-      "1 almuerzo ejecutivo, 1 jugo natural", 28000, "cash"
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        "ORD-1001", "Laura Martínez", "311 555 7788",
+        "Restaurante El Sabor, Cra 7 #45-12", 4.6285, -74.0646,
+        "Calle 53 #10-20, Apto 302", 4.6431, -74.0628,
+        "1 almuerzo ejecutivo, 1 jugo natural", 28000, "cash",
+      ]
     );
 
-    db.prepare(
+    await db.run(
       `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
                           dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
-    ).run(
-      "ORD-1002", "Andrés Torres", "312 444 9900",
-      "Farmacia Central, Av. 19 #120-30", 4.6951, -74.0360,
-      "Calle 134 #15-40", 4.7110, -74.0410,
-      "Medicamentos (1 bolsa)", 15000, "card"
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        "ORD-1002", "Andrés Torres", "312 444 9900",
+        "Farmacia Central, Av. 19 #120-30", 4.6951, -74.0360,
+        "Calle 134 #15-40", 4.7110, -74.0410,
+        "Medicamentos (1 bolsa)", 15000, "card",
+      ]
     );
   }
 
@@ -90,9 +101,13 @@ function seed() {
   console.log("  Repartidor: juan@agencia.com   / driver123");
   console.log("  Repartidor: maria@agencia.com  / driver123");
   console.log("  Repartidor: carlos@agencia.com / driver123");
+
+  await db.end();
 }
 
-seed();
-
-// Force exit since the database wrapper keeps a timer alive
-setTimeout(() => process.exit(0), 500);
+seed()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Error en seed:", err);
+    process.exit(1);
+  });

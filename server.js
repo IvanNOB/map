@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
-import db from "./db/database.js";
+import db, { init, isPostgres } from "./db/database.js";
 import authRouter, { verifyToken } from "./src/auth.js";
 import driversRouter from "./src/drivers.js";
 import createOrdersRouter from "./src/orders.js";
@@ -106,7 +106,7 @@ io.on("connection", (socket) => {
   }
 
   // Driver location update
-  socket.on("driver:update", (payload) => {
+  socket.on("driver:update", async (payload) => {
     if (!payload || typeof payload.lat !== "number" || typeof payload.lng !== "number") {
       return;
     }
@@ -114,10 +114,11 @@ io.on("connection", (socket) => {
 
     const speed = typeof payload.speed === "number" ? payload.speed : 0;
 
-    db.prepare(
+    await db.run(
       `UPDATE drivers SET lat = ?, lng = ?, speed = ?, last_seen = datetime('now'), status = 'available'
-       WHERE user_id = ?`
-    ).run(payload.lat, payload.lng, speed, user.id);
+       WHERE user_id = ?`,
+      [payload.lat, payload.lng, speed, user.id]
+    );
 
     // Broadcast to admins
     io.to("admins").emit("driver:location", {
@@ -130,16 +131,16 @@ io.on("connection", (socket) => {
     });
 
     // Insert into location_history for active orders
-    const activeOrders = db
-      .prepare(
-        "SELECT id, code FROM orders WHERE driver_id = ? AND status IN ('assigned', 'picked_up', 'on_the_way')"
-      )
-      .all(user.id);
+    const activeOrders = await db.all(
+      "SELECT id, code FROM orders WHERE driver_id = ? AND status IN ('assigned', 'picked_up', 'on_the_way')",
+      [user.id]
+    );
 
     for (const order of activeOrders) {
-      db.prepare(
-        "INSERT INTO location_history (driver_id, order_id, lat, lng) VALUES (?, ?, ?, ?)"
-      ).run(user.id, order.id, payload.lat, payload.lng);
+      await db.run(
+        "INSERT INTO location_history (driver_id, order_id, lat, lng) VALUES (?, ?, ?, ?)",
+        [user.id, order.id, payload.lat, payload.lng]
+      );
 
       // Emit to tracking rooms for this order
       io.to(`tracking:${order.code}`).emit("driver:location", {
@@ -153,20 +154,22 @@ io.on("connection", (socket) => {
   });
 
   // Driver stops sharing location
-  socket.on("driver:stop", () => {
+  socket.on("driver:stop", async () => {
     if (user.role !== "driver") return;
-    db.prepare("UPDATE drivers SET status = 'offline', last_seen = datetime('now') WHERE user_id = ?").run(
-      user.id
+    await db.run(
+      "UPDATE drivers SET status = 'offline', last_seen = datetime('now') WHERE user_id = ?",
+      [user.id]
     );
     io.to("admins").emit("driver:offline", { id: user.id });
     notifyAdmins(io, "driver_offline", { id: user.id, name: user.name });
   });
 
   // Disconnect
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     if (user.role === "driver") {
-      db.prepare("UPDATE drivers SET status = 'offline', last_seen = datetime('now') WHERE user_id = ?").run(
-        user.id
+      await db.run(
+        "UPDATE drivers SET status = 'offline', last_seen = datetime('now') WHERE user_id = ?",
+        [user.id]
       );
       io.to("admins").emit("driver:offline", { id: user.id });
       notifyAdmins(io, "driver_offline", { id: user.id, name: user.name });
@@ -176,23 +179,29 @@ io.on("connection", (socket) => {
 
 // ─── Offline Detection Interval ──────────────────────────────────────────────
 
-const OFFLINE_AFTER_MS = 30_000;
-setInterval(() => {
-  const cutoff = new Date(Date.now() - OFFLINE_AFTER_MS).toISOString();
-  const stale = db
-    .prepare("SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < ?")
-    .all(cutoff);
+const OFFLINE_SQL = isPostgres
+  ? "SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < NOW() - INTERVAL '30 seconds'"
+  : "SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < datetime('now', '-30 seconds')";
 
-  for (const { user_id } of stale) {
-    db.prepare("UPDATE drivers SET status = 'offline' WHERE user_id = ?").run(user_id);
-    io.to("admins").emit("driver:offline", { id: user_id });
+setInterval(async () => {
+  try {
+    const stale = await db.all(OFFLINE_SQL);
+    for (const { user_id } of stale) {
+      await db.run("UPDATE drivers SET status = 'offline' WHERE user_id = ?", [user_id]);
+      io.to("admins").emit("driver:offline", { id: user_id });
+    }
+  } catch (err) {
+    console.error("Offline check error:", err.message);
   }
 }, 10_000);
 
 // ─── Start Server ────────────────────────────────────────────────────────────
 
+await init();
+
 httpServer.listen(PORT, () => {
   console.log(`\n  Delivery Platform corriendo en http://localhost:${PORT}`);
+  console.log(`  Base de datos: ${isPostgres ? "PostgreSQL" : "SQLite (local)"}`);
   console.log(`  Panel de control:   http://localhost:${PORT}/`);
   console.log(`  App del repartidor: http://localhost:${PORT}/driver.html\n`);
 });

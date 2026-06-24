@@ -178,3 +178,44 @@ para pruebas, pero en celulares reales necesitas el certificado SSL.
 **¿Cuántos repartidores soporta?**
 Con SQLite: hasta ~50 repartidores simultáneos sin problema.
 Para más, migra a PostgreSQL (te puedo ayudar con eso).
+
+
+
+---
+
+## Base de datos persistente con PostgreSQL (Render)
+
+Por defecto la app usa SQLite (un archivo local). En Render el plan gratuito
+**no tiene disco persistente**, así que cada reinicio borra los datos. Para que
+los pedidos persistan, conecta una base de datos PostgreSQL gratuita de Render.
+
+### Cómo funciona
+- Si la variable de entorno `DATABASE_URL` está definida → la app usa **PostgreSQL**.
+- Si NO está definida → la app usa **SQLite** (ideal para desarrollo local; no
+  necesitas instalar PostgreSQL en tu computadora).
+
+### Pasos en Render
+
+1. En el dashboard de Render: **New +** → **PostgreSQL**.
+   - Name: `domicilios-db`
+   - Plan: **Free**
+   - Clic en **Create Database** y espera 1-2 minutos.
+
+2. En la página de la base de datos, copia la **Internal Database URL**
+   (empieza con `postgresql://...`). Úsala solo dentro de Render.
+
+3. Ve a tu **Web Service** → **Environment** → **Add Environment Variable**:
+   - Key: `DATABASE_URL`
+   - Value: (pega la Internal Database URL)
+
+4. Guarda. Render redesplegará automáticamente. El build (`npm install; npm run seed`)
+   creará las tablas y los datos de prueba en PostgreSQL.
+
+A partir de ahora, los pedidos, repartidores y el historial **persisten** entre
+reinicios y despliegues.
+
+### Notas
+- El `npm run seed` es idempotente: solo inserta los usuarios/pedidos de demo si
+  no existen, por lo que NO borra datos reales en cada despliegue.
+- Para desarrollo local NO necesitas hacer nada: sin `DATABASE_URL`, sigue
+  funcionando con SQLite como siempre.
