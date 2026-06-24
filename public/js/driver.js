@@ -153,6 +153,7 @@
     initSocket();
     initMap();
     loadDriverChat();
+    loadEarnings();
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -287,6 +288,7 @@
       if (res.ok) {
         showToast('Estado actualizado: ' + statusLabelText(status), 'success');
         loadOrders();
+        loadEarnings();
       } else {
         const err = await res.json();
         showToast(err.error || 'Error al actualizar', 'error');
@@ -466,6 +468,22 @@
     if (sendBtn) sendBtn.addEventListener('click', sendDriverChat);
     if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendDriverChat(); });
   })();
+
+  async function loadEarnings() {
+    if (!currentUser) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const res = await fetch('/api/reports/my-earnings?from=' + today + '&to=' + today, { headers: apiHeaders() });
+      if (!res.ok) return;
+      const e = await res.json();
+      const v = document.getElementById('earn-today');
+      const d = document.getElementById('earn-deliveries');
+      const p = document.getElementById('earn-pct');
+      if (v) v.textContent = '$' + Number(e.earning || 0).toLocaleString();
+      if (d) d.textContent = (e.deliveries || 0) + ' entregas';
+      if (p) p.textContent = 'Comision ' + (e.commission_pct || 0) + '%';
+    } catch (err) {}
+  }
 
   function initSocket() {
     if (socket) return;

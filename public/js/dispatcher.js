@@ -271,6 +271,8 @@
       viewReportes.classList.toggle('hidden', tab !== 'reportes');
       const viewChat = document.getElementById('view-chat');
       if (viewChat) viewChat.classList.toggle('hidden', tab !== 'chat');
+      const viewConfig = document.getElementById('view-config');
+      if (viewConfig) viewConfig.classList.toggle('hidden', tab !== 'config');
       if (tab === 'mapa') {
         initMap();
       }
@@ -280,8 +282,87 @@
       if (tab === 'chat') {
         renderChatContacts();
       }
+      if (tab === 'config') {
+        loadConfig();
+      }
     });
   });
+
+  // ─── Settings / Config ──────────────────────────────────────────────────────
+  let appSettings = { fare_base: 3000, fare_per_km: 1500, driver_commission_pct: 80, currency: '$', agency_name: 'Agencia de Domicilios' };
+
+  async function loadSettings() {
+    try {
+      const res = await apiFetch('/api/settings');
+      if (res.ok) appSettings = await res.json();
+    } catch {}
+  }
+
+  async function loadConfig() {
+    await loadSettings();
+    ['agency_name', 'fare_base', 'fare_per_km', 'driver_commission_pct'].forEach((k) => {
+      const el = document.getElementById('cfg-' + k);
+      if (el) el.value = appSettings[k];
+    });
+  }
+
+  const btnSaveConfig = document.getElementById('btn-save-config');
+  if (btnSaveConfig) {
+    btnSaveConfig.addEventListener('click', async () => {
+      const body = {
+        agency_name: document.getElementById('cfg-agency_name').value,
+        fare_base: document.getElementById('cfg-fare_base').value,
+        fare_per_km: document.getElementById('cfg-fare_per_km').value,
+        driver_commission_pct: document.getElementById('cfg-driver_commission_pct').value,
+      };
+      try {
+        const res = await apiFetch('/api/settings', { method: 'PUT', body: JSON.stringify(body) });
+        if (res.ok) { appSettings = await res.json(); showToast('Configuracion guardada', 'success'); }
+        else showToast('Error al guardar', 'error');
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
+  // ─── Cierre de caja ─────────────────────────────────────────────────────────
+  const btnLoadCash = document.getElementById('btn-load-cash');
+  if (btnLoadCash) {
+    const cashDate = document.getElementById('cash-date');
+    if (cashDate) cashDate.value = new Date().toISOString().slice(0, 10);
+    btnLoadCash.addEventListener('click', async () => {
+      const date = cashDate.value || new Date().toISOString().slice(0, 10);
+      try {
+        const res = await apiFetch('/api/reports/cash?date=' + date);
+        if (!res.ok) { showToast('Error al cargar caja', 'error'); return; }
+        const data = await res.json();
+        renderCash(data);
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
+  function money(n) { return (appSettings.currency || '$') + Number(n || 0).toLocaleString(); }
+
+  function renderCash(data) {
+    const box = document.getElementById('cash-table');
+    if (!box) return;
+    if (!data.drivers || data.drivers.length === 0) {
+      box.innerHTML = '<p style="color:var(--text-muted);padding:1rem;">Sin entregas en esta fecha.</p>';
+      return;
+    }
+    let html = '<table class="cash-table"><thead><tr>' +
+      '<th>Repartidor</th><th>Entregas</th><th>Efectivo</th><th>Tarjeta</th><th>Total</th>' +
+      '<th>Gana repartidor</th><th>Gana agencia</th></tr></thead><tbody>';
+    data.drivers.forEach((d) => {
+      html += '<tr><td>' + escapeHtml(d.driver_name) + '</td><td>' + d.deliveries + '</td>' +
+        '<td>' + money(d.cash) + '</td><td>' + money(d.card) + '</td><td>' + money(d.total) + '</td>' +
+        '<td>' + money(d.driver_earning) + '</td><td>' + money(d.agency_earning) + '</td></tr>';
+    });
+    const t = data.totals;
+    html += '<tr class="total-row"><td>TOTAL (' + data.commission_pct + '% repartidor)</td><td>' + t.deliveries + '</td>' +
+      '<td>' + money(t.cash) + '</td><td>' + money(t.card) + '</td><td>' + money(t.total) + '</td>' +
+      '<td>' + money(t.driver_earning) + '</td><td>' + money(t.agency_earning) + '</td></tr>';
+    html += '</tbody></table>';
+    box.innerHTML = html;
+  }
 
   // ─── Chat (admin <-> drivers) ───────────────────────────────────────────────
   let chatActiveDriver = null;
@@ -355,7 +436,7 @@
   // ─── Data Loading ───────────────────────────────────────────────────────────
 
   async function loadData() {
-    await Promise.all([loadOrders(), loadStats(), loadDrivers()]);
+    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings()]);
   }
 
   async function loadStats() {
@@ -532,7 +613,8 @@
     if (pickerLine) { pickerMap.removeLayer(pickerLine); pickerLine = null; }
     if (!isNaN(plat) && !isNaN(dlat)) {
       const km = haversineKm(plat, plng, dlat, dlng);
-      const base = 3000, perKm = 1500;
+      const base = Number(appSettings.fare_base) || 3000;
+      const perKm = Number(appSettings.fare_per_km) || 1500;
       const fare = Math.round((base + km * perKm) / 500) * 500;
       hint.innerHTML = `📏 Distancia: <strong>${km.toFixed(1)} km</strong> · 💰 Tarifa sugerida: <strong>$${fare.toLocaleString()}</strong>`;
       const amountInput = formNewOrder.querySelector('[name="amount"]');

@@ -2,8 +2,91 @@ import { Router } from "express";
 import PDFDocument from "pdfkit";
 import db, { COUNT_INT } from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
+import { getSettingsMap } from "./settings.js";
 
 const router = Router();
+
+// date(col) = ?  vs  col::date = ?::date
+const dateEq = (col) => (db.isPostgres ? `${col}::date = ?::date` : `date(${col}) = ?`);
+
+// ─── GET /api/reports/cash?date=YYYY-MM-DD ── daily cash reconciliation (admin)
+router.get("/cash", requireAuth, requireRole("admin"), async (req, res) => {
+  const date = req.query.date || new Date().toISOString().slice(0, 10);
+  const settings = await getSettingsMap();
+  const pct = Number(settings.driver_commission_pct) || 0;
+
+  const rows = await db.all(
+    `SELECT COALESCE(u.name, 'Sin asignar') AS driver_name, o.driver_id,
+            o.amount, o.payment_method
+     FROM orders o
+     LEFT JOIN users u ON u.id = o.driver_id
+     WHERE o.status = 'delivered' AND ${dateEq("o.delivered_at")}`,
+    [date]
+  );
+
+  const byDriver = {};
+  for (const r of rows) {
+    const key = r.driver_id || 0;
+    if (!byDriver[key]) {
+      byDriver[key] = {
+        driver_id: r.driver_id, driver_name: r.driver_name,
+        deliveries: 0, total: 0, cash: 0, card: 0, driver_earning: 0, agency_earning: 0,
+      };
+    }
+    const amt = Number(r.amount) || 0;
+    const b = byDriver[key];
+    b.deliveries += 1;
+    b.total += amt;
+    if (r.payment_method === "cash") b.cash += amt; else b.card += amt;
+    b.driver_earning += amt * pct / 100;
+    b.agency_earning += amt * (100 - pct) / 100;
+  }
+
+  const drivers = Object.values(byDriver).map((b) => ({
+    ...b,
+    total: Math.round(b.total),
+    cash: Math.round(b.cash),
+    card: Math.round(b.card),
+    driver_earning: Math.round(b.driver_earning),
+    agency_earning: Math.round(b.agency_earning),
+  }));
+
+  const totals = drivers.reduce((t, b) => ({
+    deliveries: t.deliveries + b.deliveries,
+    total: t.total + b.total,
+    cash: t.cash + b.cash,
+    card: t.card + b.card,
+    driver_earning: t.driver_earning + b.driver_earning,
+    agency_earning: t.agency_earning + b.agency_earning,
+  }), { deliveries: 0, total: 0, cash: 0, card: 0, driver_earning: 0, agency_earning: 0 });
+
+  res.json({ date, commission_pct: pct, drivers, totals });
+});
+
+// ─── GET /api/reports/my-earnings?from=&to=  (driver: own earnings) ─────────
+router.get("/my-earnings", requireAuth, async (req, res) => {
+  if (req.user.role !== "driver") return res.status(403).json({ error: "Solo repartidores" });
+  const settings = await getSettingsMap();
+  const pct = Number(settings.driver_commission_pct) || 0;
+
+  const { from, to } = req.query;
+  let where = "WHERE status = 'delivered' AND driver_id = ?";
+  const params = [req.user.id];
+  if (from) { where += " AND delivered_at >= ?"; params.push(from); }
+  if (to) { where += " AND delivered_at <= ?"; params.push(to + " 23:59:59"); }
+
+  const agg = await db.get(
+    `SELECT ${COUNT_INT} AS deliveries, COALESCE(SUM(amount), 0) AS total FROM orders ${where}`,
+    params
+  );
+  const total = Number(agg.total) || 0;
+  res.json({
+    deliveries: Number(agg.deliveries) || 0,
+    total: Math.round(total),
+    earning: Math.round(total * pct / 100),
+    commission_pct: pct,
+  });
+});
 
 // ─── GET /api/reports/orders?format=csv|pdf&from=DATE&to=DATE ──────────────
 
