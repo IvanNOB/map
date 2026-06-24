@@ -76,15 +76,25 @@
       </div>
       <div id="driver-map" class="map-container-mini"></div>
     </section>
+
+    <!-- Chat with dispatch -->
+    <section class="driver-section">
+      <h3>💬 Chat con Despacho</h3>
+      <div class="driver-chat">
+        <div class="chat-messages" id="dchat-messages">
+          <div class="chat-empty">Escribe a tu central de despacho</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="dchat-input" placeholder="Escribe un mensaje...">
+          <button class="btn btn-primary btn-sm" id="dchat-send">Enviar</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/driver.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-    }
-  </script>
+  <script src="/js/pwa.js"></script>
 </body>
 </html>

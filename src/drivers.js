@@ -5,12 +5,14 @@ import { requireAuth, requireRole } from "./auth.js";
 
 const router = Router();
 
-/** Returns drivers joined with their user info. */
+/** Returns drivers joined with their user info + average rating. */
 async function listDrivers() {
   return db.all(
     `SELECT u.id, u.name, u.email,
             d.phone, d.vehicle, d.plate, d.status,
-            d.lat, d.lng, d.speed, d.last_seen
+            d.lat, d.lng, d.speed, d.last_seen,
+            (SELECT ROUND(AVG(rating), 1) FROM orders WHERE driver_id = u.id AND rating IS NOT NULL) AS avg_rating,
+            (SELECT COUNT(*) FROM orders WHERE driver_id = u.id AND status = 'delivered') AS deliveries
      FROM users u
      JOIN drivers d ON d.user_id = u.id
      WHERE u.role = 'driver'

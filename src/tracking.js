@@ -13,8 +13,8 @@ router.get("/:code", async (req, res) => {
             o.pickup_address, o.pickup_lat, o.pickup_lng,
             o.dropoff_address, o.dropoff_lat, o.dropoff_lng,
             o.estimated_distance_km, o.estimated_minutes,
-            o.created_at, o.delivered_at, o.rating,
-            o.driver_id
+            o.created_at, o.assigned_at, o.picked_up_at, o.on_the_way_at, o.delivered_at,
+            o.rating, o.driver_id
      FROM orders o
      WHERE o.code = ?`,
     [code]
@@ -70,6 +70,9 @@ router.get("/:code", async (req, res) => {
       estimated_distance_km: order.estimated_distance_km,
       estimated_minutes: order.estimated_minutes,
       created_at: order.created_at,
+      assigned_at: order.assigned_at,
+      picked_up_at: order.picked_up_at,
+      on_the_way_at: order.on_the_way_at,
       delivered_at: order.delivered_at,
       rating: order.rating,
     },
