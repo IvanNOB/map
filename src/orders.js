@@ -3,6 +3,7 @@ import db, { COUNT_INT } from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
 import { haversineDistance, estimateTime } from "./utils.js";
 import { notifyAdmins, notifyDriver } from "./notifications.js";
+import { logActivity } from "./activity.js";
 
 /**
  * Orders router factory.
@@ -104,6 +105,43 @@ export default function createOrdersRouter(io) {
     res.json(route);
   });
 
+  // ─── Proof of delivery ──────────────────────────────────────────────────────
+
+  // POST /api/orders/:id/proof - driver (own order) or admin uploads a photo (data URL)
+  router.post("/:id/proof", requireAuth, async (req, res) => {
+    const { image } = req.body || {};
+    if (!image || typeof image !== "string" || !image.startsWith("data:image/")) {
+      return res.status(400).json({ error: "Imagen invalida" });
+    }
+    if (image.length > 1500000) {
+      return res.status(413).json({ error: "La imagen es demasiado grande" });
+    }
+    const order = await db.get("SELECT id, driver_id, code FROM orders WHERE id = ?", [req.params.id]);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+    if (req.user.role === "driver" && order.driver_id !== req.user.id) {
+      return res.status(403).json({ error: "No autorizado para esta orden" });
+    }
+
+    await db.run(
+      "INSERT INTO order_proofs (order_id, image) VALUES (?, ?) ON CONFLICT(order_id) DO UPDATE SET image = excluded.image",
+      [order.id, image]
+    );
+    logActivity(req.user, "proof_uploaded", "Prueba de entrega para " + order.code);
+    res.json({ ok: true });
+  });
+
+  // GET /api/orders/:id/proof - view proof (admin or assigned driver)
+  router.get("/:id/proof", requireAuth, async (req, res) => {
+    const order = await db.get("SELECT id, driver_id FROM orders WHERE id = ?", [req.params.id]);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+    if (req.user.role === "driver" && order.driver_id !== req.user.id) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+    const proof = await db.get("SELECT image, created_at FROM order_proofs WHERE order_id = ?", [order.id]);
+    if (!proof) return res.status(404).json({ error: "Sin prueba de entrega" });
+    res.json(proof);
+  });
+
   // ─── GET /api/orders/:id ───────────────────────────────────────────────────
 
   router.get("/:id", requireAuth, async (req, res) => {
@@ -199,6 +237,7 @@ export default function createOrdersRouter(io) {
     // Emit to admins
     io.to("admins").emit("order:new", order);
     notifyAdmins(io, "order_new", order);
+    logActivity(req.user, "order_created", "Pedido " + order.code + " creado");
 
     res.status(201).json(order);
   });
@@ -288,6 +327,8 @@ export default function createOrdersRouter(io) {
     // Emit to tracking room
     io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
 
+    logActivity(req.user, "order_assigned", "Pedido " + updated.code + " asignado a repartidor " + driver_id);
+
     res.json(updated);
   });
 
@@ -330,6 +371,8 @@ export default function createOrdersRouter(io) {
     io.to(`driver:${chosen.id}`).emit("order:assigned", updated);
     notifyDriver(io, chosen.id, "order_assigned", updated);
     io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
+
+    logActivity(req.user, "order_auto_assigned", "Pedido " + updated.code + " auto-asignado a " + chosen.name);
 
     res.json({ order: updated, driver_name: chosen.name });
   });
@@ -390,6 +433,7 @@ export default function createOrdersRouter(io) {
     if (status === "delivered") {
       notifyAdmins(io, "order_delivered", updated);
     }
+    logActivity(req.user, "order_status", "Pedido " + updated.code + " -> " + status);
 
     res.json(updated);
   });
@@ -404,6 +448,8 @@ export default function createOrdersRouter(io) {
 
     const updated = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     io.to("admins").emit("order:status", updated);
+
+    logActivity(req.user, "order_cancelled", "Pedido " + updated.code + " cancelado");
 
     res.json(updated);
   });

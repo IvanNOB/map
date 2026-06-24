@@ -48,6 +48,7 @@
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
         <button class="tab-btn" data-tab="chat">Chat</button>
         <button class="tab-btn" data-tab="reportes">Reportes</button>
+        <button class="tab-btn" data-tab="actividad">Actividad</button>
         <button class="tab-btn" data-tab="config">Config</button>
       </div>
       <div class="navbar-right">
@@ -200,6 +201,15 @@
         </div>
       </section>
 
+      <!-- Actividad View -->
+      <section id="view-actividad" class="hidden">
+        <div class="toolbar">
+          <h2 style="font-size:1.1rem;">📝 Registro de actividad</h2>
+          <button class="btn btn-outline btn-sm" id="btn-refresh-activity">Actualizar</button>
+        </div>
+        <div id="activity-list" class="activity-list"></div>
+      </section>
+
       <!-- Config View -->
       <section id="view-config" class="hidden">
         <div class="config-card">
@@ -335,6 +345,17 @@
           <button type="submit" class="btn btn-primary">Crear Repartidor</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Proof Image Modal -->
+  <div id="modal-proof" class="modal-overlay hidden">
+    <div class="modal" style="max-width:520px;">
+      <h2>📸 Prueba de entrega</h2>
+      <img id="proof-image" alt="Prueba de entrega" style="width:100%;border-radius:10px;margin:0.5rem 0;">
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="btn-close-proof">Cerrar</button>
+      </div>
     </div>
   </div>
 

@@ -15,6 +15,7 @@ import reportsRouter from "./src/reports.js";
 import chatRouter from "./src/chat.js";
 import customersRouter from "./src/customers.js";
 import settingsRouter from "./src/settings.js";
+import activityRouter from "./src/activity.js";
 import { notifyAdmins } from "./src/notifications.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -66,6 +67,9 @@ app.use("/api/customers", customersRouter);
 
 // Settings (tarifas, comisiones)
 app.use("/api/settings", settingsRouter);
+
+// Activity log (auditoria)
+app.use("/api/activity", activityRouter);
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 

@@ -273,6 +273,8 @@
       if (viewChat) viewChat.classList.toggle('hidden', tab !== 'chat');
       const viewConfig = document.getElementById('view-config');
       if (viewConfig) viewConfig.classList.toggle('hidden', tab !== 'config');
+      const viewActividad = document.getElementById('view-actividad');
+      if (viewActividad) viewActividad.classList.toggle('hidden', tab !== 'actividad');
       if (tab === 'mapa') {
         initMap();
       }
@@ -285,8 +287,45 @@
       if (tab === 'config') {
         loadConfig();
       }
+      if (tab === 'actividad') {
+        loadActivity();
+      }
     });
   });
+
+  // ─── Activity log ───────────────────────────────────────────────────────────
+  async function loadActivity() {
+    const box = document.getElementById('activity-list');
+    if (!box) return;
+    try {
+      const res = await apiFetch('/api/activity?limit=150');
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (rows.length === 0) { box.innerHTML = '<p style="color:var(--text-muted);padding:1rem;">Sin actividad registrada.</p>'; return; }
+      box.innerHTML = rows.map((r) =>
+        '<div class="activity-item">' +
+        '<span class="ai-action">' + escapeHtml(r.action) + '</span>' +
+        '<span class="ai-detail">' + escapeHtml(r.detail || '') + '</span>' +
+        '<span class="ai-meta">' + escapeHtml(r.user_name || '-') + ' · ' + formatTime(r.created_at) + '</span>' +
+        '</div>'
+      ).join('');
+    } catch {}
+  }
+  const btnRefreshActivity = document.getElementById('btn-refresh-activity');
+  if (btnRefreshActivity) btnRefreshActivity.addEventListener('click', loadActivity);
+
+  // ─── Proof of delivery (view) ───────────────────────────────────────────────
+  async function viewProof(orderId) {
+    try {
+      const res = await apiFetch('/api/orders/' + orderId + '/proof');
+      if (!res.ok) { showToast('Este pedido no tiene foto de entrega', 'warning'); return; }
+      const data = await res.json();
+      document.getElementById('proof-image').src = data.image;
+      document.getElementById('modal-proof').classList.remove('hidden');
+    } catch { showToast('Error al cargar la foto', 'error'); }
+  }
+  const btnCloseProof = document.getElementById('btn-close-proof');
+  if (btnCloseProof) btnCloseProof.addEventListener('click', () => document.getElementById('modal-proof').classList.add('hidden'));
 
   // ─── Settings / Config ──────────────────────────────────────────────────────
   let appSettings = { fare_base: 3000, fare_per_km: 1500, driver_commission_pct: 80, currency: '$', agency_name: 'Agencia de Domicilios' };
@@ -523,10 +562,12 @@
           ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar</button>' : ''}
           ${order.status === 'pending' ? '<button class="btn btn-outline btn-sm" data-auto="' + order.id + '" title="Asignar al repartidor disponible mas cercano">⚡ Auto-asignar</button>' : ''}
           ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-route="' + order.id + '">Ver Ruta</button>' : ''}
+          ${order.status === 'delivered' ? '<button class="btn btn-outline btn-sm proof-thumb-btn" data-proof="' + order.id + '">📸 Foto</button>' : ''}
           <button class="btn btn-outline btn-sm" data-copy-link="${escapeHtml(order.code)}">Copiar Link</button>
           ${waBtn}
           ${['pending', 'assigned'].includes(order.status) ? '<button class="btn btn-danger btn-sm" data-cancel="' + order.id + '">Cancelar</button>' : ''}
         </div>
+        ${order.rating ? '<div class="review-box">⭐ ' + escapeHtml(String(order.rating)) + '/5' + (order.review ? ' — &ldquo;' + escapeHtml(order.review) + '&rdquo;' : '') + '</div>' : ''}
       `;
       ordersList.appendChild(card);
     });
@@ -537,6 +578,9 @@
     });
     ordersList.querySelectorAll('[data-auto]').forEach((btn) => {
       btn.addEventListener('click', () => autoAssign(parseInt(btn.dataset.auto)));
+    });
+    ordersList.querySelectorAll('[data-proof]').forEach((btn) => {
+      btn.addEventListener('click', () => viewProof(parseInt(btn.dataset.proof)));
     });
     ordersList.querySelectorAll('[data-cancel]').forEach((btn) => {
       btn.addEventListener('click', () => cancelOrder(parseInt(btn.dataset.cancel)));

@@ -267,6 +267,7 @@
       <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         ${action ? '<button class="btn btn-success btn-sm" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + escapeHtml(action.label) + '</button>' : ''}
         ${navBtn}
+        ${['on_the_way', 'delivered'].includes(order.status) ? '<button class="btn btn-nav btn-sm" data-proof="' + order.id + '">📸 Subir prueba</button>' : ''}
         ${order.status === 'delivered' ? '<span class="badge badge-delivered">Completado</span>' : ''}
       </div>
     `;
@@ -277,6 +278,47 @@
     if (btn) {
       btn.addEventListener('click', () => updateOrderStatus(btn.dataset.orderId, btn.dataset.nextStatus));
     }
+    const proofBtn = card.querySelector('[data-proof]');
+    if (proofBtn) {
+      proofBtn.addEventListener('click', () => uploadProof(proofBtn.dataset.proof));
+    }
+  }
+
+  // Capture/resize a photo and upload as proof of delivery
+  function uploadProof(orderId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function () {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = async function () {
+          // Resize to max 800px wide, JPEG ~0.6 quality
+          const max = 800;
+          let w = img.width, h = img.height;
+          if (w > max) { h = Math.round(h * max / w); w = max; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          try {
+            const res = await apiFetch('/api/orders/' + orderId + '/proof', {
+              method: 'POST',
+              body: JSON.stringify({ image: dataUrl }),
+            });
+            if (res.ok) showToast('Foto de entrega subida', 'success');
+            else { const er = await res.json(); showToast(er.error || 'Error al subir', 'error'); }
+          } catch { showToast('Error de conexion', 'error'); }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   }
 
   async function updateOrderStatus(orderId, status) {
