@@ -5,6 +5,7 @@ import { haversineDistance, estimateTime } from "./utils.js";
 import { notifyAdmins, notifyDriver } from "./notifications.js";
 import { logActivity } from "./activity.js";
 import { sendPush } from "./push.js";
+import { sendWhatsApp } from "./whatsapp.js";
 
 /**
  * Orders router factory.
@@ -174,6 +175,7 @@ export default function createOrdersRouter(io) {
       amount,
       payment_method,
       scheduled_at,
+      branch_id,
     } = req.body || {};
 
     if (!customer_name || !pickup_address || !dropoff_address) {
@@ -239,6 +241,12 @@ export default function createOrdersRouter(io) {
     // Optional scheduled time
     if (scheduled_at) {
       await db.run("UPDATE orders SET scheduled_at = ? WHERE id = ?", [scheduled_at, order.id]);
+      order = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
+    }
+
+    // Optional branch
+    if (branch_id) {
+      await db.run("UPDATE orders SET branch_id = ? WHERE id = ?", [branch_id, order.id]);
       order = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
     }
 
@@ -342,6 +350,13 @@ export default function createOrdersRouter(io) {
     logActivity(req.user, "order_assigned", "Pedido " + updated.code + " asignado a repartidor " + driver_id);
     sendPush(driver_id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
 
+    // Auto WhatsApp to customer (only if Twilio is configured)
+    if (updated.customer_phone) {
+      const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
+      const link = `${base}/customer.html?code=${encodeURIComponent(updated.code)}`;
+      sendWhatsApp(updated.customer_phone, `Tu pedido ${updated.code} ya tiene repartidor. Sigue la entrega aqui: ${link}`);
+    }
+
     res.json(updated);
   });
 
@@ -387,6 +402,12 @@ export default function createOrdersRouter(io) {
 
     logActivity(req.user, "order_auto_assigned", "Pedido " + updated.code + " auto-asignado a " + chosen.name);
     sendPush(chosen.id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
+
+    if (updated.customer_phone) {
+      const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
+      const link = `${base}/customer.html?code=${encodeURIComponent(updated.code)}`;
+      sendWhatsApp(updated.customer_phone, `Tu pedido ${updated.code} ya tiene repartidor (${chosen.name}). Sigue la entrega aqui: ${link}`);
+    }
 
     res.json({ order: updated, driver_name: chosen.name });
   });

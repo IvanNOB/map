@@ -18,6 +18,7 @@ import settingsRouter from "./src/settings.js";
 import activityRouter from "./src/activity.js";
 import zonesRouter from "./src/zones.js";
 import pushRouter, { initPush } from "./src/push.js";
+import branchesRouter from "./src/branches.js";
 import { notifyAdmins } from "./src/notifications.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,9 @@ const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 const PORT = process.env.PORT || 3000;
+
+// Trust the reverse proxy (Render) so req.protocol reflects https
+app.set("trust proxy", 1);
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
@@ -78,6 +82,9 @@ app.use("/api/zones", zonesRouter);
 
 // Web Push notifications
 app.use("/api/push", pushRouter);
+
+// Branches (multi-sucursal)
+app.use("/api/branches", branchesRouter);
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 

@@ -219,3 +219,30 @@ reinicios y despliegues.
   no existen, por lo que NO borra datos reales en cada despliegue.
 - Para desarrollo local NO necesitas hacer nada: sin `DATABASE_URL`, sigue
   funcionando con SQLite como siempre.
+
+
+
+---
+
+## WhatsApp 100% automático (opcional, Twilio)
+
+Por defecto, al asignar un pedido se abre WhatsApp con el mensaje ya escrito
+(semi-automático, sin costo). Para envío **100% automático** desde el servidor,
+configura una cuenta de [Twilio WhatsApp](https://www.twilio.com/whatsapp) y
+agrega estas variables de entorno en Render:
+
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_WHATSAPP_FROM`  (ej. `whatsapp:+14155238886`)
+- `PUBLIC_URL`  (ej. `https://map-rgi5.onrender.com`) para los links de seguimiento
+
+Cuando estas variables están presentes, el sistema envía automáticamente el
+mensaje de seguimiento al cliente al asignar un repartidor. Si no están
+configuradas, no pasa nada (se mantiene el botón manual de WhatsApp).
+
+## Notificaciones push
+
+Las notificaciones push del navegador funcionan automáticamente: las claves
+VAPID se generan y guardan en la base de datos en el primer arranque. Solo
+requieren HTTPS (Render ya lo provee) y que el usuario acepte el permiso de
+notificaciones. Opcional: `VAPID_CONTACT` (ej. `mailto:tu@correo.com`).
