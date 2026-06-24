@@ -261,6 +261,19 @@
           <button class="btn btn-primary btn-sm" id="btn-add-zone">Agregar zona</button>
           <div id="zone-list" style="margin-top:0.8rem;"></div>
         </div>
+
+        <div class="config-card" style="margin-top:1.5rem;max-width:640px;">
+          <h2 style="font-size:1.1rem;margin-bottom:0.5rem;">🏢 Sucursales</h2>
+          <p style="color:var(--text-muted);font-size:0.83rem;margin-bottom:0.6rem;">
+            Crea puntos/sucursales para organizar los pedidos por ubicacion.
+          </p>
+          <div class="form-row">
+            <div class="form-group"><label>Nombre</label><input type="text" id="branch-name" placeholder="Ej. Sede Norte"></div>
+            <div class="form-group"><label>Direccion</label><input type="text" id="branch-address" placeholder="Direccion"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-add-branch">Agregar sucursal</button>
+          <div id="branch-list" style="margin-top:0.8rem;"></div>
+        </div>
       </section>
     </main>
   </div>
@@ -329,6 +342,10 @@
           <label>Programar para (opcional)</label>
           <input type="datetime-local" name="scheduled_at" id="scheduled_at">
           <small style="color:var(--text-muted);">Dejar vacio para un pedido inmediato.</small>
+        </div>
+        <div class="form-group">
+          <label>Sucursal (opcional)</label>
+          <select name="branch_id" id="order-branch"><option value="">— Sin sucursal —</option></select>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>

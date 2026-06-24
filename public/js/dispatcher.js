@@ -291,6 +291,7 @@
         loadConfig();
         initZoneMap();
         loadZones();
+        loadBranches();
       }
       if (tab === 'actividad') {
         loadActivity();
@@ -399,6 +400,56 @@
   function isWithinCoverage(lat, lng) {
     if (zones.length === 0) return true; // no zones defined => no restriction
     return zones.some((z) => haversineKm(lat, lng, z.lat, z.lng) <= z.radius_km);
+  }
+
+  // ─── Branches (multi-sucursal) ──────────────────────────────────────────────
+  let branches = [];
+  async function loadBranches() {
+    try {
+      const res = await apiFetch('/api/branches');
+      if (!res.ok) return;
+      branches = await res.json();
+      renderBranchList();
+      populateBranchSelect();
+    } catch {}
+  }
+  function renderBranchList() {
+    const box = document.getElementById('branch-list');
+    if (!box) return;
+    if (branches.length === 0) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;">Sin sucursales.</p>'; return; }
+    box.innerHTML = branches.map((b) =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
+      '<span>🏢 ' + escapeHtml(b.name) + (b.address ? ' — ' + escapeHtml(b.address) : '') + '</span>' +
+      '<button class="btn btn-danger btn-sm" data-branch-del="' + b.id + '">Eliminar</button></div>'
+    ).join('');
+    box.querySelectorAll('[data-branch-del]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        try { const r = await apiFetch('/api/branches/' + el.dataset.branchDel, { method: 'DELETE' }); if (r.ok) { showToast('Sucursal eliminada', 'success'); loadBranches(); } } catch {}
+      });
+    });
+  }
+  function populateBranchSelect() {
+    const sel = document.getElementById('order-branch');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Sin sucursal —</option>' +
+      branches.map((b) => '<option value="' + b.id + '">' + escapeHtml(b.name) + '</option>').join('');
+  }
+  function branchName(id) {
+    const b = branches.find((x) => x.id === id);
+    return b ? b.name : 'Sucursal';
+  }
+  const btnAddBranch = document.getElementById('btn-add-branch');
+  if (btnAddBranch) {
+    btnAddBranch.addEventListener('click', async () => {
+      const name = document.getElementById('branch-name').value.trim();
+      const address = document.getElementById('branch-address').value.trim();
+      if (!name) { showToast('Escribe un nombre', 'warning'); return; }
+      try {
+        const res = await apiFetch('/api/branches', { method: 'POST', body: JSON.stringify({ name, address }) });
+        if (res.ok) { showToast('Sucursal agregada', 'success'); document.getElementById('branch-name').value = ''; document.getElementById('branch-address').value = ''; loadBranches(); }
+        else showToast('Error al agregar', 'error');
+      } catch { showToast('Error de conexion', 'error'); }
+    });
   }
 
   // ─── Activity log ───────────────────────────────────────────────────────────
@@ -583,7 +634,7 @@
   // ─── Data Loading ───────────────────────────────────────────────────────────
 
   async function loadData() {
-    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones()]);
+    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones(), loadBranches()]);
   }
 
   async function loadStats() {
@@ -665,6 +716,7 @@
             ${order.amount ? '<span>$' + escapeHtml(String(order.amount)) + '</span>' : ''}
             ${order.estimated_distance_km ? '<span>📏 ' + escapeHtml(String(order.estimated_distance_km)) + ' km</span>' : ''}
             ${order.scheduled_at ? '<span title="Programado">📅 ' + escapeHtml(formatTime(order.scheduled_at)) + '</span>' : ''}
+            ${order.branch_id ? '<span>🏢 ' + escapeHtml(branchName(order.branch_id)) + '</span>' : ''}
           </div>
         </div>
         <div class="order-actions">
@@ -906,6 +958,7 @@
       amount: parseFloat(fd.get('amount')) || 0,
       payment_method: fd.get('payment_method'),
       scheduled_at: fd.get('scheduled_at') ? fd.get('scheduled_at').replace('T', ' ') + ':00' : undefined,
+      branch_id: fd.get('branch_id') ? parseInt(fd.get('branch_id')) : undefined,
     };
     try {
       const res = await apiFetch('/api/orders', {

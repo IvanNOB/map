@@ -26,7 +26,7 @@ export const isPostgres = !!DATABASE_URL;
  */
 
 // Tables that have an auto-increment `id` column (need RETURNING id on pg).
-const ID_TABLES = new Set(["users", "orders", "location_history", "messages", "zones"]);
+const ID_TABLES = new Set(["users", "orders", "location_history", "messages", "zones", "branches"]);
 
 function insertTable(sql) {
   const m = /^\s*insert\s+into\s+["`\[]?(\w+)/i.exec(sql);
@@ -268,7 +268,16 @@ export async function init() {
         subscription TEXT NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS branches (
+        id      SERIAL PRIMARY KEY,
+        name    TEXT NOT NULL,
+        address TEXT,
+        lat     DOUBLE PRECISION,
+        lng     DOUBLE PRECISION
+      );
     `);
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS branch_id INTEGER"); } catch (_) {}
     // rating column (safe add for existing tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rating INTEGER"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS review TEXT"); } catch (_) {}
@@ -388,7 +397,16 @@ export async function init() {
         subscription TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
+
+      CREATE TABLE IF NOT EXISTS branches (
+        id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        name    TEXT NOT NULL,
+        address TEXT,
+        lat     REAL,
+        lng     REAL
+      );
     `);
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN branch_id INTEGER"); } catch (_) {}
     // rating column (safe add for existing sqlite tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN rating INTEGER"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN review TEXT"); } catch (_) {}
