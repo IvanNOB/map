@@ -1,13 +1,13 @@
 import { Router } from "express";
 import PDFDocument from "pdfkit";
-import db from "../db/database.js";
+import db, { COUNT_INT } from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
 
 const router = Router();
 
 // ─── GET /api/reports/orders?format=csv|pdf&from=DATE&to=DATE ──────────────
 
-router.get("/orders", requireAuth, requireRole("admin"), (req, res) => {
+router.get("/orders", requireAuth, requireRole("admin"), async (req, res) => {
   const { format = "csv", from, to } = req.query;
 
   let query = `
@@ -30,7 +30,7 @@ router.get("/orders", requireAuth, requireRole("admin"), (req, res) => {
 
   query += " ORDER BY o.created_at DESC";
 
-  const orders = db.prepare(query).all(...params);
+  const orders = await db.all(query, params);
 
   if (format === "pdf") {
     return generatePDF(res, orders, from, to);
@@ -42,7 +42,7 @@ router.get("/orders", requireAuth, requireRole("admin"), (req, res) => {
 
 // ─── GET /api/reports/summary?from=DATE&to=DATE ─────────────────────────────
 
-router.get("/summary", requireAuth, requireRole("admin"), (req, res) => {
+router.get("/summary", requireAuth, requireRole("admin"), async (req, res) => {
   const { from, to } = req.query;
 
   let whereClause = "WHERE 1=1";
@@ -57,41 +57,45 @@ router.get("/summary", requireAuth, requireRole("admin"), (req, res) => {
     params.push(to + " 23:59:59");
   }
 
-  const totalOrders = db
-    .prepare(`SELECT COUNT(*) as count FROM orders ${whereClause}`)
-    .get(...params).count;
+  const totalOrders = (
+    await db.get(`SELECT ${COUNT_INT} as count FROM orders ${whereClause}`, params)
+  ).count;
 
-  const totalRevenue = db
-    .prepare(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM orders ${whereClause} AND status = 'delivered'`
+  const totalRevenue = (
+    await db.get(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM orders ${whereClause} AND status = 'delivered'`,
+      params
     )
-    .get(...params).total;
+  ).total;
 
-  const avgDeliveryMinutes = db
-    .prepare(
-      `SELECT AVG(
-        (julianday(delivered_at) - julianday(assigned_at)) * 24 * 60
-      ) as avg_minutes
-      FROM orders ${whereClause} AND status = 'delivered' AND delivered_at IS NOT NULL AND assigned_at IS NOT NULL`
+  // Average delivery time in minutes (dialect-specific)
+  const avgExpr = db.isPostgres
+    ? "AVG(EXTRACT(EPOCH FROM (delivered_at - assigned_at)) / 60)"
+    : "AVG((julianday(delivered_at) - julianday(assigned_at)) * 24 * 60)";
+
+  const avgDeliveryMinutes = (
+    await db.get(
+      `SELECT ${avgExpr} as avg_minutes
+       FROM orders ${whereClause} AND status = 'delivered' AND delivered_at IS NOT NULL AND assigned_at IS NOT NULL`,
+      params
     )
-    .get(...params).avg_minutes;
+  ).avg_minutes;
 
   // Orders by status
-  const statusRows = db
-    .prepare(
-      `SELECT status, COUNT(*) as count FROM orders ${whereClause} GROUP BY status`
-    )
-    .all(...params);
+  const statusRows = await db.all(
+    `SELECT status, ${COUNT_INT} as count FROM orders ${whereClause} GROUP BY status`,
+    params
+  );
 
   const ordersByStatus = {};
   for (const row of statusRows) {
-    ordersByStatus[row.status] = row.count;
+    ordersByStatus[row.status] = Number(row.count);
   }
 
   res.json({
-    total_orders: totalOrders,
-    total_revenue: totalRevenue,
-    avg_delivery_minutes: avgDeliveryMinutes ? Math.round(avgDeliveryMinutes * 10) / 10 : null,
+    total_orders: Number(totalOrders),
+    total_revenue: Number(totalRevenue),
+    avg_delivery_minutes: avgDeliveryMinutes ? Math.round(Number(avgDeliveryMinutes) * 10) / 10 : null,
     orders_by_status: ordersByStatus,
   });
 });

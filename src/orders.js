@@ -1,5 +1,5 @@
 import { Router } from "express";
-import db from "../db/database.js";
+import db, { COUNT_INT } from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
 import { haversineDistance, estimateTime } from "./utils.js";
 import { notifyAdmins, notifyDriver } from "./notifications.js";
@@ -18,84 +18,96 @@ export default function createOrdersRouter(io) {
     return `ORD-${ts}${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
   }
 
+  // date(col) = ?  vs  col::date = ?::date
+  const dateEq = (col) => (db.isPostgres ? `${col}::date = ?::date` : `date(${col}) = ?`);
+
   // ─── GET /api/orders ───────────────────────────────────────────────────────
 
-  router.get("/", requireAuth, (req, res) => {
+  router.get("/", requireAuth, async (req, res) => {
     const { role, id: userId } = req.user;
 
     if (role === "admin") {
       const { status } = req.query;
       if (status) {
-        const orders = db
-          .prepare("SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC")
-          .all(status);
+        const orders = await db.all(
+          "SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC",
+          [status]
+        );
         return res.json(orders);
       }
-      const orders = db.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
+      const orders = await db.all("SELECT * FROM orders ORDER BY created_at DESC");
       return res.json(orders);
     }
 
     // Driver sees only their assigned orders
-    const orders = db
-      .prepare("SELECT * FROM orders WHERE driver_id = ? ORDER BY created_at DESC")
-      .all(userId);
+    const orders = await db.all(
+      "SELECT * FROM orders WHERE driver_id = ? ORDER BY created_at DESC",
+      [userId]
+    );
     res.json(orders);
   });
 
   // ─── GET /api/orders/stats ───────────────────────────────────────────────────
   // NOTE: Must be defined BEFORE /:id to avoid "stats" being treated as an id
 
-  router.get("/stats", requireAuth, requireRole("admin"), (req, res) => {
+  router.get("/stats", requireAuth, requireRole("admin"), async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
 
-    const ordersToday = db
-      .prepare("SELECT COUNT(*) as count FROM orders WHERE date(created_at) = ?")
-      .get(today).count;
+    const ordersToday = (
+      await db.get(`SELECT ${COUNT_INT} as count FROM orders WHERE ${dateEq("created_at")}`, [today])
+    ).count;
 
-    const deliveriesToday = db
-      .prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'delivered' AND date(delivered_at) = ?")
-      .get(today).count;
+    const deliveriesToday = (
+      await db.get(
+        `SELECT ${COUNT_INT} as count FROM orders WHERE status = 'delivered' AND ${dateEq("delivered_at")}`,
+        [today]
+      )
+    ).count;
 
-    const activeOrders = db
-      .prepare("SELECT COUNT(*) as count FROM orders WHERE status IN ('assigned', 'picked_up', 'on_the_way')")
-      .get().count;
+    const activeOrders = (
+      await db.get(
+        `SELECT ${COUNT_INT} as count FROM orders WHERE status IN ('assigned', 'picked_up', 'on_the_way')`
+      )
+    ).count;
 
-    const availableDrivers = db
-      .prepare("SELECT COUNT(*) as count FROM drivers WHERE status = 'available'")
-      .get().count;
+    const availableDrivers = (
+      await db.get(`SELECT ${COUNT_INT} as count FROM drivers WHERE status = 'available'`)
+    ).count;
 
-    const revenueToday = db
-      .prepare("SELECT COALESCE(SUM(amount), 0) as total FROM orders WHERE status = 'delivered' AND date(delivered_at) = ?")
-      .get(today).total;
+    const revenueToday = (
+      await db.get(
+        `SELECT COALESCE(SUM(amount), 0) as total FROM orders WHERE status = 'delivered' AND ${dateEq("delivered_at")}`,
+        [today]
+      )
+    ).total;
 
     res.json({
-      orders_today: ordersToday,
-      deliveries_today: deliveriesToday,
-      active_orders: activeOrders,
-      available_drivers: availableDrivers,
-      revenue_today: revenueToday,
+      orders_today: Number(ordersToday),
+      deliveries_today: Number(deliveriesToday),
+      active_orders: Number(activeOrders),
+      available_drivers: Number(availableDrivers),
+      revenue_today: Number(revenueToday),
     });
   });
 
   // ─── GET /api/orders/:id/route ─────────────────────────────────────────────
 
-  router.get("/:id/route", requireAuth, (req, res) => {
-    const order = db.prepare("SELECT id FROM orders WHERE id = ?").get(req.params.id);
+  router.get("/:id/route", requireAuth, async (req, res) => {
+    const order = await db.get("SELECT id FROM orders WHERE id = ?", [req.params.id]);
     if (!order) return res.status(404).json({ error: "Orden no encontrada" });
 
-    const route = db
-      .prepare(
-        "SELECT lat, lng, timestamp FROM location_history WHERE order_id = ? ORDER BY timestamp ASC"
-      )
-      .all(req.params.id);
+    const route = await db.all(
+      "SELECT lat, lng, timestamp FROM location_history WHERE order_id = ? ORDER BY timestamp ASC",
+      [req.params.id]
+    );
 
     res.json(route);
   });
 
   // ─── GET /api/orders/:id ───────────────────────────────────────────────────
 
-  router.get("/:id", requireAuth, (req, res) => {
-    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+  router.get("/:id", requireAuth, async (req, res) => {
+    const order = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     if (!order) return res.status(404).json({ error: "Orden no encontrada" });
 
     // Drivers can only view their own assigned orders
@@ -108,7 +120,7 @@ export default function createOrdersRouter(io) {
 
   // ─── POST /api/orders ─────────────────────────────────────────────────────
 
-  router.post("/", requireAuth, requireRole("admin"), (req, res) => {
+  router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
     const {
       customer_name,
       customer_phone,
@@ -134,13 +146,11 @@ export default function createOrdersRouter(io) {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const code = generateCode();
       try {
-        const info = db
-          .prepare(
-            `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
-                                 dropoff_address, dropoff_lat, dropoff_lng, items, notes, amount, payment_method)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
+        const info = await db.run(
+          `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
+                               dropoff_address, dropoff_lat, dropoff_lng, items, notes, amount, payment_method)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
             code,
             customer_name,
             customer_phone || null,
@@ -153,19 +163,22 @@ export default function createOrdersRouter(io) {
             items || null,
             notes || null,
             amount || 0,
-            payment_method || "cash"
-          );
-        order = db.prepare("SELECT * FROM orders WHERE id = ?").get(info.lastInsertRowid);
+            payment_method || "cash",
+          ]
+        );
+        order = await db.get("SELECT * FROM orders WHERE id = ?", [info.lastInsertRowid]);
         break;
       } catch (err) {
-        // If it's a UNIQUE constraint error on code, retry with a new code
-        if (err.message && (err.message.includes("UNIQUE") || err.message.includes("unique"))) {
+        // UNIQUE constraint violation on code -> retry with a new code
+        const isUnique =
+          err.code === "23505" ||
+          (err.message && (err.message.includes("UNIQUE") || err.message.toLowerCase().includes("duplicate")));
+        if (isUnique) {
           if (attempt === MAX_RETRIES - 1) {
             return res.status(500).json({ error: "No se pudo generar un codigo unico para la orden" });
           }
           continue;
         }
-        // For any other DB error, return 500
         console.error("Error creating order:", err.message);
         return res.status(500).json({ error: "Error al crear la orden" });
       }
@@ -175,10 +188,12 @@ export default function createOrdersRouter(io) {
     if (pickup_lat && pickup_lng && dropoff_lat && dropoff_lng) {
       const distance = haversineDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
       const minutes = estimateTime(distance);
-      db.prepare(
-        "UPDATE orders SET estimated_distance_km = ?, estimated_minutes = ? WHERE id = ?"
-      ).run(Math.round(distance * 100) / 100, Math.round(minutes * 10) / 10, order.id);
-      order = db.prepare("SELECT * FROM orders WHERE id = ?").get(order.id);
+      await db.run("UPDATE orders SET estimated_distance_km = ?, estimated_minutes = ? WHERE id = ?", [
+        Math.round(distance * 100) / 100,
+        Math.round(minutes * 10) / 10,
+        order.id,
+      ]);
+      order = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
     }
 
     // Emit to admins
@@ -190,8 +205,8 @@ export default function createOrdersRouter(io) {
 
   // ─── PUT /api/orders/:id ───────────────────────────────────────────────────
 
-  router.put("/:id", requireAuth, requireRole("admin"), (req, res) => {
-    const existing = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+  router.put("/:id", requireAuth, requireRole("admin"), async (req, res) => {
+    const existing = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     if (!existing) return res.status(404).json({ error: "Orden no encontrada" });
 
     const {
@@ -209,7 +224,7 @@ export default function createOrdersRouter(io) {
       payment_method,
     } = req.body || {};
 
-    db.prepare(
+    await db.run(
       `UPDATE orders SET
          customer_name = COALESCE(?, customer_name),
          customer_phone = COALESCE(?, customer_phone),
@@ -223,45 +238,47 @@ export default function createOrdersRouter(io) {
          notes = COALESCE(?, notes),
          amount = COALESCE(?, amount),
          payment_method = COALESCE(?, payment_method)
-       WHERE id = ?`
-    ).run(
-      customer_name || null,
-      customer_phone || null,
-      pickup_address || null,
-      pickup_lat || null,
-      pickup_lng || null,
-      dropoff_address || null,
-      dropoff_lat || null,
-      dropoff_lng || null,
-      items || null,
-      notes || null,
-      amount != null ? amount : null,
-      payment_method || null,
-      req.params.id
+       WHERE id = ?`,
+      [
+        customer_name || null,
+        customer_phone || null,
+        pickup_address || null,
+        pickup_lat || null,
+        pickup_lng || null,
+        dropoff_address || null,
+        dropoff_lat || null,
+        dropoff_lng || null,
+        items || null,
+        notes || null,
+        amount != null ? amount : null,
+        payment_method || null,
+        req.params.id,
+      ]
     );
 
-    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    const order = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     res.json(order);
   });
 
   // ─── POST /api/orders/:id/assign ───────────────────────────────────────────
 
-  router.post("/:id/assign", requireAuth, requireRole("admin"), (req, res) => {
+  router.post("/:id/assign", requireAuth, requireRole("admin"), async (req, res) => {
     const { driver_id } = req.body || {};
     if (!driver_id) return res.status(400).json({ error: "driver_id es obligatorio" });
 
-    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    const order = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     if (!order) return res.status(404).json({ error: "Orden no encontrada" });
 
     // Verify driver exists
-    const driver = db.prepare("SELECT user_id FROM drivers WHERE user_id = ?").get(driver_id);
+    const driver = await db.get("SELECT user_id FROM drivers WHERE user_id = ?", [driver_id]);
     if (!driver) return res.status(404).json({ error: "Conductor no encontrado" });
 
-    db.prepare(
-      `UPDATE orders SET driver_id = ?, status = 'assigned', assigned_at = datetime('now') WHERE id = ?`
-    ).run(driver_id, req.params.id);
+    await db.run(
+      "UPDATE orders SET driver_id = ?, status = 'assigned', assigned_at = datetime('now') WHERE id = ?",
+      [driver_id, req.params.id]
+    );
 
-    const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    const updated = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
 
     // Notify admins and the assigned driver
     io.to("admins").emit("order:assigned", updated);
@@ -276,9 +293,9 @@ export default function createOrdersRouter(io) {
 
   // ─── POST /api/orders/:id/status ───────────────────────────────────────────
 
-  router.post("/:id/status", requireAuth, (req, res) => {
+  router.post("/:id/status", requireAuth, async (req, res) => {
     const { status } = req.body || {};
-    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    const order = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     if (!order) return res.status(404).json({ error: "Orden no encontrada" });
 
     // Drivers can only update their own orders
@@ -301,14 +318,15 @@ export default function createOrdersRouter(io) {
     }
 
     if (status === "delivered") {
-      db.prepare(
-        `UPDATE orders SET status = ?, delivered_at = datetime('now') WHERE id = ?`
-      ).run(status, req.params.id);
+      await db.run("UPDATE orders SET status = ?, delivered_at = datetime('now') WHERE id = ?", [
+        status,
+        req.params.id,
+      ]);
     } else {
-      db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, req.params.id);
+      await db.run("UPDATE orders SET status = ? WHERE id = ?", [status, req.params.id]);
     }
 
-    const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    const updated = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
 
     // Notify admins
     io.to("admins").emit("order:status", updated);
@@ -316,7 +334,6 @@ export default function createOrdersRouter(io) {
     // Emit to tracking room
     io.to(`tracking:${updated.code}`).emit("order:status", updated);
 
-    // Additional notifications for delivered status
     if (status === "delivered") {
       notifyAdmins(io, "order_delivered", updated);
     }
@@ -326,13 +343,13 @@ export default function createOrdersRouter(io) {
 
   // ─── DELETE /api/orders/:id ────────────────────────────────────────────────
 
-  router.delete("/:id", requireAuth, requireRole("admin"), (req, res) => {
-    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+  router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {
+    const order = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     if (!order) return res.status(404).json({ error: "Orden no encontrada" });
 
-    db.prepare("UPDATE orders SET status = 'cancelled' WHERE id = ?").run(req.params.id);
+    await db.run("UPDATE orders SET status = 'cancelled' WHERE id = ?", [req.params.id]);
 
-    const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    const updated = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
     io.to("admins").emit("order:status", updated);
 
     res.json(updated);

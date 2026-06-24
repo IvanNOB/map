@@ -56,13 +56,13 @@ export function requireRole(...roles) {
 const router = Router();
 
 // POST /api/auth/login
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "Email y contraseña son obligatorios" });
   }
 
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(String(email).toLowerCase().trim());
+  const user = await db.get("SELECT * FROM users WHERE email = ?", [String(email).toLowerCase().trim()]);
   if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.status(401).json({ error: "Credenciales inválidas" });
   }
