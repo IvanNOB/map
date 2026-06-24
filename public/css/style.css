@@ -979,3 +979,256 @@ input, select, textarea {
     align-items: stretch;
   }
 }
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEJORAS v3: tema claro, mapa satelital, PWA, gráficas, búsqueda, etc.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Light Theme Overrides ──────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #f3f4f6;
+  --bg-alt: #ffffff;
+  --panel: #ffffff;
+  --panel-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --shadow: 0 4px 12px -2px rgba(0,0,0,0.10);
+}
+
+html, body { transition: background 0.3s ease, color 0.3s ease; }
+
+/* ─── Theme Toggle Button ────────────────────────────────────────────────── */
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  transition: all var(--transition);
+}
+.icon-btn:hover { background: var(--panel-hover); transform: translateY(-1px); }
+
+/* ─── Brand with logo ────────────────────────────────────────────────────── */
+.navbar-brand, .login-card h1, .tracking-header h1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.brand-logo {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.login-card .brand-logo { width: 48px; height: 48px; font-size: 1.6rem; border-radius: 14px; }
+.login-logo-wrap { display:flex; justify-content:center; margin-bottom: 1rem; }
+
+/* ─── Search box ─────────────────────────────────────────────────────────── */
+.search-box {
+  position: relative;
+  flex: 1 1 200px;
+  max-width: 280px;
+}
+.search-box input {
+  width: 100%;
+  padding: 0.45rem 0.9rem 0.45rem 2rem;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text);
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.search-box input:focus { border-color: var(--primary); }
+.search-box::before {
+  content: '🔍';
+  position: absolute;
+  left: 0.6rem; top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* ─── Card entrance animation ────────────────────────────────────────────── */
+.order-card, .driver-card, .driver-order-card, .summary-card, .stat-card {
+  animation: cardIn 0.35s ease both;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stat-card { transition: transform var(--transition), box-shadow var(--transition); }
+.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+
+/* ─── Map: layer control + legend + custom markers ───────────────────────── */
+.map-legend {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  line-height: 1.7;
+}
+.map-legend .lg-row { display: flex; align-items: center; gap: 0.4rem; }
+.map-legend .lg-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  display: inline-block; border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+}
+.lg-pickup { background: #22c55e; }
+.lg-dropoff { background: #ef4444; }
+.lg-driver { background: #3b82f6; }
+
+/* Colored pin markers (divIcon) */
+.pin {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+.pin span { transform: rotate(45deg); }
+.pin-pickup { background: #22c55e; }
+.pin-dropoff { background: #ef4444; }
+.pin-driver {
+  background: #3b82f6;
+  border-radius: 50%;
+  transform: none;
+  animation: pulse 1.8s infinite;
+}
+.pin-driver span { transform: none; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+  70% { box-shadow: 0 0 0 12px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+
+.leaflet-control-layers, .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+}
+.leaflet-control-layers label { color: var(--text); }
+
+/* ─── Charts ─────────────────────────────────────────────────────────────── */
+.charts-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.chart-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.2rem;
+}
+.chart-card h3 {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+}
+.chart-card canvas { max-height: 260px; }
+
+/* ─── WhatsApp button ────────────────────────────────────────────────────── */
+.btn-whatsapp {
+  background: #25d366;
+  color: #fff;
+}
+.btn-whatsapp:hover { background: #1da851; }
+
+/* ─── Mini map picker (new order modal) ──────────────────────────────────── */
+.picker-map {
+  width: 100%;
+  height: 220px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-top: 0.4rem;
+}
+.picker-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+.picker-hint .step-pickup { color: #22c55e; font-weight: 600; }
+.picker-hint .step-dropoff { color: #ef4444; font-weight: 600; }
+
+/* ─── Fare suggestion ────────────────────────────────────────────────────── */
+.fare-hint {
+  font-size: 0.78rem;
+  color: var(--primary);
+  margin-top: 0.3rem;
+}
+
+/* ─── Navigation button (driver) ─────────────────────────────────────────── */
+.btn-nav {
+  background: var(--orange);
+  color: #fff;
+}
+.btn-nav:hover { background: #ea6a0c; }
+
+/* ─── Rating stars (customer) ────────────────────────────────────────────── */
+.rating-box {
+  text-align: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.rating-stars {
+  font-size: 1.8rem;
+  display: inline-flex;
+  gap: 0.2rem;
+  cursor: pointer;
+}
+.rating-stars .star {
+  color: var(--border);
+  transition: color var(--transition), transform var(--transition);
+}
+.rating-stars .star:hover { transform: scale(1.15); }
+.rating-stars .star.on { color: #fbbf24; }
+.rating-thanks { color: var(--success); font-size: 0.9rem; margin-top: 0.5rem; }
+
+/* ─── Install PWA banner ─────────────────────────────────────────────────── */
+.install-banner {
+  position: fixed;
+  bottom: 1rem; left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: #fff;
+  padding: 0.7rem 1.2rem;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  display: flex; align-items: center; gap: 0.8rem;
+  z-index: 1500;
+  animation: cardIn 0.4s ease;
+}
+.install-banner button {
+  background: #fff; color: var(--primary);
+  border: none; border-radius: 20px;
+  padding: 0.3rem 0.8rem; font-weight: 600; font-size: 0.8rem;
+}
+.install-banner .close-x { background: transparent; color:#fff; font-size:1rem; padding:0; }
+
+/* ─── Connection status dot in navbar ────────────────────────────────────── */
+.conn-indicator {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--text-muted);
+  display: inline-block;
+}
+.conn-indicator.online { background: var(--success); box-shadow: 0 0 6px var(--success); }

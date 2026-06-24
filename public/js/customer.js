@@ -12,6 +12,25 @@
   let currentOrder = null;
   let dropoffLat = null;
   let dropoffLng = null;
+  let pickupMarker = null;
+  let dropoffMarker = null;
+  let currentCode = null;
+
+  // Theme
+  (function () {
+    var t = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+
+  function pinIcon(kind, emoji) {
+    return L.divIcon({
+      className: '',
+      html: '<div class="pin pin-' + kind + '"><span>' + emoji + '</span></div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, kind === 'driver' ? 14 : 28],
+      popupAnchor: [0, kind === 'driver' ? -14 : -28],
+    });
+  }
 
   // ─── DOM References ─────────────────────────────────────────────────────────
   const searchForm = document.getElementById('search-form');
@@ -89,9 +108,47 @@
   function initMap() {
     if (map) return;
     map = L.map('tracking-map').setView([4.6097, -74.0817], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap', maxZoom: 19,
+    });
+    var satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+    );
+    satellite.addTo(map);
+    L.control.layers({ 'Satelital': satellite, 'Calles': streets }, null, { position: 'topright' }).addTo(map);
+
+    // Legend
+    var legend = L.control({ position: 'bottomleft' });
+    legend.onAdd = function () {
+      var div = L.DomUtil.create('div', 'map-legend');
+      div.innerHTML =
+        '<div class="lg-row"><span class="lg-dot lg-pickup"></span> Recogida</div>' +
+        '<div class="lg-row"><span class="lg-dot lg-dropoff"></span> Entrega</div>' +
+        '<div class="lg-row"><span class="lg-dot lg-driver"></span> Repartidor</div>';
+      return div;
+    };
+    legend.addTo(map);
+  }
+
+  function setStaticMarkers(order) {
+    if (!map) return;
+    var pts = [];
+    if (order.pickup_lat && order.pickup_lng) {
+      if (!pickupMarker) {
+        pickupMarker = L.marker([order.pickup_lat, order.pickup_lng], { icon: pinIcon('pickup', '🟢') })
+          .bindPopup('🟢 Recogida<br>' + escapeHtml(order.pickup_address || '')).addTo(map);
+      }
+      pts.push([order.pickup_lat, order.pickup_lng]);
+    }
+    if (order.dropoff_lat && order.dropoff_lng) {
+      if (!dropoffMarker) {
+        dropoffMarker = L.marker([order.dropoff_lat, order.dropoff_lng], { icon: pinIcon('dropoff', '🔴') })
+          .bindPopup('🔴 Entrega<br>' + escapeHtml(order.dropoff_address || '')).addTo(map);
+      }
+      pts.push([order.dropoff_lat, order.dropoff_lng]);
+    }
+    if (pts.length) { try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 }); } catch (e) {} }
   }
 
   function setDriverMarker(lat, lng, name) {
@@ -100,10 +157,9 @@
     if (driverMarker) {
       driverMarker.setLatLng(latlng);
     } else {
-      driverMarker = L.marker(latlng).addTo(map);
+      driverMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
     }
     driverMarker.bindPopup('<strong>' + escapeHtml(name || 'Repartidor') + '</strong>');
-    map.setView(latlng, 15);
   }
 
   function drawRoute(points) {
@@ -143,6 +199,16 @@
   function displayTrackingData(data) {
     var order = data.order;
     var driver = data.driver;
+
+    // If switching to a different order, clear previous markers/route
+    if (map && currentCode && currentCode !== order.code) {
+      [pickupMarker, dropoffMarker, driverMarker, routePolyline].forEach(function (m) {
+        if (m) map.removeLayer(m);
+      });
+      pickupMarker = dropoffMarker = driverMarker = routePolyline = null;
+      routePoints = [];
+    }
+
     currentOrder = order;
     dropoffLat = order.dropoff_lat || null;
     dropoffLng = order.dropoff_lng || null;
@@ -187,6 +253,8 @@
 
     // Init map and show driver marker
     initMap();
+    currentCode = order.code;
+    setStaticMarkers(order);
     if (driver && driver.lat != null && driver.lng != null) {
       setDriverMarker(driver.lat, driver.lng, driver.name);
     }
@@ -194,6 +262,69 @@
     // Draw route from history
     if (data.route && data.route.length > 0) {
       drawRoute(data.route);
+    }
+
+    // Rating box (only when delivered)
+    handleRating(order);
+  }
+
+  // ─── Rating ─────────────────────────────────────────────────────────────────
+  function handleRating(order) {
+    var box = document.getElementById('rating-box');
+    var starsWrap = document.getElementById('rating-stars');
+    var thanks = document.getElementById('rating-thanks');
+    if (!box) return;
+
+    if (order.status !== 'delivered') {
+      box.classList.add('hidden');
+      return;
+    }
+    box.classList.remove('hidden');
+    var stars = starsWrap.querySelectorAll('.star');
+
+    function paint(v) {
+      stars.forEach(function (s) {
+        s.classList.toggle('on', parseInt(s.dataset.v) <= v);
+      });
+    }
+
+    if (order.rating) {
+      paint(order.rating);
+      thanks.classList.remove('hidden');
+      starsWrap.style.pointerEvents = 'none';
+      return;
+    }
+
+    thanks.classList.add('hidden');
+    starsWrap.style.pointerEvents = 'auto';
+    stars.forEach(function (s) {
+      s.onmouseenter = function () { paint(parseInt(s.dataset.v)); };
+      s.onclick = function () { submitRating(parseInt(s.dataset.v)); };
+    });
+    starsWrap.onmouseleave = function () { paint(0); };
+  }
+
+  async function submitRating(value) {
+    if (!currentCode) return;
+    try {
+      var res = await fetch('/api/track/' + encodeURIComponent(currentCode) + '/rating', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: value }),
+      });
+      if (res.ok) {
+        var starsWrap = document.getElementById('rating-stars');
+        starsWrap.querySelectorAll('.star').forEach(function (s) {
+          s.classList.toggle('on', parseInt(s.dataset.v) <= value);
+        });
+        starsWrap.style.pointerEvents = 'none';
+        document.getElementById('rating-thanks').classList.remove('hidden');
+        showToast('Gracias por tu calificacion', 'success');
+      } else {
+        showToast('No se pudo enviar la calificacion', 'error');
+      }
+    } catch (e) {
+      showToast('Error de conexion', 'error');
     }
   }
 
@@ -250,6 +381,7 @@
 
         if (data.status === 'delivered') {
           trackEta.textContent = 'Entregado';
+          if (currentOrder) { currentOrder.status = 'delivered'; handleRating(currentOrder); }
         }
       }
     });

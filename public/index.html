@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3b82f6">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Agencia de Domicilios - Panel de Control</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- Toast Container -->
@@ -14,6 +19,7 @@
   <!-- Login Screen -->
   <div id="login-screen" class="login-screen">
     <div class="login-card">
+      <div class="login-logo-wrap"><span class="brand-logo">🛵</span></div>
       <h1>Agencia de Domicilios</h1>
       <p>Panel de Administracion</p>
       <form id="login-form">
@@ -35,7 +41,7 @@
   <div id="app" class="app-container hidden">
     <!-- Navbar -->
     <nav class="navbar">
-      <span class="navbar-brand">Agencia de Domicilios</span>
+      <span class="navbar-brand"><span class="brand-logo">🛵</span> Agencia de Domicilios</span>
       <div class="navbar-tabs">
         <button class="tab-btn active" data-tab="pedidos">Pedidos</button>
         <button class="tab-btn" data-tab="mapa">Mapa</button>
@@ -43,7 +49,9 @@
         <button class="tab-btn" data-tab="reportes">Reportes</button>
       </div>
       <div class="navbar-right">
+        <span class="conn-indicator" id="conn-dot" title="Estado de conexion"></span>
         <a href="/customer.html" class="navbar-link" title="Seguimiento de Pedido">Seguimiento</a>
+        <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
         <span id="user-name" class="navbar-user"></span>
         <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
       </div>
@@ -73,6 +81,9 @@
         </div>
 
         <div class="toolbar">
+          <div class="search-box">
+            <input type="text" id="order-search" placeholder="Buscar por codigo, cliente o direccion...">
+          </div>
           <button class="filter-btn active" data-filter="">Todos</button>
           <button class="filter-btn" data-filter="pending">Pendientes</button>
           <button class="filter-btn" data-filter="assigned">Asignados</button>
@@ -147,6 +158,16 @@
               <div class="summary-label">Pendientes</div>
             </div>
           </div>
+          <div id="reports-charts" class="charts-row hidden">
+            <div class="chart-card">
+              <h3>Pedidos por estado</h3>
+              <canvas id="chart-status"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Resumen financiero</h3>
+              <canvas id="chart-revenue"></canvas>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -169,12 +190,27 @@
         </div>
         <div class="form-group">
           <label>Direccion de recogida</label>
-          <input type="text" name="pickup_address" required>
+          <input type="text" name="pickup_address" id="pickup_address" required>
         </div>
         <div class="form-group">
           <label>Direccion de entrega</label>
-          <input type="text" name="dropoff_address" required>
+          <input type="text" name="dropoff_address" id="dropoff_address" required>
         </div>
+        <div class="form-group">
+          <label>Ubicar en el mapa (opcional)</label>
+          <div id="picker-map" class="picker-map"></div>
+          <div class="picker-hint">
+            Haz clic en el mapa: primero la <span class="step-pickup">recogida</span> 🟢,
+            luego la <span class="step-dropoff">entrega</span> 🔴.
+            <button type="button" id="btn-geocode" class="btn btn-outline btn-sm" style="margin-left:0.4rem;">Buscar direcciones en el mapa</button>
+            <button type="button" id="btn-reset-pins" class="btn btn-outline btn-sm">Reiniciar</button>
+          </div>
+          <div id="fare-hint" class="fare-hint"></div>
+        </div>
+        <input type="hidden" name="pickup_lat" id="pickup_lat">
+        <input type="hidden" name="pickup_lng" id="pickup_lng">
+        <input type="hidden" name="dropoff_lat" id="dropoff_lat">
+        <input type="hidden" name="dropoff_lng" id="dropoff_lng">
         <div class="form-group">
           <label>Articulos</label>
           <textarea name="items" rows="2" placeholder="Descripcion de los articulos..."></textarea>
@@ -266,5 +302,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/dispatcher.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+  </script>
 </body>
 </html>

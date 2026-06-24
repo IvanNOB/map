@@ -1,8 +1,12 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3b82f6">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Seguimiento de Pedido - Agencia de Domicilios</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -14,7 +18,7 @@
   <div class="tracking-container">
     <!-- Header -->
     <div class="tracking-header">
-      <h1>Agencia de Domicilios</h1>
+      <h1><span class="brand-logo">🛵</span> Agencia de Domicilios</h1>
       <p>Seguimiento de Pedido</p>
     </div>
 
@@ -79,11 +83,29 @@
       <div class="tracking-map-container">
         <div id="tracking-map" class="tracking-map"></div>
       </div>
+
+      <!-- Rating (shown when delivered) -->
+      <div id="rating-box" class="rating-box hidden">
+        <div class="eta-label">¿Cómo estuvo tu entrega?</div>
+        <div class="rating-stars" id="rating-stars">
+          <span class="star" data-v="1">★</span>
+          <span class="star" data-v="2">★</span>
+          <span class="star" data-v="3">★</span>
+          <span class="star" data-v="4">★</span>
+          <span class="star" data-v="5">★</span>
+        </div>
+        <div id="rating-thanks" class="rating-thanks hidden">¡Gracias por tu calificación!</div>
+      </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/customer.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+  </script>
 </body>
 </html>

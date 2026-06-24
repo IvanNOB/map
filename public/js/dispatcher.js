@@ -14,6 +14,64 @@
   let socket = null;
   let assigningOrderId = null;
 
+  // Map layers / markers
+  let orderLayerGroup = null;
+  let pickerMap = null;
+  let pickerPickup = null;
+  let pickerDropoff = null;
+  let pickerLine = null;
+  let pickerStep = 'pickup';
+  // Charts
+  let chartStatus = null;
+  let chartRevenue = null;
+  let searchTerm = '';
+
+  // ─── Pin icon helpers (colored pickup/dropoff/driver markers) ───────────────
+  function pinIcon(kind, emoji) {
+    return L.divIcon({
+      className: '',
+      html: '<div class="pin pin-' + kind + '"><span>' + emoji + '</span></div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, kind === 'driver' ? 14 : 28],
+      popupAnchor: [0, kind === 'driver' ? -14 : -28],
+    });
+  }
+  const ICON_PICKUP = () => pinIcon('pickup', '🟢');
+  const ICON_DROPOFF = () => pinIcon('dropoff', '🔴');
+  const ICON_DRIVER = () => pinIcon('driver', '🛵');
+
+  // ─── Notification sound (Web Audio, no file needed) ─────────────────────────
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+      o.start(); o.stop(ctx.currentTime + 0.4);
+    } catch (e) { /* ignore */ }
+  }
+
+  // ─── Theme toggle ───────────────────────────────────────────────────────────
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const btn = document.getElementById('btn-theme');
+    if (btn) btn.textContent = theme === 'light' ? '☀️' : '🌙';
+  }
+  (function initTheme() {
+    applyTheme(localStorage.getItem('theme') || 'dark');
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'btn-theme') {
+        const cur = document.documentElement.getAttribute('data-theme');
+        applyTheme(cur === 'light' ? 'dark' : 'light');
+      }
+    });
+  })();
+
   // ─── DOM References ─────────────────────────────────────────────────────────
   const loginScreen = document.getElementById('login-screen');
   const app = document.getElementById('app');
@@ -264,14 +322,31 @@
 
   function renderOrders() {
     ordersList.innerHTML = '';
-    if (orders.length === 0) {
+
+    // Apply client-side search over the loaded orders
+    let list = orders;
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      list = orders.filter((o) =>
+        (o.code && o.code.toLowerCase().includes(q)) ||
+        (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
+        (o.pickup_address && o.pickup_address.toLowerCase().includes(q)) ||
+        (o.dropoff_address && o.dropoff_address.toLowerCase().includes(q))
+      );
+    }
+
+    if (list.length === 0) {
       ordersList.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">No hay pedidos</p>';
+      renderOrderPins();
       return;
     }
-    orders.forEach((order) => {
+    list.forEach((order) => {
       const dName = getDriverName(order.driver_id);
       const card = document.createElement('div');
       card.className = 'order-card';
+      const waBtn = order.customer_phone
+        ? '<button class="btn btn-whatsapp btn-sm" data-wa="' + escapeHtml(order.code) + '" data-phone="' + escapeHtml(order.customer_phone) + '">WhatsApp</button>'
+        : '';
       card.innerHTML = `
         <div>
           <span class="order-code">${escapeHtml(order.code)}</span>
@@ -280,18 +355,20 @@
         <div class="order-info">
           <div class="order-customer">${escapeHtml(order.customer_name)}</div>
           <div class="order-addresses">
-            <strong>Recogida:</strong> ${escapeHtml(order.pickup_address || '-')} &rarr; <strong>Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}
+            <strong>🟢 Recogida:</strong> ${escapeHtml(order.pickup_address || '-')} &rarr; <strong>🔴 Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}
           </div>
           <div class="order-meta">
             ${dName ? '<span>Repartidor: ' + escapeHtml(dName) + '</span>' : ''}
             <span>${escapeHtml(formatTime(order.created_at))}</span>
             ${order.amount ? '<span>$' + escapeHtml(String(order.amount)) + '</span>' : ''}
+            ${order.estimated_distance_km ? '<span>📏 ' + escapeHtml(String(order.estimated_distance_km)) + ' km</span>' : ''}
           </div>
         </div>
         <div class="order-actions">
           ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar Repartidor</button>' : ''}
           ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-route="' + order.id + '">Ver Ruta</button>' : ''}
           <button class="btn btn-outline btn-sm" data-copy-link="${escapeHtml(order.code)}">Copiar Link</button>
+          ${waBtn}
           ${['pending', 'assigned'].includes(order.status) ? '<button class="btn btn-danger btn-sm" data-cancel="' + order.id + '">Cancelar</button>' : ''}
         </div>
       `;
@@ -311,7 +388,31 @@
     ordersList.querySelectorAll('[data-copy-link]').forEach((btn) => {
       btn.addEventListener('click', () => copyTrackingLink(btn.dataset.copyLink));
     });
+    ordersList.querySelectorAll('[data-wa]').forEach((btn) => {
+      btn.addEventListener('click', () => sendWhatsApp(btn.dataset.phone, btn.dataset.wa));
+    });
+
+    renderOrderPins();
   }
+
+  // ─── WhatsApp notify ─────────────────────────────────────────────────────
+  function sendWhatsApp(phone, code) {
+    const digits = String(phone).replace(/[^0-9]/g, '');
+    const url = location.origin + '/customer.html?code=' + encodeURIComponent(code);
+    const msg = `Hola! Puedes seguir tu pedido ${code} en tiempo real aqui: ${url}`;
+    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  // ─── Order search ─────────────────────────────────────────────────────────
+  (function bindSearch() {
+    const input = document.getElementById('order-search');
+    if (input) {
+      input.addEventListener('input', () => {
+        searchTerm = input.value.trim();
+        renderOrders();
+      });
+    }
+  })();
 
   function getDriverName(driverId) {
     if (!driverId) return '';
@@ -332,17 +433,124 @@
 
   // ─── Create Order ──────────────────────────────────────────────────────────
 
-  btnNewOrder.addEventListener('click', () => modalNewOrder.classList.remove('hidden'));
+  function haversineKm(a, b, c, d) {
+    const R = 6371, toR = (x) => x * Math.PI / 180;
+    const dLat = toR(c - a), dLng = toR(d - b);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a)) * Math.cos(toR(c)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }
+
+  function setPickerField(kind, lat, lng) {
+    document.getElementById(kind + '_lat').value = lat;
+    document.getElementById(kind + '_lng').value = lng;
+  }
+
+  function updateFareHint() {
+    const plat = parseFloat(document.getElementById('pickup_lat').value);
+    const plng = parseFloat(document.getElementById('pickup_lng').value);
+    const dlat = parseFloat(document.getElementById('dropoff_lat').value);
+    const dlng = parseFloat(document.getElementById('dropoff_lng').value);
+    const hint = document.getElementById('fare-hint');
+    if (pickerLine) { pickerMap.removeLayer(pickerLine); pickerLine = null; }
+    if (!isNaN(plat) && !isNaN(dlat)) {
+      const km = haversineKm(plat, plng, dlat, dlng);
+      const base = 3000, perKm = 1500;
+      const fare = Math.round((base + km * perKm) / 500) * 500;
+      hint.innerHTML = `📏 Distancia: <strong>${km.toFixed(1)} km</strong> · 💰 Tarifa sugerida: <strong>$${fare.toLocaleString()}</strong>`;
+      const amountInput = formNewOrder.querySelector('[name="amount"]');
+      if (amountInput && (!amountInput.value || amountInput.value === '0')) amountInput.value = fare;
+      pickerLine = L.polyline([[plat, plng], [dlat, dlng]], { color: '#f59e0b', weight: 2, dashArray: '6,8' }).addTo(pickerMap);
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  function placePickerMarker(kind, lat, lng) {
+    const icon = kind === 'pickup' ? ICON_PICKUP() : ICON_DROPOFF();
+    const existing = kind === 'pickup' ? pickerPickup : pickerDropoff;
+    if (existing) { existing.setLatLng([lat, lng]); }
+    else {
+      const m = L.marker([lat, lng], { icon, draggable: true }).addTo(pickerMap);
+      m.on('dragend', () => { const p = m.getLatLng(); setPickerField(kind, p.lat, p.lng); updateFareHint(); });
+      if (kind === 'pickup') pickerPickup = m; else pickerDropoff = m;
+    }
+    setPickerField(kind, lat, lng);
+    updateFareHint();
+  }
+
+  function resetPicker() {
+    if (pickerPickup) { pickerMap.removeLayer(pickerPickup); pickerPickup = null; }
+    if (pickerDropoff) { pickerMap.removeLayer(pickerDropoff); pickerDropoff = null; }
+    if (pickerLine) { pickerMap.removeLayer(pickerLine); pickerLine = null; }
+    ['pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng'].forEach((id) => document.getElementById(id).value = '');
+    document.getElementById('fare-hint').textContent = '';
+    pickerStep = 'pickup';
+  }
+
+  async function geocode(address) {
+    if (!address) return null;
+    try {
+      const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(address));
+      const data = await res.json();
+      if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function openOrderModal() {
+    modalNewOrder.classList.remove('hidden');
+    resetPicker();
+    setTimeout(() => {
+      if (!pickerMap) {
+        pickerMap = L.map('picker-map').setView([4.6097, -74.0817], 12);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri', maxZoom: 19,
+        }).addTo(pickerMap);
+        pickerMap.on('click', (e) => {
+          if (pickerStep === 'pickup') { placePickerMarker('pickup', e.latlng.lat, e.latlng.lng); pickerStep = 'dropoff'; }
+          else { placePickerMarker('dropoff', e.latlng.lat, e.latlng.lng); pickerStep = 'pickup'; }
+        });
+      }
+      pickerMap.invalidateSize();
+    }, 200);
+  }
+
+  btnNewOrder.addEventListener('click', openOrderModal);
   btnCancelOrderForm.addEventListener('click', () => modalNewOrder.classList.add('hidden'));
+
+  document.getElementById('btn-reset-pins').addEventListener('click', resetPicker);
+  document.getElementById('btn-geocode').addEventListener('click', async () => {
+    const pAddr = document.getElementById('pickup_address').value.trim();
+    const dAddr = document.getElementById('dropoff_address').value.trim();
+    showToast('Buscando direcciones...', 'info');
+    const p = await geocode(pAddr);
+    const d = await geocode(dAddr);
+    if (p) placePickerMarker('pickup', p.lat, p.lng);
+    if (d) placePickerMarker('dropoff', d.lat, d.lng);
+    if (p || d) {
+      const pts = [];
+      if (p) pts.push([p.lat, p.lng]);
+      if (d) pts.push([d.lat, d.lng]);
+      pickerMap.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
+      pickerStep = (p && d) ? 'pickup' : (p ? 'dropoff' : 'pickup');
+    } else {
+      showToast('No se encontraron las direcciones', 'warning');
+    }
+  });
 
   formNewOrder.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(formNewOrder);
+    const num = (v) => { const n = parseFloat(v); return isNaN(n) ? undefined : n; };
     const body = {
       customer_name: fd.get('customer_name'),
       customer_phone: fd.get('customer_phone'),
       pickup_address: fd.get('pickup_address'),
       dropoff_address: fd.get('dropoff_address'),
+      pickup_lat: num(fd.get('pickup_lat')),
+      pickup_lng: num(fd.get('pickup_lng')),
+      dropoff_lat: num(fd.get('dropoff_lat')),
+      dropoff_lng: num(fd.get('dropoff_lng')),
       items: fd.get('items'),
       notes: fd.get('notes'),
       amount: parseFloat(fd.get('amount')) || 0,
@@ -357,6 +565,7 @@
         showToast('Pedido creado exitosamente', 'success');
         modalNewOrder.classList.add('hidden');
         formNewOrder.reset();
+        resetPicker();
         loadOrders();
         loadStats();
       } else {
@@ -496,12 +705,38 @@
   function initMap() {
     if (map) {
       map.invalidateSize();
+      renderOrderPins();
       return;
     }
     map = L.map('map').setView([4.6097, -74.0817], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+
+    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap', maxZoom: 19,
+    });
+    const satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+    );
+    satellite.addTo(map); // default to satellite as requested
+    L.control.layers(
+      { 'Satelital': satellite, 'Calles': streets },
+      null,
+      { position: 'topright' }
+    ).addTo(map);
+
+    // Legend
+    const legend = L.control({ position: 'bottomleft' });
+    legend.onAdd = function () {
+      const div = L.DomUtil.create('div', 'map-legend');
+      div.innerHTML =
+        '<div class="lg-row"><span class="lg-dot lg-pickup"></span> Recogida</div>' +
+        '<div class="lg-row"><span class="lg-dot lg-dropoff"></span> Entrega</div>' +
+        '<div class="lg-row"><span class="lg-dot lg-driver"></span> Repartidor</div>';
+      return div;
+    };
+    legend.addTo(map);
+
+    orderLayerGroup = L.layerGroup().addTo(map);
 
     // Add existing driver markers
     drivers.forEach((d) => {
@@ -510,31 +745,39 @@
       }
     });
 
-    // Add active order markers
+    renderOrderPins();
+  }
+
+  // Draw pickup (green) + dropoff (red) markers and a connecting line for active orders
+  function renderOrderPins() {
+    if (!map || !orderLayerGroup) return;
+    orderLayerGroup.clearLayers();
     orders.forEach((o) => {
-      if (['assigned', 'picked_up', 'on_the_way'].includes(o.status)) {
-        if (o.pickup_lat && o.pickup_lng) {
-          L.circleMarker([o.pickup_lat, o.pickup_lng], { radius: 6, color: '#3b82f6', fillOpacity: 0.8 })
-            .bindPopup('Recogida: ' + escapeHtml(o.pickup_address || o.code))
-            .addTo(map);
-        }
-        if (o.dropoff_lat && o.dropoff_lng) {
-          L.circleMarker([o.dropoff_lat, o.dropoff_lng], { radius: 6, color: '#ef4444', fillOpacity: 0.8 })
-            .bindPopup('Entrega: ' + escapeHtml(o.dropoff_address || o.code))
-            .addTo(map);
-        }
+      if (!['pending', 'assigned', 'picked_up', 'on_the_way'].includes(o.status)) return;
+      const hasPickup = o.pickup_lat && o.pickup_lng;
+      const hasDropoff = o.dropoff_lat && o.dropoff_lng;
+      if (hasPickup) {
+        L.marker([o.pickup_lat, o.pickup_lng], { icon: ICON_PICKUP() })
+          .bindPopup('<strong>' + escapeHtml(o.code) + '</strong><br>🟢 Recogida<br>' + escapeHtml(o.pickup_address || ''))
+          .addTo(orderLayerGroup);
+      }
+      if (hasDropoff) {
+        L.marker([o.dropoff_lat, o.dropoff_lng], { icon: ICON_DROPOFF() })
+          .bindPopup('<strong>' + escapeHtml(o.code) + '</strong><br>🔴 Entrega<br>' + escapeHtml(o.dropoff_address || ''))
+          .addTo(orderLayerGroup);
+      }
+      if (hasPickup && hasDropoff) {
+        L.polyline([[o.pickup_lat, o.pickup_lng], [o.dropoff_lat, o.dropoff_lng]], {
+          color: '#f59e0b', weight: 2, dashArray: '6,8', opacity: 0.7,
+        }).addTo(orderLayerGroup);
       }
     });
   }
 
   function addDriverMarker(d) {
     if (!d.lat || !d.lng) return;
-    const marker = L.circleMarker([d.lat, d.lng], {
-      radius: 10,
-      color: '#22c55e',
-      fillColor: '#22c55e',
-      fillOpacity: 0.8,
-    }).bindPopup(`<strong>${escapeHtml(d.name)}</strong><br>Vehiculo: ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${d.speed || 0} km/h`);
+    const marker = L.marker([d.lat, d.lng], { icon: ICON_DRIVER() })
+      .bindPopup(`<strong>${escapeHtml(d.name)}</strong><br>🛵 ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${d.speed || 0} km/h`);
     marker.addTo(map);
     driverMarkers[d.id] = marker;
   }
@@ -547,12 +790,8 @@
         `<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${data.speed || 0} km/h`
       );
     } else {
-      const marker = L.circleMarker([data.lat, data.lng], {
-        radius: 10,
-        color: '#22c55e',
-        fillColor: '#22c55e',
-        fillOpacity: 0.8,
-      }).bindPopup(`<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${data.speed || 0} km/h`);
+      const marker = L.marker([data.lat, data.lng], { icon: ICON_DRIVER() })
+        .bindPopup(`<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${data.speed || 0} km/h`);
       marker.addTo(map);
       driverMarkers[data.id] = marker;
     }
@@ -574,10 +813,13 @@
 
     socket.on('connect', () => {
       console.log('Socket conectado');
+      const dot = document.getElementById('conn-dot');
+      if (dot) dot.classList.add('online');
     });
 
     socket.on('order:new', (order) => {
       showToast('Nuevo pedido: ' + order.code, 'info');
+      playBeep();
       loadOrders();
       loadStats();
     });
@@ -629,6 +871,8 @@
 
     socket.on('disconnect', () => {
       console.log('Socket desconectado');
+      const dot = document.getElementById('conn-dot');
+      if (dot) dot.classList.remove('online');
     });
   }
 
@@ -749,6 +993,7 @@
         document.getElementById('summary-cancelled').textContent = byStatus.cancelled || 0;
         document.getElementById('summary-pending').textContent = byStatus.pending || 0;
         reportsSummary.classList.remove('hidden');
+        renderCharts(data);
       } else {
         showToast('Error al cargar el resumen', 'error');
       }
@@ -756,6 +1001,48 @@
       showToast('Error de conexion', 'error');
     }
   });
+
+  // ─── Charts (Chart.js) ──────────────────────────────────────────────────────
+  function renderCharts(data) {
+    if (typeof Chart === 'undefined') return;
+    document.getElementById('reports-charts').classList.remove('hidden');
+    const labels = ['Pendiente', 'Asignado', 'Recogido', 'En Camino', 'Entregado', 'Cancelado'];
+    const keys = ['pending', 'assigned', 'picked_up', 'on_the_way', 'delivered', 'cancelled'];
+    const colors = ['#eab308', '#3b82f6', '#f97316', '#a855f7', '#22c55e', '#ef4444'];
+    const byStatus = data.orders_by_status || {};
+    const counts = keys.map((k) => byStatus[k] || 0);
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#e8eaed';
+
+    if (chartStatus) chartStatus.destroy();
+    chartStatus = new Chart(document.getElementById('chart-status'), {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0 }] },
+      options: { plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 } } } } },
+    });
+
+    const delivered = byStatus.delivered || 0;
+    const revenue = data.total_revenue || 0;
+    if (chartRevenue) chartRevenue.destroy();
+    chartRevenue = new Chart(document.getElementById('chart-revenue'), {
+      type: 'bar',
+      data: {
+        labels: ['Total Pedidos', 'Entregados', 'Ingresos ($K)'],
+        datasets: [{
+          label: 'Resumen',
+          data: [data.total_orders || 0, delivered, Math.round(revenue / 1000)],
+          backgroundColor: ['#3b82f6', '#22c55e', '#a855f7'],
+          borderRadius: 6,
+        }],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: textColor }, grid: { display: false } },
+          y: { ticks: { color: textColor }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        },
+      },
+    });
+  }
 
   // ─── Auto Refresh ──────────────────────────────────────────────────────────
 
