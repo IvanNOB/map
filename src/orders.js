@@ -291,6 +291,49 @@ export default function createOrdersRouter(io) {
     res.json(updated);
   });
 
+  // ─── POST /api/orders/:id/auto-assign ──────────────────────────────────────
+  // Assigns the order to the nearest AVAILABLE driver (by pickup location).
+
+  router.post("/:id/auto-assign", requireAuth, requireRole("admin"), async (req, res) => {
+    const order = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    // Candidate drivers that are available
+    const available = await db.all(
+      `SELECT u.id, u.name, d.lat, d.lng
+       FROM users u JOIN drivers d ON d.user_id = u.id
+       WHERE u.role = 'driver' AND d.status = 'available'`
+    );
+    if (available.length === 0) {
+      return res.status(409).json({ error: "No hay repartidores disponibles en este momento" });
+    }
+
+    // Pick nearest to pickup if coords available, otherwise the first available
+    let chosen = available[0];
+    if (order.pickup_lat != null && order.pickup_lng != null) {
+      const withCoords = available.filter((d) => d.lat != null && d.lng != null);
+      if (withCoords.length > 0) {
+        chosen = withCoords.reduce((best, d) => {
+          const dist = haversineDistance(order.pickup_lat, order.pickup_lng, d.lat, d.lng);
+          return dist < best._dist ? Object.assign({}, d, { _dist: dist }) : best;
+        }, Object.assign({}, withCoords[0], { _dist: Infinity }));
+      }
+    }
+
+    await db.run(
+      "UPDATE orders SET driver_id = ?, status = 'assigned', assigned_at = datetime('now') WHERE id = ?",
+      [chosen.id, req.params.id]
+    );
+    const updated = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
+
+    io.to("admins").emit("order:assigned", updated);
+    io.to(`driver:${chosen.id}`).emit("order:assigned", updated);
+    notifyDriver(io, chosen.id, "order_assigned", updated);
+    io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
+
+    res.json({ order: updated, driver_name: chosen.name });
+  });
+
   // ─── POST /api/orders/:id/status ───────────────────────────────────────────
 
   router.post("/:id/status", requireAuth, async (req, res) => {
