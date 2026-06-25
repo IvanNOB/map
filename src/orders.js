@@ -1,7 +1,7 @@
 import { Router } from "express";
 import db, { COUNT_INT } from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
-import { haversineDistance, estimateTime } from "./utils.js";
+import { haversineDistance, estimateTime, getRoute } from "./utils.js";
 import { notifyAdmins, notifyDriver } from "./notifications.js";
 import { logActivity } from "./activity.js";
 import { sendPush } from "./push.js";
@@ -226,10 +226,18 @@ export default function createOrdersRouter(io) {
       }
     }
 
-    // Calculate estimated distance and time if coordinates are provided
+    // Calculate estimated distance and time if coordinates are provided.
+    // Prefer the real road route (OSRM); fall back to straight-line estimate.
     if (pickup_lat && pickup_lng && dropoff_lat && dropoff_lng) {
-      const distance = haversineDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
-      const minutes = estimateTime(distance);
+      let distance, minutes;
+      const route = await getRoute(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+      if (route) {
+        distance = route.distanceKm;
+        minutes = route.minutes;
+      } else {
+        distance = haversineDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+        minutes = estimateTime(distance);
+      }
       await db.run("UPDATE orders SET estimated_distance_km = ?, estimated_minutes = ? WHERE id = ?", [
         Math.round(distance * 100) / 100,
         Math.round(minutes * 10) / 10,
