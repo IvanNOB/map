@@ -1580,3 +1580,58 @@ a { color: var(--gold); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.5); }
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ORGANIZACIÓN DEL PANEL — encabezados de vista + cuadrícula de configuración
+   ═══════════════════════════════════════════════════════════════════════════ */
+.view-header {
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.view-header h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: linear-gradient(180deg, #fbeeb6, #d4af37 60%, #a9742f);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.view-header p { color: var(--text-muted); font-size: 0.86rem; margin-top: 0.2rem; }
+
+/* Configuración en cuadrícula ordenada */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.2rem;
+  align-items: start;
+}
+.config-grid .config-card {
+  max-width: none !important;
+  margin: 0 !important;
+}
+.config-wide { grid-column: 1 / -1; }
+
+/* Toolbar que se acomoda en varias filas en pantallas pequeñas */
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Tarjetas de pedidos en cuadrícula cuando hay espacio */
+.orders-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .orders-list { grid-template-columns: 1fr; }
+  .view-header h2 { font-size: 1.15rem; }
+}
