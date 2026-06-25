@@ -26,7 +26,7 @@ export const isPostgres = !!DATABASE_URL;
  */
 
 // Tables that have an auto-increment `id` column (need RETURNING id on pg).
-const ID_TABLES = new Set(["users", "orders", "location_history", "messages", "zones", "branches"]);
+const ID_TABLES = new Set(["users", "orders", "location_history", "messages", "zones", "branches", "places"]);
 
 function insertTable(sql) {
   const m = /^\s*insert\s+into\s+["`\[]?(\w+)/i.exec(sql);
@@ -276,6 +276,16 @@ export async function init() {
         lat     DOUBLE PRECISION,
         lng     DOUBLE PRECISION
       );
+
+      CREATE TABLE IF NOT EXISTS places (
+        id        SERIAL PRIMARY KEY,
+        name      TEXT NOT NULL,
+        category  TEXT NOT NULL DEFAULT 'otro',
+        address   TEXT,
+        lat       DOUBLE PRECISION NOT NULL,
+        lng       DOUBLE PRECISION NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS branch_id INTEGER"); } catch (_) {}
     // rating column (safe add for existing tables)
@@ -404,6 +414,16 @@ export async function init() {
         address TEXT,
         lat     REAL,
         lng     REAL
+      );
+
+      CREATE TABLE IF NOT EXISTS places (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        name      TEXT NOT NULL,
+        category  TEXT NOT NULL DEFAULT 'otro',
+        address   TEXT,
+        lat       REAL NOT NULL,
+        lng       REAL NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
     `);
     try { await impl.exec("ALTER TABLE orders ADD COLUMN branch_id INTEGER"); } catch (_) {}

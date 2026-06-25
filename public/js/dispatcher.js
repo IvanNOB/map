@@ -293,6 +293,8 @@
         initZoneMap();
         loadZones();
         loadBranches();
+        initPlaceMap();
+        loadPlaces();
       }
       if (tab === 'actividad') {
         loadActivity();
@@ -438,6 +440,139 @@
   function branchName(id) {
     const b = branches.find((x) => x.id === id);
     return b ? b.name : 'Sucursal';
+  }
+
+  // ─── Places / Points of interest ────────────────────────────────────────────
+  const PLACE_EMOJI = { local: '🏪', restaurante: '🍽️', farmacia: '💊', cliente: '🏠', otro: '📍' };
+  let places = [];
+  let placeMap = null;
+  let placeNewMarker = null;
+  let placeNewCenter = null;
+  let placeMarkersConfig = [];
+  let placeMarkersMain = [];
+
+  function placeIcon(category) {
+    const emoji = PLACE_EMOJI[category] || '📍';
+    return L.divIcon({
+      className: '',
+      html: '<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));">' + emoji + '</div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 22],
+      popupAnchor: [0, -20],
+    });
+  }
+
+  function initPlaceMap() {
+    if (placeMap) { placeMap.invalidateSize(); return; }
+    placeMap = L.map('place-map').setView([4.6097, -74.0817], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(placeMap);
+    placeMap.on('click', (e) => {
+      placeNewCenter = e.latlng;
+      if (placeNewMarker) placeNewMarker.setLatLng(e.latlng);
+      else placeNewMarker = L.marker(e.latlng).addTo(placeMap);
+    });
+    setTimeout(() => placeMap.invalidateSize(), 200);
+  }
+
+  async function loadPlaces() {
+    try {
+      const res = await apiFetch('/api/places');
+      if (!res.ok) return;
+      places = await res.json();
+      renderPlaceList();
+      populatePlaceSelect();
+      drawPlacesConfig();
+      drawPlacesOnMainMap();
+    } catch {}
+  }
+
+  function renderPlaceList() {
+    const box = document.getElementById('place-list');
+    if (!box) return;
+    if (places.length === 0) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;">Sin lugares guardados.</p>'; return; }
+    box.innerHTML = places.map((p) =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
+      '<span>' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + (p.address ? ' — ' + escapeHtml(p.address) : '') + '</span>' +
+      '<button class="btn btn-danger btn-sm" data-place-del="' + p.id + '">Eliminar</button></div>'
+    ).join('');
+    box.querySelectorAll('[data-place-del]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        try { const r = await apiFetch('/api/places/' + el.dataset.placeDel, { method: 'DELETE' }); if (r.ok) { showToast('Lugar eliminado', 'success'); loadPlaces(); } } catch {}
+      });
+    });
+  }
+
+  function populatePlaceSelect() {
+    const sel = document.getElementById('order-place');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Ninguno —</option>' +
+      places.map((p) => '<option value="' + p.id + '">' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + '</option>').join('');
+  }
+
+  function drawPlacesConfig() {
+    if (!placeMap) return;
+    placeMarkersConfig.forEach((m) => placeMap.removeLayer(m));
+    placeMarkersConfig = [];
+    places.forEach((p) => {
+      const m = L.marker([p.lat, p.lng], { icon: placeIcon(p.category) }).bindPopup(escapeHtml(p.name)).addTo(placeMap);
+      placeMarkersConfig.push(m);
+    });
+  }
+
+  function drawPlacesOnMainMap() {
+    if (!map) return;
+    placeMarkersMain.forEach((m) => map.removeLayer(m));
+    placeMarkersMain = [];
+    places.forEach((p) => {
+      const m = L.marker([p.lat, p.lng], { icon: placeIcon(p.category) })
+        .bindPopup('<strong>' + escapeHtml(p.name) + '</strong><br>' + (PLACE_EMOJI[p.category] || '') + ' ' + escapeHtml(p.category) + (p.address ? '<br>' + escapeHtml(p.address) : ''))
+        .addTo(map);
+      placeMarkersMain.push(m);
+    });
+  }
+
+  const btnAddPlace = document.getElementById('btn-add-place');
+  if (btnAddPlace) {
+    btnAddPlace.addEventListener('click', async () => {
+      const name = document.getElementById('place-name').value.trim();
+      const category = document.getElementById('place-category').value;
+      const address = document.getElementById('place-address').value.trim();
+      if (!name) { showToast('Escribe un nombre', 'warning'); return; }
+      if (!placeNewCenter) { showToast('Haz clic en el mapa para fijar el punto', 'warning'); return; }
+      try {
+        const res = await apiFetch('/api/places', {
+          method: 'POST',
+          body: JSON.stringify({ name, category, address, lat: placeNewCenter.lat, lng: placeNewCenter.lng }),
+        });
+        if (res.ok) {
+          showToast('Lugar agregado', 'success');
+          document.getElementById('place-name').value = '';
+          document.getElementById('place-address').value = '';
+          if (placeNewMarker) { placeMap.removeLayer(placeNewMarker); placeNewMarker = null; }
+          placeNewCenter = null;
+          loadPlaces();
+        } else showToast('Error al agregar lugar', 'error');
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
+  // When a saved place is chosen in the new-order form, fill pickup fields
+  const orderPlaceSel = document.getElementById('order-place');
+  if (orderPlaceSel) {
+    orderPlaceSel.addEventListener('change', () => {
+      const p = places.find((x) => String(x.id) === orderPlaceSel.value);
+      if (!p) return;
+      const pickAddr = document.getElementById('pickup_address');
+      if (pickAddr) pickAddr.value = p.address || p.name;
+      document.getElementById('pickup_lat').value = p.lat;
+      document.getElementById('pickup_lng').value = p.lng;
+      if (typeof placePickerMarker === 'function' && pickerMap) {
+        placePickerMarker('pickup', p.lat, p.lng);
+        pickerMap.setView([p.lat, p.lng], 14);
+        pickerStep = 'dropoff';
+      }
+      showToast('Recogida fijada en ' + p.name, 'info');
+    });
   }
   const btnAddBranch = document.getElementById('btn-add-branch');
   if (btnAddBranch) {
@@ -660,7 +795,7 @@
   // ─── Data Loading ───────────────────────────────────────────────────────────
 
   async function loadData() {
-    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones(), loadBranches()]);
+    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones(), loadBranches(), loadPlaces()]);
   }
 
   async function loadStats() {
@@ -1272,6 +1407,7 @@
 
     renderOrderPins();
     if (typeof drawZonesOnMainMap === 'function') drawZonesOnMainMap();
+    if (typeof drawPlacesOnMainMap === 'function') drawPlacesOnMainMap();
   }
 
   // Remove and re-add all driver markers from the current `drivers` array
