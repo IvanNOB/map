@@ -1,0 +1,10 @@
+{
+  "appId": "com.agencia.domicilios",
+  "appName": "Repartidor Domicilios",
+  "webDir": "www",
+  "server": {
+    "url": "https://map-rgi5.onrender.com/driver.html",
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}

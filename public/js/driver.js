@@ -363,57 +363,93 @@
   btnShareLocation.addEventListener('click', startSharing);
   btnStopLocation.addEventListener('click', stopSharing);
 
-  function startSharing() {
-    if (!navigator.geolocation) {
-      showToast('Geolocalizacion no disponible', 'error');
-      return;
+  // ─── Wake Lock (keep screen on while sharing) ───────────────────────────────
+  let wakeLock = null;
+  async function acquireWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (e) { /* ignore */ }
+  }
+  function releaseWakeLock() {
+    try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
+  }
+  // Re-acquire the wake lock when the app comes back to the foreground
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && sharing) acquireWakeLock();
+  });
+
+  // ─── Capacitor (native Android) background geolocation, if available ─────────
+  function bgPlugin() {
+    return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundGeolocation) || null;
+  }
+  let bgWatcherId = null;
+
+  function sendLocation(latitude, longitude, speed, heading, accuracy) {
+    const now = new Date().toLocaleTimeString('es-CO');
+    gpsReadout.textContent = `Lat: ${latitude.toFixed(5)} | Lng: ${longitude.toFixed(5)} | Velocidad: ${(speed || 0).toFixed(1)} m/s | Precision: ${(accuracy || 0).toFixed(0)} m | Ultima actualizacion: ${now}`;
+    if (map) {
+      const latlng = [latitude, longitude];
+      if (positionMarker) positionMarker.setLatLng(latlng);
+      else positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
+      map.setView(latlng, 15);
     }
+    if (socket && socket.connected) {
+      socket.emit('driver:update', {
+        lat: latitude, lng: longitude, speed: speed || 0, heading: heading || 0, accuracy: accuracy || 0,
+      });
+    }
+  }
+
+  function startSharing() {
     if (!consentLocation.checked) return;
 
+    const bg = bgPlugin();
     sharing = true;
     btnShareLocation.classList.add('hidden');
     btnStopLocation.classList.remove('hidden');
 
+    if (bg) {
+      // Native app: tracks in the background even with the app closed / screen off
+      bg.addWatcher({
+        backgroundMessage: "Compartiendo tu ubicacion con la central",
+        backgroundTitle: "Repartidor en linea",
+        requestPermissions: true,
+        stale: false,
+        distanceFilter: 20,
+      }, (location, error) => {
+        if (error) { showToast('Permiso de ubicacion requerido', 'warning'); return; }
+        if (location) sendLocation(location.latitude, location.longitude, location.speed, location.bearing, location.accuracy);
+      }).then((id) => { bgWatcherId = id; });
+      showToast('Rastreo en segundo plano activado', 'success');
+      return;
+    }
+
+    // Web fallback: foreground tracking + keep screen on
+    if (!navigator.geolocation) { showToast('Geolocalizacion no disponible', 'error'); return; }
+    acquireWakeLock();
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude, speed, accuracy } = pos.coords;
-        const now = new Date().toLocaleTimeString('es-CO');
-        gpsReadout.textContent = `Lat: ${latitude.toFixed(5)} | Lng: ${longitude.toFixed(5)} | Velocidad: ${(speed || 0).toFixed(1)} m/s | Precision: ${(accuracy || 0).toFixed(0)} m | Ultima actualizacion: ${now}`;
-
-        // Update map marker
-        if (map) {
-          const latlng = [latitude, longitude];
-          if (positionMarker) {
-            positionMarker.setLatLng(latlng);
-          } else {
-            positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
-          }
-          map.setView(latlng, 15);
-        }
-
-        // Emit via Socket.IO
-        if (socket && socket.connected) {
-          socket.emit('driver:update', {
-            lat: latitude,
-            lng: longitude,
-            speed: speed || 0,
-            heading: pos.coords.heading || 0,
-            accuracy: accuracy || 0,
-          });
-        }
+        const { latitude, longitude, speed, accuracy, heading } = pos.coords;
+        sendLocation(latitude, longitude, speed, heading, accuracy);
       },
-      (err) => {
-        showToast('Error de geolocalizacion: ' + err.message, 'error');
-      },
+      (err) => { showToast('Error de geolocalizacion: ' + err.message, 'error'); },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
   }
 
   function stopSharing() {
+    const bg = bgPlugin();
+    if (bg && bgWatcherId) {
+      bg.removeWatcher({ id: bgWatcherId });
+      bgWatcherId = null;
+    }
     if (watchId !== null) {
       navigator.geolocation.clearWatch(watchId);
       watchId = null;
     }
+    releaseWakeLock();
     sharing = false;
     btnShareLocation.classList.remove('hidden');
     btnStopLocation.classList.add('hidden');

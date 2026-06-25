@@ -1,0 +1,19 @@
+{
+  "name": "domicilios-mobile",
+  "version": "1.0.0",
+  "description": "App Android (Capacitor) que envuelve la app web del repartidor con rastreo en segundo plano",
+  "private": true,
+  "scripts": {
+    "add:android": "cap add android",
+    "sync": "cap sync",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor-community/background-geolocation": "^1.2.21"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
