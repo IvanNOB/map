@@ -280,6 +280,7 @@
       if (viewActividad) viewActividad.classList.toggle('hidden', tab !== 'actividad');
       if (tab === 'mapa') {
         initMap();
+        loadDrivers().then(() => refreshDriverMarkers());
       }
       if (tab === 'repartidores') {
         loadDrivers();
@@ -1229,6 +1230,7 @@
     if (map) {
       map.invalidateSize();
       renderOrderPins();
+      refreshDriverMarkers();
       return;
     }
     map = L.map('map').setView([4.6097, -74.0817], 12);
@@ -1270,6 +1272,18 @@
 
     renderOrderPins();
     if (typeof drawZonesOnMainMap === 'function') drawZonesOnMainMap();
+  }
+
+  // Remove and re-add all driver markers from the current `drivers` array
+  function refreshDriverMarkers() {
+    if (!map) return;
+    Object.keys(driverMarkers).forEach((id) => {
+      map.removeLayer(driverMarkers[id]);
+      delete driverMarkers[id];
+    });
+    drivers.forEach((d) => {
+      if (d.lat && d.lng && d.status !== 'offline') addDriverMarker(d);
+    });
   }
 
   // Draw pickup (green) + dropoff (red) markers and a connecting line for active orders
