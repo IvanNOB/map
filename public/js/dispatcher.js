@@ -521,6 +521,31 @@
     });
   }
 
+  // ─── Change own password ────────────────────────────────────────────────────
+  const btnChangePassword = document.getElementById('btn-change-password');
+  if (btnChangePassword) {
+    btnChangePassword.addEventListener('click', async () => {
+      const current = document.getElementById('cfg-current-password').value;
+      const next = document.getElementById('cfg-new-password').value;
+      if (!current || !next) { showToast('Completa ambos campos', 'warning'); return; }
+      if (next.length < 6) { showToast('La nueva contraseña debe tener al menos 6 caracteres', 'warning'); return; }
+      try {
+        const res = await apiFetch('/api/auth/change-password', {
+          method: 'POST',
+          body: JSON.stringify({ current_password: current, new_password: next }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Contraseña cambiada correctamente', 'success');
+          document.getElementById('cfg-current-password').value = '';
+          document.getElementById('cfg-new-password').value = '';
+        } else {
+          showToast(data.error || 'Error al cambiar contraseña', 'error');
+        }
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
   // ─── Cierre de caja ─────────────────────────────────────────────────────────
   const btnLoadCash = document.getElementById('btn-load-cash');
   if (btnLoadCash) {
