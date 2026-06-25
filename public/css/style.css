@@ -322,12 +322,17 @@ input, select, textarea {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.2rem;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 0.75rem 1rem;
-  align-items: center;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   transition: background var(--transition);
+}
+.order-card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .order-card:hover {
@@ -353,14 +358,13 @@ input, select, textarea {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 0.2rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .order-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -369,9 +373,11 @@ input, select, textarea {
 
 .order-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.4rem;
+  margin-top: 0.2rem;
 }
 
 /* ─── Status Badges ──────────────────────────────────────────────────────── */
