@@ -44,3 +44,24 @@ export function dynamicETA(driverLat, driverLng, dropoffLat, dropoffLng, avgSpee
   const distance = haversineDistance(driverLat, driverLng, dropoffLat, dropoffLng);
   return estimateTime(distance, avgSpeedKmh);
 }
+
+
+/**
+ * Fetch the fastest driving route between two points using OSRM (free, no key).
+ * @returns {Promise<{distanceKm:number, minutes:number, geometry:object}|null>}
+ */
+export async function getRoute(lat1, lng1, lat2, lng2) {
+  try {
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/` +
+      `${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const r = data.routes && data.routes[0];
+    if (!r) return null;
+    return { distanceKm: r.distance / 1000, minutes: r.duration / 60, geometry: r.geometry };
+  } catch (e) {
+    return null;
+  }
+}

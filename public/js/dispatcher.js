@@ -970,27 +970,59 @@
     document.getElementById(kind + '_lng').value = lng;
   }
 
-  function updateFareHint() {
+  // Fetch fastest driving route geometry from OSRM (free, no key)
+  async function osrmRoute(lat1, lng1, lat2, lng2) {
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const r = data.routes && data.routes[0];
+      if (!r) return null;
+      const latlngs = r.geometry.coordinates.map((c) => [c[1], c[0]]); // [lng,lat] -> [lat,lng]
+      return { distanceKm: r.distance / 1000, minutes: r.duration / 60, latlngs };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  let fareReqSeq = 0;
+  async function updateFareHint() {
     const plat = parseFloat(document.getElementById('pickup_lat').value);
     const plng = parseFloat(document.getElementById('pickup_lng').value);
     const dlat = parseFloat(document.getElementById('dropoff_lat').value);
     const dlng = parseFloat(document.getElementById('dropoff_lng').value);
     const hint = document.getElementById('fare-hint');
     if (pickerLine) { pickerMap.removeLayer(pickerLine); pickerLine = null; }
-    if (!isNaN(plat) && !isNaN(dlat)) {
-      const km = haversineKm(plat, plng, dlat, dlng);
-      const base = Number(appSettings.fare_base) || 3000;
-      const perKm = Number(appSettings.fare_per_km) || 1500;
-      const fare = Math.round((base + km * perKm) / 500) * 500;
-      hint.innerHTML = `📏 Distancia: <strong>${km.toFixed(1)} km</strong> · 💰 Tarifa sugerida: <strong>$${fare.toLocaleString()}</strong>`;
-      const amountInput = formNewOrder.querySelector('[name="amount"]');
-      if (amountInput && (!amountInput.value || amountInput.value === '0')) amountInput.value = fare;
-      pickerLine = L.polyline([[plat, plng], [dlat, dlng]], { color: '#f59e0b', weight: 2, dashArray: '6,8' }).addTo(pickerMap);
-      if (!isWithinCoverage(dlat, dlng)) {
-        hint.innerHTML += '<div style="color:var(--danger);margin-top:4px;">⚠️ La entrega esta fuera de las zonas de cobertura.</div>';
-      }
-    } else {
-      hint.textContent = '';
+    if (isNaN(plat) || isNaN(dlat)) { hint.textContent = ''; return; }
+
+    const base = Number(appSettings.fare_base) || 3000;
+    const perKm = Number(appSettings.fare_per_km) || 1500;
+    const seq = ++fareReqSeq;
+
+    // Show a straight-line estimate immediately
+    let km = haversineKm(plat, plng, dlat, dlng);
+    hint.innerHTML = `📏 Distancia: <strong>${km.toFixed(1)} km</strong> · 🛣️ calculando ruta...`;
+    pickerLine = L.polyline([[plat, plng], [dlat, dlng]], { color: '#f59e0b', weight: 2, dashArray: '6,8' }).addTo(pickerMap);
+
+    // Then fetch the real road route (fastest)
+    const route = await osrmRoute(plat, plng, dlat, dlng);
+    if (seq !== fareReqSeq) return; // a newer request superseded this one
+    let minutesTxt = '';
+    if (route) {
+      km = route.distanceKm;
+      minutesTxt = ` · ⏱️ <strong>${Math.round(route.minutes)} min</strong>`;
+      if (pickerLine) pickerMap.removeLayer(pickerLine);
+      pickerLine = L.polyline(route.latlngs, { color: '#3b82f6', weight: 5, opacity: 0.8 }).addTo(pickerMap);
+      try { pickerMap.fitBounds(pickerLine.getBounds(), { padding: [30, 30] }); } catch (e) {}
+    }
+
+    const fare = Math.round((base + km * perKm) / 500) * 500;
+    hint.innerHTML = `📏 Distancia: <strong>${km.toFixed(1)} km</strong>${minutesTxt} · 💰 Tarifa sugerida: <strong>$${fare.toLocaleString()}</strong>`;
+    const amountInput = formNewOrder.querySelector('[name="amount"]');
+    if (amountInput && (!amountInput.value || amountInput.value === '0')) amountInput.value = fare;
+    if (!isWithinCoverage(dlat, dlng)) {
+      hint.innerHTML += '<div style="color:var(--danger);margin-top:4px;">⚠️ La entrega esta fuera de las zonas de cobertura.</div>';
     }
   }
 

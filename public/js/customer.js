@@ -32,6 +32,35 @@
     });
   }
 
+  // Fastest driving route via OSRM (free, no key)
+  var plannedPolyline = null;
+  var routeReqSeq = 0;
+  async function osrmRoute(lat1, lng1, lat2, lng2) {
+    try {
+      var url = 'https://router.project-osrm.org/route/v1/driving/' + lng1 + ',' + lat1 + ';' + lng2 + ',' + lat2 + '?overview=full&geometries=geojson';
+      var res = await fetch(url);
+      if (!res.ok) return null;
+      var data = await res.json();
+      var r = data.routes && data.routes[0];
+      if (!r) return null;
+      return { distanceKm: r.distance / 1000, minutes: r.duration / 60, latlngs: r.geometry.coordinates.map(function (c) { return [c[1], c[0]]; }) };
+    } catch (e) { return null; }
+  }
+
+  // Draw the fastest route from the driver's current position to the dropoff
+  async function updatePlannedRoute(driverLat, driverLng) {
+    if (!map || dropoffLat == null || dropoffLng == null) return;
+    var seq = ++routeReqSeq;
+    var route = await osrmRoute(driverLat, driverLng, dropoffLat, dropoffLng);
+    if (seq !== routeReqSeq || !map) return;
+    if (route) {
+      if (plannedPolyline) map.removeLayer(plannedPolyline);
+      plannedPolyline = L.polyline(route.latlngs, { color: '#3b82f6', weight: 5, opacity: 0.8 }).addTo(map);
+      var eta = document.getElementById('track-eta');
+      if (eta) eta.textContent = Math.round(route.minutes) + ' min';
+    }
+  }
+
   // ─── DOM References ─────────────────────────────────────────────────────────
   const searchForm = document.getElementById('search-form');
   const orderCodeInput = document.getElementById('order-code-input');
@@ -257,6 +286,7 @@
     setStaticMarkers(order);
     if (driver && driver.lat != null && driver.lng != null) {
       setDriverMarker(driver.lat, driver.lng, driver.name);
+      updatePlannedRoute(driver.lat, driver.lng);
     }
 
     // Draw route from history
@@ -433,11 +463,12 @@
         setDriverMarker(data.lat, data.lng, data.name);
         appendRoutePoint(data.lat, data.lng);
 
-        // Recalculate ETA
+        // Straight-line ETA immediately, then refine with the real road route
         var eta = calculateEta(data.lat, data.lng);
         if (eta != null) {
           trackEta.textContent = eta + ' min';
         }
+        updatePlannedRoute(data.lat, data.lng);
       }
     });
 
