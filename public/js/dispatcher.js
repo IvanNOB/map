@@ -1385,6 +1385,25 @@
 
     socket.on('driver:location', (data) => {
       updateDriverMarker(data);
+      // Reflect live online status in the drivers list
+      const d = drivers.find((x) => x.id === data.id);
+      if (d) {
+        d.lat = data.lat; d.lng = data.lng; d.speed = data.speed; d.status = 'available';
+      } else {
+        // Driver came online after page load — refresh the list
+        loadDrivers();
+        return;
+      }
+      const viewRep = document.getElementById('view-repartidores');
+      if (viewRep && !viewRep.classList.contains('hidden')) renderDrivers();
+    });
+
+    socket.on('driver:offline', (data) => {
+      const d = drivers.find((x) => x.id === data.id);
+      if (d) d.status = 'offline';
+      if (driverMarkers[data.id] && map) { map.removeLayer(driverMarkers[data.id]); delete driverMarkers[data.id]; }
+      const viewRep = document.getElementById('view-repartidores');
+      if (viewRep && !viewRep.classList.contains('hidden')) renderDrivers();
     });
 
     socket.on('driver:offline', (data) => {
