@@ -242,8 +242,18 @@
           <button class="btn btn-primary" id="btn-save-config">Guardar configuracion</button>
         </div>
 
-        <div class="config-card" style="margin-top:1.5rem;max-width:640px;">
-          <h2 style="font-size:1.1rem;margin-bottom:0.5rem;">🗺️ Zonas de cobertura</h2>
+        <div class="config-card" style="margin-top:1.5rem;max-width:480px;">
+          <h2 style="font-size:1.1rem;margin-bottom:0.8rem;">🔑 Cambiar mi contraseña</h2>
+          <div class="form-group">
+            <label>Contraseña actual</label>
+            <input type="password" id="cfg-current-password" autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label>Nueva contraseña</label>
+            <input type="password" id="cfg-new-password" autocomplete="new-password" placeholder="Minimo 6 caracteres">
+          </div>
+          <button class="btn btn-primary" id="btn-change-password">Cambiar contraseña</button>
+        </div>
           <p style="color:var(--text-muted);font-size:0.83rem;margin-bottom:0.6rem;">
             Haz clic en el mapa para fijar el centro de una zona, define el nombre y el radio, y guarda.
           </p>
