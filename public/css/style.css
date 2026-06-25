@@ -1451,3 +1451,132 @@ html, body { transition: background 0.3s ease, color 0.3s ease; }
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg-alt); color: var(--text); font-size: 0.85rem; resize: vertical;
 }
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TEMA PREMIUM / VIP TECH — Servicio Ghost (negro + oro/bronce + plata)
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #0a0a0c;
+  --bg-alt: #121116;
+  --panel: #16151b;
+  --panel-hover: #201d27;
+  --border: rgba(212, 175, 55, 0.22);
+  --text: #f3eee2;
+  --text-muted: #b9a98a;
+  --primary: #d4af37;
+  --primary-hover: #e8c860;
+  --primary-soft: rgba(212, 175, 55, 0.15);
+  --gold: #d4af37;
+  --gold-light: #f4d97a;
+  --bronze: #a9742f;
+  --silver: #cfd2d6;
+  --shadow: 0 10px 30px -10px rgba(0,0,0,0.7);
+}
+
+/* Fondo geométrico futurista con halos dorados */
+body {
+  background:
+    radial-gradient(1100px 600px at 82% -12%, rgba(212,175,55,0.12), transparent 60%),
+    radial-gradient(900px 520px at -12% 112%, rgba(169,116,47,0.12), transparent 60%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 24px),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 24px),
+    #0a0a0c;
+  background-attachment: fixed;
+}
+
+/* Títulos en mayúsculas y con acabado metálico dorado */
+.navbar-brand, .login-card h1, .tracking-header h1,
+.config-card h2, .summary-label {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.login-card h1, .tracking-header h1, .navbar-brand {
+  font-weight: 800;
+  background: linear-gradient(180deg, #fbeeb6 0%, #d4af37 55%, #a9742f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+}
+
+/* Botones primarios dorados con texto oscuro y brillo */
+.btn-primary {
+  background: linear-gradient(180deg, #f4d97a 0%, #d4af37 55%, #b8860b 100%);
+  color: #1a1405;
+  font-weight: 700;
+  border: 1px solid #f4d97a;
+  box-shadow: 0 2px 12px rgba(212,175,55,0.35);
+}
+.btn-primary:hover {
+  background: linear-gradient(180deg, #ffe89c 0%, #e8c860 55%, #caa01a 100%);
+  box-shadow: 0 4px 18px rgba(212,175,55,0.5);
+}
+
+/* Botones "outline" con borde dorado */
+.btn-outline {
+  border: 1px solid rgba(212,175,55,0.5);
+  color: var(--gold);
+  background: transparent;
+}
+.btn-outline:hover { background: rgba(212,175,55,0.12); }
+
+/* Paneles/tarjetas con borde dorado tenue y relieve */
+.login-card, .order-card, .driver-card, .stat-card, .summary-card,
+.chart-card, .config-card, .tracking-card, .chat-panel, .chat-contacts,
+.driver-chat, .timeline, .modal, .driver-section, .activity-item, .picker-map {
+  border: 1px solid var(--border) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.025), transparent 40%),
+    var(--panel);
+  box-shadow: 0 0 0 1px rgba(212,175,55,0.05), 0 12px 30px -14px rgba(0,0,0,0.75);
+}
+
+/* Logo (escudo) con degradado metálico oro y brillo */
+.brand-logo {
+  background: linear-gradient(135deg, #f7e9b0 0%, #d4af37 50%, #a9742f 100%) !important;
+  box-shadow: 0 0 16px rgba(212,175,55,0.55), inset 0 1px 2px rgba(255,255,255,0.6);
+  border: 1px solid rgba(247,233,176,0.7);
+}
+
+/* Navbar premium con línea dorada */
+.navbar {
+  background: linear-gradient(180deg, #17161c 0%, #0c0b10 100%);
+  border-bottom: 1px solid rgba(212,175,55,0.28);
+}
+.tab-btn.active { color: var(--gold); border-color: var(--gold); }
+.tab-btn:hover { color: var(--gold-light); }
+
+/* Valores destacados en oro */
+.stat-value, .summary-value, .eta-value, .e-value {
+  background: linear-gradient(180deg, #fbeeb6, #d4af37);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Inputs oscuros con foco dorado */
+input, select, textarea {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(212,175,55,0.22);
+  outline: none;
+}
+
+/* Enlaces e indicadores */
+a { color: var(--gold); }
+.navbar-link { color: var(--text-muted); }
+.navbar-link:hover { color: var(--gold); }
+
+/* Indicador de conexión en oro cuando esta online */
+.conn-indicator.online { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+
+/* Scrollbars sutiles dorados */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.5); }
