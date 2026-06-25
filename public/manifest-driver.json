@@ -5,8 +5,8 @@
   "start_url": "/driver.html",
   "scope": "/driver.html",
   "display": "standalone",
-  "background_color": "#0f1117",
-  "theme_color": "#3b82f6",
+  "background_color": "#0a0a0c",
+  "theme_color": "#d4af37",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
