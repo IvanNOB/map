@@ -286,7 +286,6 @@
     setStaticMarkers(order);
     if (driver && driver.lat != null && driver.lng != null) {
       setDriverMarker(driver.lat, driver.lng, driver.name);
-      updatePlannedRoute(driver.lat, driver.lng);
     }
 
     // Draw route from history
@@ -463,12 +462,11 @@
         setDriverMarker(data.lat, data.lng, data.name);
         appendRoutePoint(data.lat, data.lng);
 
-        // Straight-line ETA immediately, then refine with the real road route
+        // Straight-line ETA
         var eta = calculateEta(data.lat, data.lng);
         if (eta != null) {
           trackEta.textContent = eta + ' min';
         }
-        updatePlannedRoute(data.lat, data.lng);
       }
     });
 

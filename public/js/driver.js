@@ -15,6 +15,49 @@
   let orderMarkers = [];
   let baseLayers = null;
   let dchatMessages = [];
+  let driverRoutePolyline = null;
+  let lastRouteTs = 0;
+
+  // Fastest driving route via OSRM (free, no key)
+  async function osrmRoute(lat1, lng1, lat2, lng2) {
+    try {
+      var url = 'https://router.project-osrm.org/route/v1/driving/' + lng1 + ',' + lat1 + ';' + lng2 + ',' + lat2 + '?overview=full&geometries=geojson';
+      var res = await fetch(url);
+      if (!res.ok) return null;
+      var data = await res.json();
+      var r = data.routes && data.routes[0];
+      if (!r) return null;
+      return { distanceKm: r.distance / 1000, minutes: r.duration / 60, latlngs: r.geometry.coordinates.map(function (c) { return [c[1], c[0]]; }) };
+    } catch (e) { return null; }
+  }
+
+  // Draw the fastest route from the driver to the current target:
+  // - going to pickup while the order is 'assigned'
+  // - going to dropoff once 'picked_up' / 'on_the_way'
+  async function updateDriverRoute(curLat, curLng) {
+    if (!map) return;
+    const active = orders.find((o) => ['assigned', 'picked_up', 'on_the_way'].includes(o.status));
+    if (!active) {
+      if (driverRoutePolyline) { map.removeLayer(driverRoutePolyline); driverRoutePolyline = null; }
+      return;
+    }
+    const toPickup = active.status === 'assigned';
+    const tLat = toPickup ? active.pickup_lat : active.dropoff_lat;
+    const tLng = toPickup ? active.pickup_lng : active.dropoff_lng;
+    if (tLat == null || tLng == null) return;
+
+    // Throttle route recalculation to once every 20s
+    const now = Date.now();
+    if (now - lastRouteTs < 20000) return;
+    lastRouteTs = now;
+
+    const route = await osrmRoute(curLat, curLng, tLat, tLng);
+    if (!route || !map) return;
+    if (driverRoutePolyline) map.removeLayer(driverRoutePolyline);
+    driverRoutePolyline = L.polyline(route.latlngs, {
+      color: toPickup ? '#22c55e' : '#3b82f6', weight: 5, opacity: 0.8,
+    }).addTo(map);
+  }
 
   // ─── Pin icons ──────────────────────────────────────────────────────────────
   function pinIcon(kind, emoji) {
@@ -212,7 +255,9 @@
       const res = await apiFetch('/api/orders');
       if (res.ok) {
         orders = await res.json();
+        lastRouteTs = 0; // force route recompute when orders/targets change
         renderOrders();
+        if (lastPos) updateDriverRoute(lastPos.lat, lastPos.lng);
       }
     } catch {}
   }
@@ -421,6 +466,8 @@
     lastPos = { lat: latitude, lng: longitude, speed: speed || 0 };
     // Send over HTTP (works in background, unlike a WebSocket which the OS suspends)
     postLocation(latitude, longitude, speed);
+    // Draw/refresh the fastest route to the current target (in-app, no Google Maps)
+    updateDriverRoute(latitude, longitude);
   }
 
   function startSharing() {
