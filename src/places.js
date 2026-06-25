@@ -30,6 +30,35 @@ router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
   res.status(201).json({ id: info.lastInsertRowid, name, category: cat, address, lat, lng });
 });
 
+// PUT /api/places/:id - update a point of interest (admin)
+router.put("/:id", requireAuth, requireRole("admin"), async (req, res) => {
+  const { name, category, address, lat, lng } = req.body || {};
+  const place = await db.get("SELECT id FROM places WHERE id = ?", [req.params.id]);
+  if (!place) return res.status(404).json({ error: "Lugar no encontrado" });
+
+  const cat = VALID.includes(category) ? category : null;
+  await db.run(
+    `UPDATE places SET
+       name = COALESCE(?, name),
+       category = COALESCE(?, category),
+       address = ?,
+       lat = COALESCE(?, lat),
+       lng = COALESCE(?, lng)
+     WHERE id = ?`,
+    [
+      name ? name.trim() : null,
+      cat,
+      address || null,
+      typeof lat === "number" ? lat : null,
+      typeof lng === "number" ? lng : null,
+      req.params.id,
+    ]
+  );
+  logActivity(req.user, "place_updated", "Lugar actualizado #" + req.params.id);
+  const updated = await db.get("SELECT id, name, category, address, lat, lng FROM places WHERE id = ?", [req.params.id]);
+  res.json(updated);
+});
+
 // DELETE /api/places/:id (admin)
 router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {
   await db.run("DELETE FROM places WHERE id = ?", [req.params.id]);

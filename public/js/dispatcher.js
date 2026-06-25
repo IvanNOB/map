@@ -445,6 +445,7 @@
   // ─── Places / Points of interest ────────────────────────────────────────────
   const PLACE_EMOJI = { local: '🏪', restaurante: '🍽️', farmacia: '💊', cliente: '🏠', otro: '📍' };
   let places = [];
+  let editingPlaceId = null;
   let placeMap = null;
   let placeNewMarker = null;
   let placeNewCenter = null;
@@ -503,15 +504,50 @@
     if (!box) return;
     if (places.length === 0) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;">Sin lugares guardados.</p>'; return; }
     box.innerHTML = places.map((p) =>
-      '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
-      '<span>' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + (p.address ? ' — ' + escapeHtml(p.address) : '') + '</span>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
+      '<span style="flex:1;">' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + (p.address ? ' — ' + escapeHtml(p.address) : '') + '</span>' +
+      '<button class="btn btn-outline btn-sm" data-place-edit="' + p.id + '">Editar</button>' +
       '<button class="btn btn-danger btn-sm" data-place-del="' + p.id + '">Eliminar</button></div>'
     ).join('');
     box.querySelectorAll('[data-place-del]').forEach((el) => {
       el.addEventListener('click', async () => {
-        try { const r = await apiFetch('/api/places/' + el.dataset.placeDel, { method: 'DELETE' }); if (r.ok) { showToast('Lugar eliminado', 'success'); loadPlaces(); } } catch {}
+        try { const r = await apiFetch('/api/places/' + el.dataset.placeDel, { method: 'DELETE' }); if (r.ok) { showToast('Lugar eliminado', 'success'); if (editingPlaceId === parseInt(el.dataset.placeDel)) resetPlaceForm(); loadPlaces(); } } catch {}
       });
     });
+    box.querySelectorAll('[data-place-edit]').forEach((el) => {
+      el.addEventListener('click', () => editPlace(parseInt(el.dataset.placeEdit)));
+    });
+  }
+
+  // Load a place into the form for editing
+  function editPlace(id) {
+    const p = places.find((x) => x.id === id);
+    if (!p) return;
+    editingPlaceId = id;
+    document.getElementById('place-name').value = p.name || '';
+    document.getElementById('place-category').value = p.category || 'otro';
+    document.getElementById('place-address').value = p.address || '';
+    setPlaceCoords(p.lat, p.lng, false);
+    const btn = document.getElementById('btn-add-place');
+    if (btn) btn.textContent = 'Guardar cambios';
+    const cancel = document.getElementById('btn-cancel-place');
+    if (cancel) cancel.classList.remove('hidden');
+    showToast('Editando: ' + p.name, 'info');
+  }
+
+  function resetPlaceForm() {
+    editingPlaceId = null;
+    document.getElementById('place-name').value = '';
+    document.getElementById('place-address').value = '';
+    document.getElementById('place-lat').value = '';
+    document.getElementById('place-lng').value = '';
+    document.getElementById('place-category').value = 'local';
+    if (placeNewMarker && placeMap) { placeMap.removeLayer(placeNewMarker); placeNewMarker = null; }
+    placeNewCenter = null;
+    const btn = document.getElementById('btn-add-place');
+    if (btn) btn.textContent = 'Agregar lugar';
+    const cancel = document.getElementById('btn-cancel-place');
+    if (cancel) cancel.classList.add('hidden');
   }
 
   function populatePlaceSelect() {
@@ -557,23 +593,22 @@
       if (!name) { showToast('Escribe un nombre', 'warning'); return; }
       if (isNaN(lat) || isNaN(lng)) { showToast('Indica la ubicacion: clic en el mapa, coordenadas o buscar direccion', 'warning'); return; }
       try {
-        const res = await apiFetch('/api/places', {
-          method: 'POST',
+        const editing = editingPlaceId != null;
+        const res = await apiFetch('/api/places' + (editing ? '/' + editingPlaceId : ''), {
+          method: editing ? 'PUT' : 'POST',
           body: JSON.stringify({ name, category, address, lat, lng }),
         });
         if (res.ok) {
-          showToast('Lugar agregado', 'success');
-          document.getElementById('place-name').value = '';
-          document.getElementById('place-address').value = '';
-          document.getElementById('place-lat').value = '';
-          document.getElementById('place-lng').value = '';
-          if (placeNewMarker) { placeMap.removeLayer(placeNewMarker); placeNewMarker = null; }
-          placeNewCenter = null;
+          showToast(editing ? 'Lugar actualizado' : 'Lugar agregado', 'success');
+          resetPlaceForm();
           loadPlaces();
-        } else showToast('Error al agregar lugar', 'error');
+        } else showToast('Error al guardar lugar', 'error');
       } catch { showToast('Error de conexion', 'error'); }
     });
   }
+
+  const btnCancelPlace = document.getElementById('btn-cancel-place');
+  if (btnCancelPlace) btnCancelPlace.addEventListener('click', resetPlaceForm);
 
   // Typing coordinates manually moves the marker
   ['place-lat', 'place-lng'].forEach((id) => {
