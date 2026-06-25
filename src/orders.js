@@ -481,6 +481,27 @@ export default function createOrdersRouter(io) {
     res.json(updated);
   });
 
+  // ─── POST /api/orders/clear ── delete orders permanently (admin) ───────────
+  // body: { which: 'delivered' | 'cancelled' | 'all' }
+  router.post("/clear", requireAuth, requireRole("admin"), async (req, res) => {
+    const which = (req.body && req.body.which) || "all";
+    let cond = "";
+    if (which === "delivered") cond = "WHERE status = 'delivered'";
+    else if (which === "cancelled") cond = "WHERE status = 'cancelled'";
+    // 'all' -> no condition
+
+    const rows = await db.all(`SELECT id FROM orders ${cond}`);
+    for (const r of rows) {
+      await db.run("DELETE FROM location_history WHERE order_id = ?", [r.id]);
+      await db.run("DELETE FROM order_proofs WHERE order_id = ?", [r.id]);
+    }
+    await db.run(`DELETE FROM orders ${cond}`);
+
+    logActivity(req.user, "orders_cleared", `Limpieza de pedidos (${which}): ${rows.length}`);
+    io.to("admins").emit("orders:cleared", { which, deleted: rows.length });
+    res.json({ ok: true, deleted: rows.length });
+  });
+
   // ─── DELETE /api/orders/:id ────────────────────────────────────────────────
 
   router.delete("/:id", requireAuth, requireRole("admin"), async (req, res) => {

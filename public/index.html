@@ -95,6 +95,7 @@
           <button class="filter-btn" data-filter="delivered">Entregados</button>
           <button class="filter-btn" data-filter="cancelled">Cancelados</button>
           <button class="btn btn-primary btn-sm" id="btn-new-order" style="margin-left:auto;">+ Nuevo Pedido</button>
+          <button class="btn btn-outline btn-sm" id="btn-clear-orders" title="Eliminar pedidos">🧹 Limpiar</button>
         </div>
 
         <div id="orders-list" class="orders-list"></div>
@@ -435,6 +436,25 @@
           <button type="submit" class="btn btn-primary">Crear Repartidor</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Clear Orders Modal -->
+  <div id="modal-clear" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>🧹 Limpiar pedidos</h2>
+      <p style="color:var(--text-muted);font-size:0.88rem;">
+        Elimina pedidos de forma <strong>permanente</strong> (no se puede deshacer).
+        Útil para borrar los pedidos de prueba.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;margin:1rem 0;">
+        <button class="btn btn-outline" data-clear="delivered">Eliminar pedidos entregados</button>
+        <button class="btn btn-outline" data-clear="cancelled">Eliminar pedidos cancelados</button>
+        <button class="btn btn-danger" data-clear="all">Eliminar TODOS los pedidos</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="btn-cancel-clear">Cancelar</button>
+      </div>
     </div>
   </div>
 
