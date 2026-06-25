@@ -1,5 +1,5 @@
 /* Service Worker - Agencia de Domicilios PWA */
-const CACHE = "domicilios-v9";
+const CACHE = "domicilios-v10";
 const ASSETS = [
   "/",
   "/index.html",
