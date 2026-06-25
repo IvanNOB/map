@@ -1,0 +1,16 @@
+{
+  "name": "Seguimiento - Domicilios",
+  "short_name": "Seguimiento",
+  "description": "Sigue tu pedido en tiempo real",
+  "start_url": "/customer.html",
+  "scope": "/customer.html",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

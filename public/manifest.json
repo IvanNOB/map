@@ -1,8 +1,9 @@
 {
-  "name": "Agencia de Domicilios",
-  "short_name": "Domicilios",
-  "description": "Plataforma de gestión y seguimiento de domicilios en tiempo real",
+  "name": "Admin - Agencia de Domicilios",
+  "short_name": "Admin Domicilios",
+  "description": "Panel de administracion de la agencia de domicilios",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f1117",
   "theme_color": "#3b82f6",

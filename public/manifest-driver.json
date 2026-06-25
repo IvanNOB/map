@@ -1,0 +1,16 @@
+{
+  "name": "Repartidor - Domicilios",
+  "short_name": "Repartidor",
+  "description": "App del repartidor: pedidos asignados y seguimiento en tiempo real",
+  "start_url": "/driver.html",
+  "scope": "/driver.html",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
