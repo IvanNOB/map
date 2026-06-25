@@ -36,6 +36,10 @@ jobs:
         working-directory: mobile
         run: npx cap add android
 
+      - name: Generar iconos (fantasma) y splash
+        working-directory: mobile
+        run: npx @capacitor/assets generate --android || true
+
       - name: Agregar permisos de ubicación
         working-directory: mobile
         run: node patch-manifest.mjs
