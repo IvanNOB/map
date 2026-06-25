@@ -1080,6 +1080,34 @@
   btnNewOrder.addEventListener('click', openOrderModal);
   btnCancelOrderForm.addEventListener('click', () => modalNewOrder.classList.add('hidden'));
 
+  // ─── Clear orders ───────────────────────────────────────────────────────────
+  const btnClearOrders = document.getElementById('btn-clear-orders');
+  const modalClear = document.getElementById('modal-clear');
+  if (btnClearOrders && modalClear) {
+    btnClearOrders.addEventListener('click', () => modalClear.classList.remove('hidden'));
+    document.getElementById('btn-cancel-clear').addEventListener('click', () => modalClear.classList.add('hidden'));
+    modalClear.querySelectorAll('[data-clear]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const which = btn.dataset.clear;
+        const labels = { delivered: 'entregados', cancelled: 'cancelados', all: 'TODOS los' };
+        if (!confirm(`¿Eliminar ${labels[which]} pedidos de forma permanente? Esta accion no se puede deshacer.`)) return;
+        try {
+          const res = await apiFetch('/api/orders/clear', { method: 'POST', body: JSON.stringify({ which }) });
+          const data = await res.json();
+          if (res.ok) {
+            showToast(`${data.deleted} pedido(s) eliminado(s)`, 'success');
+            modalClear.classList.add('hidden');
+            loadOrders();
+            loadStats();
+            if (map) renderOrderPins();
+          } else {
+            showToast(data.error || 'Error al limpiar', 'error');
+          }
+        } catch { showToast('Error de conexion', 'error'); }
+      });
+    });
+  }
+
   // ─── Customer autocomplete ──────────────────────────────────────────────────
   let customersCache = [];
   async function loadCustomers() {
