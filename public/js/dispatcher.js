@@ -467,11 +467,23 @@
     placeMap = L.map('place-map').setView([4.6097, -74.0817], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(placeMap);
     placeMap.on('click', (e) => {
-      placeNewCenter = e.latlng;
-      if (placeNewMarker) placeNewMarker.setLatLng(e.latlng);
-      else placeNewMarker = L.marker(e.latlng).addTo(placeMap);
+      setPlaceCoords(e.latlng.lat, e.latlng.lng, true);
     });
     setTimeout(() => placeMap.invalidateSize(), 200);
+  }
+
+  // Set the place coordinates (from map click, typing, or geocoding) and move the marker
+  function setPlaceCoords(lat, lng, fromMap) {
+    placeNewCenter = { lat: lat, lng: lng };
+    const latI = document.getElementById('place-lat');
+    const lngI = document.getElementById('place-lng');
+    if (latI) latI.value = Number(lat).toFixed(6);
+    if (lngI) lngI.value = Number(lng).toFixed(6);
+    if (placeMap) {
+      if (placeNewMarker) placeNewMarker.setLatLng([lat, lng]);
+      else placeNewMarker = L.marker([lat, lng]).addTo(placeMap);
+      if (!fromMap) placeMap.setView([lat, lng], 15);
+    }
   }
 
   async function loadPlaces() {
@@ -537,22 +549,52 @@
       const name = document.getElementById('place-name').value.trim();
       const category = document.getElementById('place-category').value;
       const address = document.getElementById('place-address').value.trim();
+      // Prefer typed coordinates; otherwise use the marker placed on the map
+      const latVal = parseFloat(document.getElementById('place-lat').value);
+      const lngVal = parseFloat(document.getElementById('place-lng').value);
+      let lat = !isNaN(latVal) ? latVal : (placeNewCenter ? placeNewCenter.lat : NaN);
+      let lng = !isNaN(lngVal) ? lngVal : (placeNewCenter ? placeNewCenter.lng : NaN);
       if (!name) { showToast('Escribe un nombre', 'warning'); return; }
-      if (!placeNewCenter) { showToast('Haz clic en el mapa para fijar el punto', 'warning'); return; }
+      if (isNaN(lat) || isNaN(lng)) { showToast('Indica la ubicacion: clic en el mapa, coordenadas o buscar direccion', 'warning'); return; }
       try {
         const res = await apiFetch('/api/places', {
           method: 'POST',
-          body: JSON.stringify({ name, category, address, lat: placeNewCenter.lat, lng: placeNewCenter.lng }),
+          body: JSON.stringify({ name, category, address, lat, lng }),
         });
         if (res.ok) {
           showToast('Lugar agregado', 'success');
           document.getElementById('place-name').value = '';
           document.getElementById('place-address').value = '';
+          document.getElementById('place-lat').value = '';
+          document.getElementById('place-lng').value = '';
           if (placeNewMarker) { placeMap.removeLayer(placeNewMarker); placeNewMarker = null; }
           placeNewCenter = null;
           loadPlaces();
         } else showToast('Error al agregar lugar', 'error');
       } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
+  // Typing coordinates manually moves the marker
+  ['place-lat', 'place-lng'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      const lat = parseFloat(document.getElementById('place-lat').value);
+      const lng = parseFloat(document.getElementById('place-lng').value);
+      if (!isNaN(lat) && !isNaN(lng)) setPlaceCoords(lat, lng, false);
+    });
+  });
+
+  // Find coordinates from the address (geocoding)
+  const btnPlaceGeocode = document.getElementById('btn-place-geocode');
+  if (btnPlaceGeocode) {
+    btnPlaceGeocode.addEventListener('click', async () => {
+      const addr = document.getElementById('place-address').value.trim();
+      if (!addr) { showToast('Escribe una direccion primero', 'warning'); return; }
+      showToast('Buscando direccion...', 'info');
+      const r = await geocode(addr);
+      if (r) { setPlaceCoords(r.lat, r.lng, false); showToast('Ubicacion encontrada', 'success'); }
+      else showToast('No se encontro la direccion', 'warning');
     });
   }
 
