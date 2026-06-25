@@ -395,11 +395,13 @@
       else positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
       map.setView(latlng, 15);
     }
-    if (socket && socket.connected) {
-      socket.emit('driver:update', {
-        lat: latitude, lng: longitude, speed: speed || 0, heading: heading || 0, accuracy: accuracy || 0,
-      });
-    }
+    // Send over HTTP (works in background, unlike a WebSocket which the OS suspends)
+    fetch('/api/location/ping', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ lat: latitude, lng: longitude, speed: speed || 0 }),
+      keepalive: true,
+    }).catch(() => {});
   }
 
   function startSharing() {
@@ -454,6 +456,8 @@
     btnShareLocation.classList.remove('hidden');
     btnStopLocation.classList.add('hidden');
 
+    // Notify the server over HTTP (reliable) and via socket if connected
+    fetch('/api/location/offline', { method: 'POST', headers: apiHeaders(), keepalive: true }).catch(() => {});
     if (socket && socket.connected) {
       socket.emit('driver:stop');
     }
