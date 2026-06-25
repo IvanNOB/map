@@ -1,5 +1,5 @@
-/* Service Worker - Agencia de Domicilios PWA */
-const CACHE = "domicilios-v10";
+/* Service Worker - Servicio Ghost PWA */
+const CACHE = "domicilios-v11";
 const ASSETS = [
   "/",
   "/index.html",
@@ -53,7 +53,7 @@ self.addEventListener("fetch", (event) => {
 
 // ─── Push notifications ──────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
-  let data = { title: "Agencia de Domicilios", body: "Tienes una notificacion", url: "/" };
+  let data = { title: "Servicio Ghost", body: "Tienes una notificacion", url: "/" };
   try {
     if (event.data) data = Object.assign(data, event.data.json());
   } catch (e) {}

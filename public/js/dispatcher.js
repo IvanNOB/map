@@ -700,7 +700,7 @@
   if (btnCloseProof) btnCloseProof.addEventListener('click', () => document.getElementById('modal-proof').classList.add('hidden'));
 
   // ─── Settings / Config ──────────────────────────────────────────────────────
-  let appSettings = { fare_base: 3000, fare_per_km: 1500, driver_commission_pct: 80, currency: '$', agency_name: 'Agencia de Domicilios' };
+  let appSettings = { fare_base: 3000, fare_per_km: 1500, driver_commission_pct: 80, currency: '$', agency_name: 'Servicio Ghost' };
 
   async function loadSettings() {
     try {

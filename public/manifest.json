@@ -1,7 +1,7 @@
 {
-  "name": "Admin - Agencia de Domicilios",
-  "short_name": "Admin Domicilios",
-  "description": "Panel de administracion de la agencia de domicilios",
+  "name": "Servicio Ghost - Admin",
+  "short_name": "Ghost Admin",
+  "description": "Panel de administracion de Servicio Ghost",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

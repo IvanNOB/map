@@ -8,7 +8,7 @@ export const DEFAULTS = {
   fare_per_km: 1500, // per-km rate (COP)
   driver_commission_pct: 80, // % of order amount the driver earns
   currency: "$",
-  agency_name: "Agencia de Domicilios",
+  agency_name: "Servicio Ghost",
 };
 
 /** Returns a merged map of defaults + stored settings (values coerced to numbers when numeric). */
