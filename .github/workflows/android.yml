@@ -1,0 +1,58 @@
+name: Compilar APK del Repartidor
+
+# Se puede ejecutar manualmente desde la pestaña "Actions",
+# y también automáticamente cuando cambie algo en mobile/.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android.yml"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Configurar Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Instalar dependencias
+        working-directory: mobile
+        run: npm install
+
+      - name: Crear plataforma Android
+        working-directory: mobile
+        run: npx cap add android
+
+      - name: Agregar permisos de ubicación
+        working-directory: mobile
+        run: node patch-manifest.mjs
+
+      - name: Sincronizar Capacitor
+        working-directory: mobile
+        run: npx cap sync android
+
+      - name: Compilar APK (debug)
+        working-directory: mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Subir el APK como artefacto descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: repartidor-domicilios-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
