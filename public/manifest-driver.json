@@ -1,6 +1,6 @@
 {
-  "name": "Repartidor - Domicilios",
-  "short_name": "Repartidor",
+  "name": "Servicio Ghost - Repartidor",
+  "short_name": "Ghost Repartidor",
   "description": "App del repartidor: pedidos asignados y seguimiento en tiempo real",
   "start_url": "/driver.html",
   "scope": "/driver.html",

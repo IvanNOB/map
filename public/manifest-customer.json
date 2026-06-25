@@ -1,6 +1,6 @@
 {
-  "name": "Seguimiento - Domicilios",
-  "short_name": "Seguimiento",
+  "name": "Servicio Ghost - Seguimiento",
+  "short_name": "Ghost Seguimiento",
   "description": "Sigue tu pedido en tiempo real",
   "start_url": "/customer.html",
   "scope": "/customer.html",
