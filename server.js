@@ -240,8 +240,8 @@ io.on("connection", (socket) => {
 // ─── Offline Detection Interval ──────────────────────────────────────────────
 
 const OFFLINE_SQL = isPostgres
-  ? "SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < NOW() - INTERVAL '30 seconds'"
-  : "SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < datetime('now', '-30 seconds')";
+  ? "SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < NOW() - INTERVAL '90 seconds'"
+  : "SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < datetime('now', '-90 seconds')";
 
 setInterval(async () => {
   try {

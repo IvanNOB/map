@@ -385,6 +385,29 @@
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundGeolocation) || null;
   }
   let bgWatcherId = null;
+  let lastPos = null;
+  let heartbeat = null;
+
+  function postLocation(lat, lng, speed) {
+    fetch('/api/location/ping', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ lat: lat, lng: lng, speed: speed || 0 }),
+      keepalive: true,
+    }).catch(() => {});
+  }
+
+  function startHeartbeat() {
+    stopHeartbeat();
+    // Re-send the last known position every 15s so the driver stays "online"
+    // even while stationary (GPS only emits on movement).
+    heartbeat = setInterval(() => {
+      if (lastPos) postLocation(lastPos.lat, lastPos.lng, lastPos.speed);
+    }, 15000);
+  }
+  function stopHeartbeat() {
+    if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+  }
 
   function sendLocation(latitude, longitude, speed, heading, accuracy) {
     const now = new Date().toLocaleTimeString('es-CO');
@@ -395,13 +418,9 @@
       else positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
       map.setView(latlng, 15);
     }
+    lastPos = { lat: latitude, lng: longitude, speed: speed || 0 };
     // Send over HTTP (works in background, unlike a WebSocket which the OS suspends)
-    fetch('/api/location/ping', {
-      method: 'POST',
-      headers: apiHeaders(),
-      body: JSON.stringify({ lat: latitude, lng: longitude, speed: speed || 0 }),
-      keepalive: true,
-    }).catch(() => {});
+    postLocation(latitude, longitude, speed);
   }
 
   function startSharing() {
@@ -411,6 +430,7 @@
     sharing = true;
     btnShareLocation.classList.add('hidden');
     btnStopLocation.classList.remove('hidden');
+    startHeartbeat();
 
     if (bg) {
       // Native app: tracks in the background even with the app closed / screen off
@@ -452,6 +472,7 @@
       watchId = null;
     }
     releaseWakeLock();
+    stopHeartbeat();
     sharing = false;
     btnShareLocation.classList.remove('hidden');
     btnStopLocation.classList.add('hidden');
