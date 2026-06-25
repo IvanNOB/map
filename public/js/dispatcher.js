@@ -934,7 +934,7 @@
     list.forEach((order) => {
       const dName = getDriverName(order.driver_id);
       const card = document.createElement('div');
-      card.className = 'order-card';
+      card.className = 'order-card status-' + order.status;
       const waBtn = order.customer_phone
         ? '<button class="btn btn-whatsapp btn-sm" data-wa="' + escapeHtml(order.code) + '" data-phone="' + escapeHtml(order.customer_phone) + '">WhatsApp</button>'
         : '';
