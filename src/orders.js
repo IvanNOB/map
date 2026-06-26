@@ -43,8 +43,17 @@ export default function createOrdersRouter(io) {
     }
 
     // Driver sees only their assigned orders
+    if (role === "driver") {
+      const orders = await db.all(
+        "SELECT * FROM orders WHERE driver_id = ? ORDER BY created_at DESC",
+        [userId]
+      );
+      return res.json(orders);
+    }
+
+    // Restaurant sees only the orders it sent
     const orders = await db.all(
-      "SELECT * FROM orders WHERE driver_id = ? ORDER BY created_at DESC",
+      "SELECT * FROM orders WHERE restaurant_id = ? ORDER BY created_at DESC",
       [userId]
     );
     res.json(orders);
@@ -160,13 +169,13 @@ export default function createOrdersRouter(io) {
 
   // ─── POST /api/orders ─────────────────────────────────────────────────────
 
-  router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
+  router.post("/", requireAuth, async (req, res) => {
+    if (req.user.role !== "admin" && req.user.role !== "restaurant") {
+      return res.status(403).json({ error: "No autorizado" });
+    }
     const {
       customer_name,
       customer_phone,
-      pickup_address,
-      pickup_lat,
-      pickup_lng,
       dropoff_address,
       dropoff_lat,
       dropoff_lng,
@@ -178,8 +187,24 @@ export default function createOrdersRouter(io) {
       branch_id,
     } = req.body || {};
 
+    // Pickup: restaurants always pick up from their own registered location
+    let pickup_address = req.body.pickup_address;
+    let pickup_lat = req.body.pickup_lat;
+    let pickup_lng = req.body.pickup_lng;
+    let restaurant_id = null;
+    if (req.user.role === "restaurant") {
+      const prof = await db.get(
+        "SELECT u.name, r.address, r.lat, r.lng FROM users u JOIN restaurants r ON r.user_id = u.id WHERE u.id = ?",
+        [req.user.id]
+      );
+      restaurant_id = req.user.id;
+      pickup_address = (prof && (prof.address || prof.name)) || pickup_address;
+      pickup_lat = prof ? prof.lat : pickup_lat;
+      pickup_lng = prof ? prof.lng : pickup_lng;
+    }
+
     if (!customer_name || !pickup_address || !dropoff_address) {
-      return res.status(400).json({ error: "customer_name, pickup_address y dropoff_address son obligatorios" });
+      return res.status(400).json({ error: "customer_name, direccion de recogida y de entrega son obligatorias" });
     }
 
     // Retry loop to handle code collisions (UNIQUE constraint on code)
@@ -255,6 +280,12 @@ export default function createOrdersRouter(io) {
     // Optional branch
     if (branch_id) {
       await db.run("UPDATE orders SET branch_id = ? WHERE id = ?", [branch_id, order.id]);
+      order = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
+    }
+
+    // Restaurant source (the order was sent by a restaurant)
+    if (restaurant_id) {
+      await db.run("UPDATE orders SET restaurant_id = ? WHERE id = ?", [restaurant_id, order.id]);
       order = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
     }
 

@@ -295,6 +295,7 @@
         loadBranches();
         initPlaceMap();
         loadPlaces();
+        loadRestaurants();
       }
       if (tab === 'actividad') {
         loadActivity();
@@ -440,6 +441,77 @@
   function branchName(id) {
     const b = branches.find((x) => x.id === id);
     return b ? b.name : 'Sucursal';
+  }
+
+  // ─── Restaurants (management) ───────────────────────────────────────────────
+  let restaurants = [];
+  async function loadRestaurants() {
+    try {
+      const res = await apiFetch('/api/restaurants');
+      if (!res.ok) return;
+      restaurants = await res.json();
+      renderRestaurantList();
+    } catch {}
+  }
+  function restaurantName(id) {
+    const r = restaurants.find((x) => x.id === id);
+    return r ? r.name : 'Restaurante';
+  }
+  function renderRestaurantList() {
+    const box = document.getElementById('restaurant-list');
+    if (!box) return;
+    if (restaurants.length === 0) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;">Sin restaurantes registrados.</p>'; return; }
+    box.innerHTML = restaurants.map((r) =>
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
+      '<span style="flex:1;">🍴 ' + escapeHtml(r.name) + ' <span style="color:var(--text-muted);font-size:0.8rem;">(' + escapeHtml(r.email) + ')</span></span>' +
+      '<button class="btn btn-danger btn-sm" data-rest-del="' + r.id + '">Eliminar</button></div>'
+    ).join('');
+    box.querySelectorAll('[data-rest-del]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        if (!confirm('¿Eliminar este restaurante?')) return;
+        try { const res = await apiFetch('/api/restaurants/' + el.dataset.restDel, { method: 'DELETE' }); if (res.ok) { showToast('Restaurante eliminado', 'success'); loadRestaurants(); } } catch {}
+      });
+    });
+  }
+  const btnAddRestaurant = document.getElementById('btn-add-restaurant');
+  if (btnAddRestaurant) {
+    btnAddRestaurant.addEventListener('click', async () => {
+      const body = {
+        name: document.getElementById('r-name').value.trim(),
+        email: document.getElementById('r-email').value.trim(),
+        password: document.getElementById('r-password').value,
+        phone: document.getElementById('r-phone').value.trim(),
+        address: document.getElementById('r-address').value.trim(),
+      };
+      const lat = parseFloat(document.getElementById('r-lat').value);
+      const lng = parseFloat(document.getElementById('r-lng').value);
+      if (!isNaN(lat)) body.lat = lat;
+      if (!isNaN(lng)) body.lng = lng;
+      if (!body.name || !body.email || !body.password) { showToast('Nombre, email y contraseña son obligatorios', 'warning'); return; }
+      try {
+        const res = await apiFetch('/api/restaurants', { method: 'POST', body: JSON.stringify(body) });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Restaurante creado', 'success');
+          ['r-name', 'r-email', 'r-password', 'r-phone', 'r-address', 'r-lat', 'r-lng'].forEach((id) => { document.getElementById(id).value = ''; });
+          loadRestaurants();
+        } else showToast(data.error || 'Error al crear', 'error');
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+  const btnRGeocode = document.getElementById('btn-r-geocode');
+  if (btnRGeocode) {
+    btnRGeocode.addEventListener('click', async () => {
+      const addr = document.getElementById('r-address').value.trim();
+      if (!addr) { showToast('Escribe una direccion primero', 'warning'); return; }
+      showToast('Buscando direccion...', 'info');
+      const r = await geocode(addr);
+      if (r) {
+        document.getElementById('r-lat').value = r.lat.toFixed(6);
+        document.getElementById('r-lng').value = r.lng.toFixed(6);
+        showToast('Coordenadas encontradas', 'success');
+      } else showToast('No se encontro la direccion', 'warning');
+    });
   }
 
   // ─── Places / Points of interest ────────────────────────────────────────────
@@ -872,7 +944,7 @@
   // ─── Data Loading ───────────────────────────────────────────────────────────
 
   async function loadData() {
-    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones(), loadBranches(), loadPlaces()]);
+    await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones(), loadBranches(), loadPlaces(), loadRestaurants()]);
   }
 
   async function loadStats() {
@@ -955,6 +1027,7 @@
             ${order.estimated_distance_km ? '<span>📏 ' + escapeHtml(String(order.estimated_distance_km)) + ' km</span>' : ''}
             ${order.scheduled_at ? '<span title="Programado">📅 ' + escapeHtml(formatTime(order.scheduled_at)) + '</span>' : ''}
             ${order.branch_id ? '<span>🏢 ' + escapeHtml(branchName(order.branch_id)) + '</span>' : ''}
+            ${order.restaurant_id ? '<span title="Enviado por restaurante">🍴 ' + escapeHtml(restaurantName(order.restaurant_id)) + '</span>' : ''}
           </div>
         </div>
         <div class="order-actions">

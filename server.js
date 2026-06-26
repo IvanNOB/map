@@ -20,6 +20,7 @@ import zonesRouter from "./src/zones.js";
 import pushRouter, { initPush } from "./src/push.js";
 import branchesRouter from "./src/branches.js";
 import placesRouter from "./src/places.js";
+import restaurantsRouter from "./src/restaurants.js";
 import { notifyAdmins } from "./src/notifications.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -89,6 +90,9 @@ app.use("/api/branches", branchesRouter);
 
 // Places / points of interest
 app.use("/api/places", placesRouter);
+
+// Restaurants (portal + management)
+app.use("/api/restaurants", restaurantsRouter);
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 
