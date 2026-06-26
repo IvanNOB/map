@@ -21,6 +21,19 @@ export default function createOrdersRouter(io) {
     return `ORD-${ts}${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
   }
 
+  const STATUS_LABELS = {
+    pending: "Pendiente", assigned: "Asignado", picked_up: "Recogido",
+    on_the_way: "En camino", delivered: "Entregado", cancelled: "Cancelado",
+  };
+  const statusLabel = (s) => STATUS_LABELS[s] || s;
+
+  // Notify the originating restaurant (socket + push) about an order change
+  function notifyRestaurant(order, event, pushTitle, pushBody) {
+    if (!order || !order.restaurant_id) return;
+    io.to(`restaurant:${order.restaurant_id}`).emit(event, order);
+    sendPush(order.restaurant_id, { title: pushTitle, body: pushBody, url: "/restaurant.html" });
+  }
+
   // date(col) = ?  vs  col::date = ?::date
   const dateEq = (col) => (db.isPostgres ? `${col}::date = ?::date` : `date(${col}) = ?`);
 
@@ -388,6 +401,7 @@ export default function createOrdersRouter(io) {
 
     logActivity(req.user, "order_assigned", "Pedido " + updated.code + " asignado a repartidor " + driver_id);
     sendPush(driver_id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
+    notifyRestaurant(updated, "order:assigned", "Tu pedido fue asignado", updated.code + ": un repartidor va en camino");
 
     // Auto WhatsApp to customer (only if Twilio is configured)
     if (updated.customer_phone) {
@@ -441,6 +455,7 @@ export default function createOrdersRouter(io) {
 
     logActivity(req.user, "order_auto_assigned", "Pedido " + updated.code + " auto-asignado a " + chosen.name);
     sendPush(chosen.id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
+    notifyRestaurant(updated, "order:assigned", "Tu pedido fue asignado", updated.code + " asignado a " + chosen.name);
 
     if (updated.customer_phone) {
       const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
@@ -508,6 +523,7 @@ export default function createOrdersRouter(io) {
       notifyAdmins(io, "order_delivered", updated);
     }
     logActivity(req.user, "order_status", "Pedido " + updated.code + " -> " + status);
+    notifyRestaurant(updated, "order:status", "Pedido " + updated.code, "Estado: " + statusLabel(status));
 
     res.json(updated);
   });
@@ -545,6 +561,7 @@ export default function createOrdersRouter(io) {
     io.to("admins").emit("order:status", updated);
 
     logActivity(req.user, "order_cancelled", "Pedido " + updated.code + " cancelado");
+    notifyRestaurant(updated, "order:status", "Pedido " + updated.code, "Tu pedido fue cancelado");
 
     res.json(updated);
   });

@@ -142,6 +142,8 @@ io.on("connection", (socket) => {
   } else if (user.role === "driver") {
     socket.join("drivers");
     socket.join(`driver:${user.id}`);
+  } else if (user.role === "restaurant") {
+    socket.join(`restaurant:${user.id}`);
   }
 
   // Driver location update

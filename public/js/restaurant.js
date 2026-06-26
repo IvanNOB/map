@@ -54,6 +54,11 @@
     document.getElementById('rest-name').textContent = currentUser.name;
     loadOrders();
     initSocket();
+    // Notifications: ask permission + subscribe to push
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    if (window.enablePush) window.enablePush(token);
   }
 
   async function checkAuth() {
@@ -146,8 +151,8 @@
   function initSocket() {
     if (socket) return;
     socket = io({ auth: { token } });
-    socket.on('order:status', () => loadOrders());
-    socket.on('order:assigned', () => loadOrders());
+    socket.on('order:status', (o) => { loadOrders(); if (o && o.code) showToast('Pedido ' + o.code + ': ' + statusLabel(o.status), 'info'); });
+    socket.on('order:assigned', (o) => { loadOrders(); if (o && o.code) showToast('Pedido ' + o.code + ' asignado a un repartidor', 'info'); });
   }
 
   checkAuth();

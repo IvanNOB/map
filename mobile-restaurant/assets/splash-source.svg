@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="42%" r="45%">
+      <stop offset="0" stop-color="rgba(212,175,55,0.18)"/>
+      <stop offset="1" stop-color="rgba(0,0,0,0)"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbeeb6"/>
+      <stop offset="0.55" stop-color="#d4af37"/>
+      <stop offset="1" stop-color="#a9742f"/>
+    </linearGradient>
+  </defs>
+  <rect width="2732" height="2732" fill="#0a0a0c"/>
+  <rect width="2732" height="2732" fill="url(#halo)"/>
+  <g transform="translate(1116,1016)">
+    <path fill="url(#gold)" d="M250 0C108 0 0 108 0 250v320c0 28 34 42 54 22l58-58 60 60c14 14 36 14 50 0l60-60 60 60c14 14 36 14 50 0l60-60 58 58c20 20 54 6 54-22V250C500 108 392 0 250 0z"/>
+    <circle cx="166" cy="260" r="46" fill="#0a0a0c"/>
+    <circle cx="334" cy="260" r="46" fill="#0a0a0c"/>
+    <circle cx="250" cy="392" r="30" fill="#0a0a0c"/>
+  </g>
+  <text x="1366" y="1880" font-family="system-ui,sans-serif" font-size="130" fill="#d4af37" text-anchor="middle" font-weight="800" letter-spacing="8">SERVICIO GHOST</text>
+  <text x="1366" y="1980" font-family="system-ui,sans-serif" font-size="60" fill="#b9a98a" text-anchor="middle" letter-spacing="6">ENTREGAS RAPIDAS</text>
+</svg>
