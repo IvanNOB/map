@@ -54,6 +54,7 @@
       <div class="navbar-right">
         <span class="conn-indicator" id="conn-dot" title="Estado de conexion"></span>
         <a href="/customer.html" class="navbar-link" title="Seguimiento de Pedido">Seguimiento</a>
+        <a href="/restaurant.html" class="navbar-link" title="Portal de Restaurantes" target="_blank" rel="noopener">Restaurantes</a>
         <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
         <span id="user-name" class="navbar-user"></span>
         <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
@@ -337,6 +338,33 @@
           <button class="btn btn-primary btn-sm" id="btn-add-place">Agregar lugar</button>
           <button class="btn btn-outline btn-sm hidden" id="btn-cancel-place">Cancelar edición</button>
           <div id="place-list" style="margin-top:0.8rem;"></div>
+        </div>
+
+        <div class="config-card config-wide">
+          <h2 style="font-size:1.05rem;margin-bottom:0.5rem;">🍴 Restaurantes</h2>
+          <p style="color:var(--text-muted);font-size:0.83rem;margin-bottom:0.6rem;">
+            Crea cuentas para tus restaurantes aliados. Ellos entran a
+            <a href="/restaurant.html" target="_blank" rel="noopener">/restaurant.html</a> y envían sus domicilios al despacho.
+          </p>
+          <div class="form-row">
+            <div class="form-group"><label>Nombre del restaurante</label><input type="text" id="r-name" placeholder="Ej. Pizzería Roma"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="r-email" placeholder="correo@restaurante.com"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Contraseña</label><input type="password" id="r-password"></div>
+            <div class="form-group"><label>Teléfono</label><input type="tel" id="r-phone"></div>
+          </div>
+          <div class="form-group"><label>Dirección (recogida por defecto)</label><input type="text" id="r-address" placeholder="Dirección del restaurante"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Latitud</label><input type="number" step="any" id="r-lat"></div>
+            <div class="form-group"><label>Longitud</label><input type="number" step="any" id="r-lng"></div>
+          </div>
+          <p style="font-size:0.78rem;color:var(--text-muted);margin:0 0 0.5rem;">
+            Tip: escribe la dirección y usa
+            <button type="button" id="btn-r-geocode" class="btn btn-outline btn-sm" style="margin-left:0.3rem;">buscar coordenadas</button>
+          </p>
+          <button class="btn btn-primary btn-sm" id="btn-add-restaurant">Crear restaurante</button>
+          <div id="restaurant-list" style="margin-top:0.8rem;"></div>
         </div>
         </div>
       </section>

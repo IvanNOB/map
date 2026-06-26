@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#d4af37" />
+  <link rel="manifest" href="/manifest-restaurant.json" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <title>Restaurante - Servicio Ghost</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Login -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo-wrap"><span class="brand-logo">👻</span></div>
+      <h1>Servicio Ghost</h1>
+      <p>Portal de Restaurantes</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="login-email" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="login-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Ingresar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app" class="hidden">
+    <header class="navbar">
+      <span class="navbar-brand"><span class="brand-logo">👻</span> <span id="rest-name">Restaurante</span></span>
+      <div class="navbar-right">
+        <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesión</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="config-grid">
+        <!-- Nuevo domicilio -->
+        <div class="config-card">
+          <h2 style="font-size:1.05rem;margin-bottom:0.8rem;">➕ Enviar domicilio al despacho</h2>
+          <form id="order-form">
+            <div class="form-group"><label>Nombre del cliente</label><input type="text" id="o-name" required></div>
+            <div class="form-group"><label>Teléfono del cliente</label><input type="tel" id="o-phone"></div>
+            <div class="form-group"><label>Dirección de entrega</label><input type="text" id="o-dropoff" required></div>
+            <div class="form-group"><label>Artículos / pedido</label><textarea id="o-items" rows="2"></textarea></div>
+            <div class="form-row">
+              <div class="form-group"><label>Monto ($)</label><input type="number" id="o-amount" min="0" step="0.01" value="0"></div>
+              <div class="form-group">
+                <label>Pago</label>
+                <select id="o-payment"><option value="cash">Efectivo</option><option value="card">Tarjeta</option></select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Enviar al despacho</button>
+          </form>
+        </div>
+
+        <!-- Mis domicilios -->
+        <div class="config-card">
+          <h2 style="font-size:1.05rem;margin-bottom:0.8rem;">📦 Mis domicilios</h2>
+          <div id="orders-list" class="orders-list" style="display:flex;flex-direction:column;gap:0.6rem;"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/restaurant.js"></script>
+  <script src="/js/pwa.js"></script>
+</body>
+</html>

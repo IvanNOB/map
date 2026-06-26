@@ -166,7 +166,7 @@ export async function init() {
         name        TEXT NOT NULL,
         email       TEXT NOT NULL UNIQUE,
         password    TEXT NOT NULL,
-        role        TEXT NOT NULL CHECK (role IN ('admin','driver')),
+        role        TEXT NOT NULL CHECK (role IN ('admin','driver','restaurant')),
         created_at  TIMESTAMP NOT NULL DEFAULT NOW()
       );
 
@@ -277,6 +277,14 @@ export async function init() {
         lng     DOUBLE PRECISION
       );
 
+      CREATE TABLE IF NOT EXISTS restaurants (
+        user_id  INTEGER PRIMARY KEY,
+        address  TEXT,
+        phone    TEXT,
+        lat      DOUBLE PRECISION,
+        lng      DOUBLE PRECISION
+      );
+
       CREATE TABLE IF NOT EXISTS places (
         id        SERIAL PRIMARY KEY,
         name      TEXT NOT NULL,
@@ -288,6 +296,9 @@ export async function init() {
       );
     `);
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS branch_id INTEGER"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS restaurant_id INTEGER"); } catch (_) {}
+    // Allow the 'restaurant' role on existing databases (drop the old role check)
+    try { await impl.exec("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check"); } catch (_) {}
     // rating column (safe add for existing tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS rating INTEGER"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS review TEXT"); } catch (_) {}
@@ -301,7 +312,7 @@ export async function init() {
         name        TEXT NOT NULL,
         email       TEXT NOT NULL UNIQUE,
         password    TEXT NOT NULL,
-        role        TEXT NOT NULL CHECK (role IN ('admin','driver')),
+        role        TEXT NOT NULL CHECK (role IN ('admin','driver','restaurant')),
         created_at  TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
@@ -416,6 +427,14 @@ export async function init() {
         lng     REAL
       );
 
+      CREATE TABLE IF NOT EXISTS restaurants (
+        user_id  INTEGER PRIMARY KEY,
+        address  TEXT,
+        phone    TEXT,
+        lat      REAL,
+        lng      REAL
+      );
+
       CREATE TABLE IF NOT EXISTS places (
         id        INTEGER PRIMARY KEY AUTOINCREMENT,
         name      TEXT NOT NULL,
@@ -427,6 +446,7 @@ export async function init() {
       );
     `);
     try { await impl.exec("ALTER TABLE orders ADD COLUMN branch_id INTEGER"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN restaurant_id INTEGER"); } catch (_) {}
     // rating column (safe add for existing sqlite tables)
     try { await impl.exec("ALTER TABLE orders ADD COLUMN rating INTEGER"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN review TEXT"); } catch (_) {}

@@ -300,6 +300,18 @@
       navBtn = '<a class="btn btn-nav btn-sm" href="' + navUrl + '" target="_blank" rel="noopener">🧭 Navegar ' + (toPickup ? 'a recogida' : 'a entrega') + '</a>';
     }
 
+    // Contact the customer via WhatsApp / call (from the driver's phone)
+    let contactBtns = '';
+    if (order.customer_phone) {
+      const digits = String(order.customer_phone).replace(/[^0-9]/g, '');
+      if (digits) {
+        const waMsg = encodeURIComponent('Hola! Soy tu repartidor de Servicio Ghost con tu pedido ' + order.code + '.');
+        contactBtns =
+          '<a class="btn btn-whatsapp btn-sm" href="https://wa.me/' + digits + '?text=' + waMsg + '" target="_blank" rel="noopener">💬 WhatsApp cliente</a>' +
+          '<a class="btn btn-outline btn-sm" href="tel:' + digits + '">📞 Llamar</a>';
+      }
+    }
+
     card.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
         <span class="order-code">${escapeHtml(order.code)}</span>
@@ -313,6 +325,7 @@
       <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
         ${action ? '<button class="btn btn-success btn-sm" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + escapeHtml(action.label) + '</button>' : ''}
         ${navBtn}
+        ${contactBtns}
         ${['on_the_way', 'delivered'].includes(order.status) ? '<button class="btn btn-nav btn-sm" data-proof="' + order.id + '">📸 Subir prueba</button>' : ''}
         ${order.status === 'delivered' ? '<span class="badge badge-delivered">Completado</span>' : ''}
       </div>
