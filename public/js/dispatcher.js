@@ -1630,6 +1630,8 @@
     drivers.forEach((d) => {
       if (d.lat && d.lng && d.status !== 'offline') addDriverMarker(d);
     });
+    renderLivePeople();
+    fitDriversBounds();
   }
 
   // Draw pickup (green) + dropoff (red) markers and a connecting line for active orders
@@ -1661,7 +1663,8 @@
   function addDriverMarker(d) {
     if (!d.lat || !d.lng) return;
     const marker = L.marker([d.lat, d.lng], { icon: ICON_DRIVER() })
-      .bindPopup(`<strong>${escapeHtml(d.name)}</strong><br>🛵 ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${d.speed || 0} km/h`);
+      .bindPopup(`<strong>${escapeHtml(d.name)}</strong><br>🛵 ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${Math.round(d.speed || 0)} km/h`)
+      .bindTooltip(escapeHtml(d.name), { permanent: true, direction: 'top', offset: [0, -16], className: 'driver-label' });
     marker.addTo(map);
     driverMarkers[d.id] = marker;
   }
@@ -1671,15 +1674,61 @@
     if (driverMarkers[data.id]) {
       driverMarkers[data.id].setLatLng([data.lat, data.lng]);
       driverMarkers[data.id].setPopupContent(
-        `<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${data.speed || 0} km/h`
+        `<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${Math.round(data.speed || 0)} km/h`
       );
+      if (driverMarkers[data.id].getTooltip()) driverMarkers[data.id].setTooltipContent(escapeHtml(data.name));
     } else {
       const marker = L.marker([data.lat, data.lng], { icon: ICON_DRIVER() })
-        .bindPopup(`<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${data.speed || 0} km/h`);
+        .bindPopup(`<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${Math.round(data.speed || 0)} km/h`)
+        .bindTooltip(escapeHtml(data.name), { permanent: true, direction: 'top', offset: [0, -16], className: 'driver-label' });
       marker.addTo(map);
       driverMarkers[data.id] = marker;
     }
+    renderLivePeople();
   }
+
+  // ─── Live people panel (who is online right now) ────────────────────────────
+  function renderLivePeople() {
+    const box = document.getElementById('live-people-list');
+    const countEl = document.getElementById('live-count');
+    if (!box) return;
+    const online = drivers.filter((d) => d.lat && d.lng && d.status !== 'offline');
+    if (countEl) countEl.textContent = online.length;
+    if (online.length === 0) {
+      box.innerHTML = '<p class="live-empty">Nadie en línea por ahora.</p>';
+      return;
+    }
+    box.innerHTML = online.map((d) =>
+      '<div class="live-person" data-center="' + d.id + '">' +
+        '<span class="live-avatar">🛵</span>' +
+        '<div class="live-info">' +
+          '<span class="live-name">' + escapeHtml(d.name) + '</span>' +
+          '<span class="live-meta">' + escapeHtml(d.vehicle || 'Repartidor') + ' · ' + Math.round(d.speed || 0) + ' km/h</span>' +
+        '</div>' +
+        '<button class="btn btn-outline btn-sm live-go" data-center="' + d.id + '">Ver</button>' +
+      '</div>'
+    ).join('');
+    box.querySelectorAll('[data-center]').forEach((el) => {
+      el.addEventListener('click', (e) => { e.stopPropagation(); centerOnDriver(parseInt(el.dataset.center)); });
+    });
+  }
+
+  function centerOnDriver(id) {
+    const m = driverMarkers[id];
+    if (m && map) { map.setView(m.getLatLng(), 16); m.openPopup(); }
+  }
+
+  function fitDriversBounds() {
+    if (!map) return;
+    const ms = Object.values(driverMarkers);
+    if (ms.length === 0) return;
+    try { map.fitBounds(L.featureGroup(ms).getBounds().pad(0.3), { maxZoom: 15 }); } catch (e) {}
+  }
+
+  (function () {
+    const btnFitPeople = document.getElementById('btn-fit-people');
+    if (btnFitPeople) btnFitPeople.addEventListener('click', fitDriversBounds);
+  })();
 
   function removeDriverMarker(data) {
     if (!map) return;
@@ -1748,6 +1797,7 @@
       const d = drivers.find((x) => x.id === data.id);
       if (d) d.status = 'offline';
       if (driverMarkers[data.id] && map) { map.removeLayer(driverMarkers[data.id]); delete driverMarkers[data.id]; }
+      renderLivePeople();
       const viewRep = document.getElementById('view-repartidores');
       if (viewRep && !viewRep.classList.contains('hidden')) renderDrivers();
     });
