@@ -117,8 +117,19 @@
 
       <!-- Mapa View -->
       <section id="view-mapa" class="hidden">
-        <div class="view-header"><h2>🗺️ Mapa en vivo</h2><p>Repartidores, pedidos activos, zonas y lugares.</p></div>
-        <div id="map" class="map-container"></div>
+        <div class="view-header"><h2>🗺️ Mapa en vivo</h2><p>Mira en tiempo real dónde está cada persona. Los nombres aparecen sobre el mapa.</p></div>
+        <div class="map-wrap">
+          <div id="map" class="map-container"></div>
+          <div id="live-people" class="live-people">
+            <div class="live-people-head">
+              <span class="live-dot"></span>
+              <strong>En línea ahora</strong>
+              <span id="live-count" class="live-count">0</span>
+              <button id="btn-fit-people" class="btn btn-outline btn-sm" title="Ver a todos" style="margin-left:auto;">Ver a todos</button>
+            </div>
+            <div id="live-people-list" class="live-people-list"></div>
+          </div>
+        </div>
       </section>
 
       <!-- Repartidores View -->

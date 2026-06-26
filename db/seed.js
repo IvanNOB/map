@@ -43,64 +43,68 @@ async function seed() {
     role: "admin",
   });
 
-  // Drivers
-  const drivers = [
-    { name: "Juan Pérez", email: "juan@agencia.com", phone: "300 111 2233", vehicle: "Moto", plate: "ABC12D" },
-    { name: "María Gómez", email: "maria@agencia.com", phone: "300 222 3344", vehicle: "Moto", plate: "XYZ98E" },
-    { name: "Carlos Ruiz", email: "carlos@agencia.com", phone: "300 333 4455", vehicle: "Bicicleta", plate: "—" },
-  ];
+  // Demo drivers + orders are ONLY seeded when SEED_DEMO=true (local testing).
+  // In production this stays off, so test data never reappears after deploys.
+  if (process.env.SEED_DEMO === "true") {
+    // Drivers
+    const drivers = [
+      { name: "Juan Pérez", email: "juan@agencia.com", phone: "300 111 2233", vehicle: "Moto", plate: "ABC12D" },
+      { name: "María Gómez", email: "maria@agencia.com", phone: "300 222 3344", vehicle: "Moto", plate: "XYZ98E" },
+      { name: "Carlos Ruiz", email: "carlos@agencia.com", phone: "300 333 4455", vehicle: "Bicicleta", plate: "—" },
+    ];
 
-  for (const d of drivers) {
-    await upsertUser({
-      name: d.name,
-      email: d.email,
-      password: hash("driver123"),
-      role: "driver",
-    });
-    const user = await getUserByEmail(d.email);
-    if (user) {
-      await upsertDriver({
-        user_id: user.id,
-        phone: d.phone,
-        vehicle: d.vehicle,
-        plate: d.plate,
+    for (const d of drivers) {
+      await upsertUser({
+        name: d.name,
+        email: d.email,
+        password: hash("driver123"),
+        role: "driver",
       });
+      const user = await getUserByEmail(d.email);
+      if (user) {
+        await upsertDriver({
+          user_id: user.id,
+          phone: d.phone,
+          vehicle: d.vehicle,
+          plate: d.plate,
+        });
+      }
+    }
+
+    // Demo orders (only if the orders table is empty).
+    const { c } = await db.get("SELECT COUNT(*) AS c FROM orders");
+    if (Number(c) === 0) {
+      await db.run(
+        `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
+                            dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [
+          "ORD-1001", "Laura Martínez", "311 555 7788",
+          "Restaurante El Sabor, Cra 7 #45-12", 4.6285, -74.0646,
+          "Calle 53 #10-20, Apto 302", 4.6431, -74.0628,
+          "1 almuerzo ejecutivo, 1 jugo natural", 28000, "cash",
+        ]
+      );
+
+      await db.run(
+        `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
+                            dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        [
+          "ORD-1002", "Andrés Torres", "312 444 9900",
+          "Farmacia Central, Av. 19 #120-30", 4.6951, -74.0360,
+          "Calle 134 #15-40", 4.7110, -74.0410,
+          "Medicamentos (1 bolsa)", 15000, "card",
+        ]
+      );
     }
   }
 
-  // Demo orders (only if the orders table is empty).
-  const { c } = await db.get("SELECT COUNT(*) AS c FROM orders");
-  if (Number(c) === 0) {
-    await db.run(
-      `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
-                          dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [
-        "ORD-1001", "Laura Martínez", "311 555 7788",
-        "Restaurante El Sabor, Cra 7 #45-12", 4.6285, -74.0646,
-        "Calle 53 #10-20, Apto 302", 4.6431, -74.0628,
-        "1 almuerzo ejecutivo, 1 jugo natural", 28000, "cash",
-      ]
-    );
-
-    await db.run(
-      `INSERT INTO orders (code, customer_name, customer_phone, pickup_address, pickup_lat, pickup_lng,
-                          dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [
-        "ORD-1002", "Andrés Torres", "312 444 9900",
-        "Farmacia Central, Av. 19 #120-30", 4.6951, -74.0360,
-        "Calle 134 #15-40", 4.7110, -74.0410,
-        "Medicamentos (1 bolsa)", 15000, "card",
-      ]
-    );
-  }
-
   console.log("Seed completado.");
-  console.log("  Admin:      admin@agencia.com  / admin123");
-  console.log("  Repartidor: juan@agencia.com   / driver123");
-  console.log("  Repartidor: maria@agencia.com  / driver123");
-  console.log("  Repartidor: carlos@agencia.com / driver123");
+  console.log("  Admin: admin@agencia.com / admin123");
+  if (process.env.SEED_DEMO === "true") {
+    console.log("  (Datos de prueba activados con SEED_DEMO=true)");
+  }
 
   await db.end();
 }
