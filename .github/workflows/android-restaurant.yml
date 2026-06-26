@@ -34,6 +34,10 @@ jobs:
         working-directory: mobile-restaurant
         run: npx cap add android
 
+      - name: Registrar "Compartir desde WhatsApp" en el manifest
+        working-directory: mobile-restaurant
+        run: node patch-manifest.mjs
+
       - name: Generar iconos (fantasma) y splash
         working-directory: mobile-restaurant
         run: npx @capacitor/assets generate --android || true
