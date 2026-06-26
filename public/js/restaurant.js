@@ -59,6 +59,9 @@
       Notification.requestPermission();
     }
     if (window.enablePush) window.enablePush(token);
+    // Revisar si la app se abrió compartiendo un mensaje desde WhatsApp
+    checkSharedIntent();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkSharedIntent(); });
   }
 
   async function checkAuth() {
@@ -93,6 +96,94 @@
   });
 
   document.getElementById('btn-logout').addEventListener('click', showLogin);
+
+  // ─── Importar datos desde un mensaje de WhatsApp ────────────────────────────
+  function parseWhatsApp(text) {
+    const res = { name: '', phone: '', address: '', items: '' };
+    if (!text) return res;
+    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const phoneMatch = text.match(/(\+?\d[\d\s().-]{6,}\d)/);
+    if (phoneMatch) res.phone = phoneMatch[1].replace(/[^\d+]/g, '');
+
+    const labels = {
+      name: /^(nombre|cliente|name)\s*[:\-]\s*(.+)/i,
+      phone: /^(tel[eé]fono|tel|cel(ular)?|whatsapp|wa|n[uú]mero|numero)\s*[:\-]\s*(.+)/i,
+      address: /^(direcci[oó]n|direccion|dir|domicilio|barrio)\s*[:\-]\s*(.+)/i,
+      items: /^(pedido|orden|productos?|art[ií]culos?|items?)\s*[:\-]\s*(.+)/i,
+    };
+    const remaining = [];
+    lines.forEach((line) => {
+      let matched = false;
+      for (const key in labels) {
+        const m = line.match(labels[key]);
+        if (m) {
+          const val = m[m.length - 1].trim();
+          if (key === 'phone') { if (!res.phone) res.phone = val.replace(/[^\d+]/g, ''); }
+          else if (!res[key]) res[key] = val;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) remaining.push(line);
+    });
+
+    const addrKw = /(calle|cra|carrera|av\b|avenida|diagonal|transversal|\bkr\b|\bcl\b|#|n[oº]\.?|mz|manzana|casa|apto|apartamento|torre|barrio|conjunto|edificio)/i;
+    const isPhoneLine = (l) => l.replace(/[^\d]/g, '').length >= 7 && /^[\d\s+().-]+$/.test(l);
+    // Dirección: debe tener palabra clave Y un número o '#'
+    if (!res.address) {
+      const a = remaining.find((l) => addrKw.test(l) && /[#\d]/.test(l) && !isPhoneLine(l));
+      if (a) res.address = a;
+    }
+    if (!res.name) {
+      const c = remaining.find((l) =>
+        l !== res.address && /[a-záéíóúñ]/i.test(l) && !/\d{4,}/.test(l) && !isPhoneLine(l) && l.split(' ').length <= 5
+      );
+      if (c) res.name = c;
+    }
+    if (!res.items) {
+      const left = remaining.filter((l) => l !== res.address && l !== res.name && !isPhoneLine(l));
+      if (left.length) res.items = left.join(', ');
+    }
+    return res;
+  }
+
+  function applyParsed(text) {
+    const p = parseWhatsApp(text);
+    if (p.name) document.getElementById('o-name').value = p.name;
+    if (p.phone) document.getElementById('o-phone').value = p.phone;
+    if (p.address) document.getElementById('o-dropoff').value = p.address;
+    if (p.items) document.getElementById('o-items').value = p.items;
+    const got = [p.name, p.phone, p.address, p.items].filter(Boolean).length;
+    showToast(got ? 'Datos importados, revisa y envía' : 'No se reconocieron datos, llénalos manual', got ? 'success' : 'warning');
+  }
+
+  document.getElementById('btn-parse').addEventListener('click', () => {
+    applyParsed(document.getElementById('o-import').value);
+  });
+  document.getElementById('btn-paste').addEventListener('click', async () => {
+    try {
+      const txt = await navigator.clipboard.readText();
+      document.getElementById('o-import').value = txt;
+      applyParsed(txt);
+    } catch (e) {
+      showToast('No se pudo leer el portapapeles; pega el texto manualmente', 'warning');
+    }
+  });
+
+  // ─── Compartir nativo desde WhatsApp (APK) ──────────────────────────────────
+  async function checkSharedIntent() {
+    const SI = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SendIntent;
+    if (!SI) return;
+    try {
+      const r = await SI.checkSendIntentReceived();
+      const shared = (r && (r.text || r.title || r.description || r.url)) || '';
+      if (shared) {
+        const t = decodeURIComponent(shared);
+        document.getElementById('o-import').value = t;
+        applyParsed(t);
+      }
+    } catch (e) { /* sin contenido compartido */ }
+  }
 
   // Geocode an address with Nominatim (free)
   async function geocode(address) {

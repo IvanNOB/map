@@ -47,6 +47,15 @@
         <!-- Nuevo domicilio -->
         <div class="config-card">
           <h2 style="font-size:1.05rem;margin-bottom:0.8rem;">➕ Enviar domicilio al despacho</h2>
+          <div class="form-group">
+            <label>📥 Importar desde WhatsApp</label>
+            <textarea id="o-import" rows="3" placeholder="Pega aquí el mensaje del cliente (nombre, teléfono, dirección, pedido) y pulsa 'Rellenar'."></textarea>
+            <div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap;">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-paste">📋 Pegar</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-parse">Rellenar formulario</button>
+            </div>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:0.8rem 0;">
           <form id="order-form">
             <div class="form-group"><label>Nombre del cliente</label><input type="text" id="o-name" required></div>
             <div class="form-group"><label>Teléfono del cliente</label><input type="tel" id="o-phone"></div>
