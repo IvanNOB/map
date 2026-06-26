@@ -1,0 +1,19 @@
+{
+  "name": "ghost-restaurant-mobile",
+  "version": "1.0.0",
+  "description": "App Android (Capacitor) del portal de restaurantes de Servicio Ghost",
+  "private": true,
+  "scripts": {
+    "add:android": "cap add android",
+    "sync": "cap sync",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/assets": "^3.0.5"
+  }
+}

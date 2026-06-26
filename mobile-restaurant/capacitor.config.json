@@ -1,0 +1,10 @@
+{
+  "appId": "com.servicioghost.restaurante",
+  "appName": "Ghost Restaurante",
+  "webDir": "www",
+  "server": {
+    "url": "https://map-rgi5.onrender.com/restaurant.html",
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}
