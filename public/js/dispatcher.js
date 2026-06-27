@@ -1755,6 +1755,7 @@
 
     socket.on('order:new', (order) => {
       showToast('Nuevo pedido: ' + order.code, 'info');
+      if (window.ghostAlert) window.ghostAlert({ beeps: 3 });
       playBeep();
       loadOrders();
       loadStats();

@@ -49,6 +49,55 @@
 
   var deferredPrompt = null;
 
+  // ── Alerta sonora + vibración cuando la app está abierta ──────────────────
+  var audioCtx = null;
+  function ensureAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) {}
+    return audioCtx;
+  }
+  // Desbloquear el audio en la primera interacción (política de autoplay)
+  ['click', 'touchstart', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, ensureAudio, { once: true, passive: true });
+  });
+
+  function beep(times) {
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var n = times || 3;
+    for (var i = 0; i < n; i++) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      var start = ctx.currentTime + i * 0.35;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.5, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.3);
+      osc.start(start);
+      osc.stop(start + 0.32);
+    }
+  }
+
+  // Llamable desde cualquier pantalla para avisar de forma llamativa.
+  window.ghostAlert = function (opts) {
+    opts = opts || {};
+    try { beep(opts.beeps || 3); } catch (e) {}
+    try { if (navigator.vibrate) navigator.vibrate(opts.vibrate || [500, 200, 500, 200, 500]); } catch (e) {}
+  };
+
+  // Cuando el service worker recibe una notificación push y la app está abierta.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      if (e.data && e.data.type === 'push-alert') {
+        window.ghostAlert({ beeps: 3 });
+      }
+    });
+  }
+
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
