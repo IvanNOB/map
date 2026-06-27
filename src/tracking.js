@@ -27,10 +27,10 @@ router.get("/:code", async (req, res) => {
   let driver = null;
   let eta = null;
 
-  // The customer should only see the driver's live position while the order is
-  // active (assigned / picked_up / on_the_way). Once delivered or cancelled,
-  // we keep the driver's name/vehicle but hide the live location.
-  const ACTIVE_STATUSES = ["assigned", "picked_up", "on_the_way"];
+  // The customer should only see the driver's live position once the driver has
+  // marked the order as "Recogido" (picked_up) and while it's on the way.
+  // Before that (assigned) and after delivery/cancellation, the location is hidden.
+  const ACTIVE_STATUSES = ["picked_up", "on_the_way"];
   const isActive = ACTIVE_STATUSES.includes(order.status);
 
   if (order.driver_id) {
