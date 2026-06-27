@@ -868,6 +868,7 @@
   // ─── Chat (admin <-> drivers) ───────────────────────────────────────────────
   let chatActiveDriver = null;
   const chatThreads = {}; // driverId -> [messages]
+  const chatUnread = {};  // driverId -> count of unread messages
 
   function renderChatContacts() {
     const box = document.getElementById('chat-contacts');
@@ -879,8 +880,12 @@
     box.innerHTML = drivers.map((d) => {
       const online = d.status !== 'offline' ? 'online' : '';
       const active = chatActiveDriver === d.id ? 'active' : '';
-      return '<div class="chat-contact ' + active + '" data-driver="' + d.id + '">' +
-        '<span class="cc-dot ' + online + '"></span>' + escapeHtml(d.name) + '</div>';
+      const unread = chatUnread[d.id] > 0
+        ? '<span class="cc-unread">' + (chatUnread[d.id] > 9 ? '9+' : chatUnread[d.id]) + '</span>'
+        : '';
+      const hasUnread = chatUnread[d.id] > 0 ? ' has-unread' : '';
+      return '<div class="chat-contact ' + active + hasUnread + '" data-driver="' + d.id + '">' +
+        '<span class="cc-dot ' + online + '"></span>' + escapeHtml(d.name) + unread + '</div>';
     }).join('');
     box.querySelectorAll('[data-driver]').forEach((el) => {
       el.addEventListener('click', () => openChat(parseInt(el.dataset.driver)));
@@ -889,6 +894,7 @@
 
   async function openChat(driverId) {
     chatActiveDriver = driverId;
+    chatUnread[driverId] = 0;
     renderChatContacts();
     const d = drivers.find((x) => x.id === driverId);
     document.getElementById('chat-header').textContent = d ? d.name : 'Repartidor';
@@ -1763,6 +1769,8 @@
       if (chatActiveDriver === msg.driver_id) {
         renderChatMessages(msg.driver_id);
       } else if (msg.sender_role === 'driver') {
+        chatUnread[msg.driver_id] = (chatUnread[msg.driver_id] || 0) + 1;
+        renderChatContacts();
         playBeep();
         showToast('Mensaje de ' + (getDriverName(msg.driver_id) || 'repartidor'), 'info');
       }
