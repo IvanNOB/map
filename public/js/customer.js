@@ -191,6 +191,17 @@
     driverMarker.bindPopup('<strong>' + escapeHtml(name || 'Repartidor') + '</strong>');
   }
 
+  // The customer can only see the driver while the order is active.
+  function isActiveStatus(status) {
+    return status === 'assigned' || status === 'picked_up' || status === 'on_the_way';
+  }
+
+  // Remove the driver from the customer map (e.g. once delivered/cancelled).
+  function removeDriverMarker() {
+    if (map && driverMarker) { map.removeLayer(driverMarker); }
+    driverMarker = null;
+  }
+
   function drawRoute(points) {
     if (!map || !points || points.length === 0) return;
     routePoints = points.map(function (p) { return [p.lat, p.lng]; });
@@ -284,8 +295,11 @@
     initMap();
     currentCode = order.code;
     setStaticMarkers(order);
-    if (driver && driver.lat != null && driver.lng != null) {
+    // Only reveal the driver's live position while the order is active.
+    if (isActiveStatus(order.status) && driver && driver.lat != null && driver.lng != null) {
       setDriverMarker(driver.lat, driver.lng, driver.name);
+    } else {
+      removeDriverMarker();
     }
 
     // Draw route from history
@@ -458,6 +472,8 @@
     });
 
     socket.on('driver:location', function (data) {
+      // Ignore live position once the order is no longer active.
+      if (currentOrder && !isActiveStatus(currentOrder.status)) return;
       if (data.lat != null && data.lng != null) {
         setDriverMarker(data.lat, data.lng, data.name);
         appendRoutePoint(data.lat, data.lng);
@@ -487,6 +503,10 @@
           handleRating(currentOrder);
         }
         if (data.status === 'delivered') trackEta.textContent = 'Entregado';
+        // Once delivered or cancelled, the customer no longer sees the driver.
+        if (data.status === 'delivered' || data.status === 'cancelled') {
+          removeDriverMarker();
+        }
       }
     });
 
