@@ -1037,6 +1037,7 @@
           </div>
         </div>
         <div class="order-actions">
+          ${order.status !== 'cancelled' ? '<button class="btn btn-outline btn-sm" data-edit="' + order.id + '">✏️ Editar</button>' : ''}
           ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar</button>' : ''}
           ${order.status === 'pending' ? '<button class="btn btn-outline btn-sm" data-auto="' + order.id + '" title="Asignar al repartidor disponible mas cercano">⚡ Auto-asignar</button>' : ''}
           ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-route="' + order.id + '">Ver Ruta</button>' : ''}
@@ -1053,6 +1054,9 @@
     // Event delegation for order actions
     ordersList.querySelectorAll('[data-assign]').forEach((btn) => {
       btn.addEventListener('click', () => openAssignModal(parseInt(btn.dataset.assign)));
+    });
+    ordersList.querySelectorAll('[data-edit]').forEach((btn) => {
+      btn.addEventListener('click', () => openEditOrder(parseInt(btn.dataset.edit)));
     });
     ordersList.querySelectorAll('[data-auto]').forEach((btn) => {
       btn.addEventListener('click', () => autoAssign(parseInt(btn.dataset.auto)));
@@ -1271,27 +1275,80 @@
     return null;
   }
 
+  let editingOrderId = null;
+
+  function ensurePickerMap() {
+    if (!pickerMap) {
+      pickerMap = L.map('picker-map').setView([4.6097, -74.0817], 12);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri', maxZoom: 19,
+      }).addTo(pickerMap);
+      pickerMap.on('click', (e) => {
+        if (pickerStep === 'pickup') { placePickerMarker('pickup', e.latlng.lat, e.latlng.lng); pickerStep = 'dropoff'; }
+        else { placePickerMarker('dropoff', e.latlng.lat, e.latlng.lng); pickerStep = 'pickup'; }
+      });
+    }
+    pickerMap.invalidateSize();
+  }
+
+  function setOrderModalMode(editing) {
+    const title = document.getElementById('order-modal-title');
+    const btn = document.getElementById('btn-submit-order');
+    if (title) title.textContent = editing ? '✏️ Editar Pedido' : 'Nuevo Pedido';
+    if (btn) btn.textContent = editing ? 'Guardar cambios' : 'Crear Pedido';
+  }
+
   function openOrderModal() {
+    editingOrderId = null;
+    setOrderModalMode(false);
+    formNewOrder.reset();
     modalNewOrder.classList.remove('hidden');
     resetPicker();
     loadCustomers();
+    setTimeout(ensurePickerMap, 200);
+  }
+
+  // Reutiliza el mismo formulario para EDITAR un pedido existente
+  function openEditOrder(orderId) {
+    const o = orders.find((x) => x.id === orderId);
+    if (!o) return;
+    editingOrderId = orderId;
+    setOrderModalMode(true);
+    formNewOrder.reset();
+    modalNewOrder.classList.remove('hidden');
+    resetPicker();
+    loadCustomers();
+
+    const setVal = (name, val) => {
+      const el = formNewOrder.querySelector('[name="' + name + '"]');
+      if (el) el.value = (val == null ? '' : val);
+    };
+    setVal('customer_name', o.customer_name);
+    setVal('customer_phone', o.customer_phone);
+    setVal('pickup_address', o.pickup_address);
+    setVal('dropoff_address', o.dropoff_address);
+    setVal('items', o.items);
+    setVal('notes', o.notes);
+    setVal('amount', o.amount);
+    setVal('payment_method', o.payment_method);
+    document.getElementById('pickup_lat').value = o.pickup_lat != null ? o.pickup_lat : '';
+    document.getElementById('pickup_lng').value = o.pickup_lng != null ? o.pickup_lng : '';
+    document.getElementById('dropoff_lat').value = o.dropoff_lat != null ? o.dropoff_lat : '';
+    document.getElementById('dropoff_lng').value = o.dropoff_lng != null ? o.dropoff_lng : '';
+
     setTimeout(() => {
-      if (!pickerMap) {
-        pickerMap = L.map('picker-map').setView([4.6097, -74.0817], 12);
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri', maxZoom: 19,
-        }).addTo(pickerMap);
-        pickerMap.on('click', (e) => {
-          if (pickerStep === 'pickup') { placePickerMarker('pickup', e.latlng.lat, e.latlng.lng); pickerStep = 'dropoff'; }
-          else { placePickerMarker('dropoff', e.latlng.lat, e.latlng.lng); pickerStep = 'pickup'; }
-        });
-      }
-      pickerMap.invalidateSize();
-    }, 200);
+      ensurePickerMap();
+      if (o.pickup_lat && o.pickup_lng) placePickerMarker('pickup', o.pickup_lat, o.pickup_lng);
+      if (o.dropoff_lat && o.dropoff_lng) placePickerMarker('dropoff', o.dropoff_lat, o.dropoff_lng);
+    }, 250);
   }
 
   btnNewOrder.addEventListener('click', openOrderModal);
-  btnCancelOrderForm.addEventListener('click', () => modalNewOrder.classList.add('hidden'));
+  btnCancelOrderForm.addEventListener('click', () => {
+    modalNewOrder.classList.add('hidden');
+    editingOrderId = null;
+    setOrderModalMode(false);
+  });
 
   // ─── Clear orders ───────────────────────────────────────────────────────────
   const btnClearOrders = document.getElementById('btn-clear-orders');
@@ -1395,20 +1452,23 @@
       branch_id: fd.get('branch_id') ? parseInt(fd.get('branch_id')) : undefined,
     };
     try {
-      const res = await apiFetch('/api/orders', {
-        method: 'POST',
+      const editing = editingOrderId != null;
+      const res = await apiFetch(editing ? '/api/orders/' + editingOrderId : '/api/orders', {
+        method: editing ? 'PUT' : 'POST',
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        showToast('Pedido creado exitosamente', 'success');
+        showToast(editing ? 'Pedido actualizado' : 'Pedido creado exitosamente', 'success');
         modalNewOrder.classList.add('hidden');
+        editingOrderId = null;
+        setOrderModalMode(false);
         formNewOrder.reset();
         resetPicker();
         loadOrders();
         loadStats();
       } else {
         const err = await res.json();
-        showToast(err.error || 'Error al crear pedido', 'error');
+        showToast(err.error || 'Error al guardar pedido', 'error');
       }
     } catch {
       showToast('Error de conexion', 'error');
