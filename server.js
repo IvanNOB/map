@@ -173,7 +173,7 @@ io.on("connection", (socket) => {
 
     // Insert into location_history for active orders
     const activeOrders = await db.all(
-      "SELECT id, code FROM orders WHERE driver_id = ? AND status IN ('assigned', 'picked_up', 'on_the_way')",
+      "SELECT id, code FROM orders WHERE driver_id = ? AND status IN ('picked_up', 'on_the_way')",
       [user.id]
     );
 

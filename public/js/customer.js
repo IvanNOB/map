@@ -193,9 +193,10 @@
     driverMarker.bindPopup('<strong>' + escapeHtml(name || 'Repartidor') + '</strong>');
   }
 
-  // The customer can only see the driver while the order is active.
+  // The customer can only see the driver once the order is "Recogido" (picked_up)
+  // and while it's on the way. Not during "assigned", and not after delivery.
   function isActiveStatus(status) {
-    return status === 'assigned' || status === 'picked_up' || status === 'on_the_way';
+    return status === 'picked_up' || status === 'on_the_way';
   }
 
   // Remove the driver from the customer map (e.g. once delivered/cancelled).

@@ -59,7 +59,7 @@ export default function createLocationRouter(io) {
     });
 
     const active = await db.all(
-      "SELECT id, code FROM orders WHERE driver_id = ? AND status IN ('assigned','picked_up','on_the_way')",
+      "SELECT id, code FROM orders WHERE driver_id = ? AND status IN ('picked_up','on_the_way')",
       [req.user.id]
     );
     for (const o of active) {
