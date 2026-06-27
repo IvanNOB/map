@@ -305,6 +305,7 @@ export async function init() {
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS picked_up_at TIMESTAMP"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS on_the_way_at TIMESTAMP"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS dropoff_confirmed INTEGER DEFAULT 0"); } catch (_) {}
   } else {
     await impl.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -453,6 +454,7 @@ export async function init() {
     try { await impl.exec("ALTER TABLE orders ADD COLUMN scheduled_at TEXT"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN picked_up_at TEXT"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN on_the_way_at TEXT"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN dropoff_confirmed INTEGER DEFAULT 0"); } catch (_) {}
     impl._save();
   }
 }

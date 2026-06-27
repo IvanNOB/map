@@ -79,6 +79,18 @@
         </div>
       </div>
 
+      <!-- Confirmar dirección de entrega (cliente) -->
+      <div id="confirm-address-box" class="tracking-card confirm-address hidden">
+        <div class="eta-label">📍 Confirma tu dirección de entrega</div>
+        <p id="confirm-address-status" class="confirm-hint">Confirma tu dirección para que el repartidor llegue más rápido.</p>
+        <input type="text" id="confirm-address-input" class="confirm-input" placeholder="Escribe tu dirección exacta (calle, número, apto, barrio...)">
+        <div class="confirm-actions">
+          <button class="btn btn-outline btn-sm" id="btn-use-location">📍 Usar mi ubicación actual</button>
+          <button class="btn btn-primary btn-sm" id="btn-confirm-address">Confirmar dirección</button>
+        </div>
+        <div id="confirm-coords" class="confirm-coords hidden"></div>
+      </div>
+
       <!-- Timeline -->
       <div id="timeline" class="timeline hidden"></div>
 

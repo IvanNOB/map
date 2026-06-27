@@ -11,7 +11,7 @@ router.get("/:code", async (req, res) => {
   const order = await db.get(
     `SELECT o.id, o.code, o.customer_name, o.status,
             o.pickup_address, o.pickup_lat, o.pickup_lng,
-            o.dropoff_address, o.dropoff_lat, o.dropoff_lng,
+            o.dropoff_address, o.dropoff_lat, o.dropoff_lng, o.dropoff_confirmed,
             o.estimated_distance_km, o.estimated_minutes,
             o.created_at, o.assigned_at, o.picked_up_at, o.on_the_way_at, o.delivered_at,
             o.rating, o.review, o.driver_id
@@ -81,6 +81,7 @@ router.get("/:code", async (req, res) => {
       dropoff_address: order.dropoff_address,
       dropoff_lat: order.dropoff_lat,
       dropoff_lng: order.dropoff_lng,
+      dropoff_confirmed: !!order.dropoff_confirmed,
       estimated_distance_km: order.estimated_distance_km,
       estimated_minutes: order.estimated_minutes,
       created_at: order.created_at,
@@ -124,6 +125,67 @@ router.post("/:code/rating", async (req, res) => {
   const review = comment ? String(comment).slice(0, 500) : null;
   await db.run("UPDATE orders SET rating = ?, review = ? WHERE id = ?", [r, review, order.id]);
   res.json({ ok: true, rating: r });
+});
+
+// POST /api/track/:code/address - customer confirms / sets their delivery address (public)
+router.post("/:code/address", async (req, res) => {
+  const { address, lat, lng } = req.body || {};
+
+  const addr = address != null ? String(address).trim().slice(0, 300) : "";
+  const hasCoords = lat != null && lng != null && !isNaN(Number(lat)) && !isNaN(Number(lng));
+
+  if (!addr && !hasCoords) {
+    return res.status(400).json({ error: "Escribe tu direccion o comparte tu ubicacion" });
+  }
+
+  const order = await db.get(
+    "SELECT id, code, status, dropoff_address FROM orders WHERE code = ?",
+    [req.params.code]
+  );
+  if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+  // Only allow the customer to set the address while the order is still in progress.
+  if (order.status === "delivered" || order.status === "cancelled") {
+    return res.status(400).json({ error: "Este pedido ya no se puede modificar" });
+  }
+
+  const finalAddress = addr || order.dropoff_address || "Ubicacion compartida por el cliente";
+
+  await db.run(
+    `UPDATE orders
+        SET dropoff_address = ?,
+            dropoff_lat = ?,
+            dropoff_lng = ?,
+            dropoff_confirmed = 1
+      WHERE id = ?`,
+    [finalAddress, hasCoords ? Number(lat) : null, hasCoords ? Number(lng) : null, order.id]
+  );
+
+  const updated = await db.get("SELECT * FROM orders WHERE id = ?", [order.id]);
+
+  // Notify the admin panel (and any other customer tabs) in real time.
+  const io = req.app.get("io");
+  if (io) {
+    io.to("admins").emit("order:address", {
+      id: updated.id,
+      code: updated.code,
+      dropoff_address: updated.dropoff_address,
+      dropoff_lat: updated.dropoff_lat,
+      dropoff_lng: updated.dropoff_lng,
+    });
+    io.to("admins").emit("notification", {
+      type: "address_confirmed",
+      data: { code: updated.code, address: updated.dropoff_address },
+    });
+    io.to(`tracking:${updated.code}`).emit("order:status", updated);
+  }
+
+  res.json({
+    ok: true,
+    dropoff_address: updated.dropoff_address,
+    dropoff_lat: updated.dropoff_lat,
+    dropoff_lng: updated.dropoff_lng,
+  });
 });
 
 export default router;

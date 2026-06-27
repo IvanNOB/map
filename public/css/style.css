@@ -1939,3 +1939,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 420px) {
   .stats-row { grid-template-columns: 1fr; }
 }
+
+
+/* ─── Confirmar dirección de entrega (página del cliente) ────────────────── */
+.confirm-address { border: 1px solid var(--primary); }
+.confirm-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0.35rem 0 0.6rem;
+}
+.confirm-hint.confirmed { color: var(--success); font-weight: 600; }
+.confirm-input {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.confirm-input:focus { border-color: var(--primary); outline: none; }
+.confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.confirm-actions .btn { flex: 1; min-width: 140px; }
+.confirm-coords {
+  margin-top: 0.5rem;
+  color: var(--success);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
