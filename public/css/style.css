@@ -245,8 +245,88 @@ input, select, textarea {
   padding: 1.5rem;
   overflow-y: auto;
   width: 100%;
+}
+
+/* Keep a comfortable reading width for the non-console views */
+#view-repartidores,
+#view-reportes,
+#view-chat,
+#view-config,
+#view-actividad {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+/* ─── Dispatch console (Pedidos + Mapa) ──────────────────────────────────── */
+.dispatch {
+  display: flex;
+  gap: 1rem;
+  height: calc(100vh - 60px - 3rem);
+}
+.dispatch-side {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+}
+.dispatch-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.dispatch-side-head h2 { font-size: 1.15rem; margin: 0; }
+.dispatch-actions { display: flex; gap: 0.4rem; }
+
+.dispatch-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+.mini-stat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.mini-val { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+.mini-lbl { font-size: 0.72rem; color: var(--text-muted); }
+.mini-stat.primary .mini-val { color: var(--primary); }
+.mini-stat.success .mini-val { color: var(--success); }
+.mini-stat.warning .mini-val { color: var(--warning); }
+.mini-stat.purple  .mini-val { color: var(--purple); }
+
+.dispatch-side .search-box { flex: none; max-width: none; }
+
+.dispatch-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dispatch-side .orders-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.dispatch-main { flex: 1; min-width: 0; }
+.dispatch-main .map-wrap { height: 100%; }
+.dispatch-main .map-container { height: 100%; }
+
+@media (max-width: 900px) {
+  .dispatch { flex-direction: column; height: auto; }
+  .dispatch-side { width: 100%; }
+  .dispatch-side .orders-list { max-height: 55vh; }
+  .dispatch-main { height: 60vh; }
+  .dispatch-main .map-wrap,
+  .dispatch-main .map-container { height: 60vh; }
 }
 
 /* ─── Stats Cards ────────────────────────────────────────────────────────── */

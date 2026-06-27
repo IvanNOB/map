@@ -43,8 +43,7 @@
     <nav class="navbar">
       <span class="navbar-brand"><span class="brand-logo">👻</span> Servicio Ghost</span>
       <div class="navbar-tabs">
-        <button class="tab-btn active" data-tab="pedidos">Pedidos</button>
-        <button class="tab-btn" data-tab="mapa">Mapa</button>
+        <button class="tab-btn active" data-tab="pedidos">Pedidos y Mapa</button>
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
         <button class="tab-btn" data-tab="chat">Chat</button>
         <button class="tab-btn" data-tab="reportes">Reportes</button>
@@ -63,72 +62,58 @@
 
     <!-- Content Views -->
     <main class="content">
-      <!-- Pedidos View -->
+      <!-- Pedidos + Mapa (Consola de despacho) -->
       <section id="view-pedidos">
-        <div class="view-header"><h2>📦 Pedidos</h2><p>Resumen del día y gestión de pedidos.</p></div>
-        <div class="stats-row">
-          <div class="stat-card primary">
-            <div class="stat-icon">📦</div>
-            <div class="stat-body">
-              <div class="stat-value" id="stat-active">0</div>
-              <div class="stat-label">Pedidos Activos</div>
+        <div class="dispatch">
+          <!-- IZQUIERDA: Pedidos -->
+          <aside class="dispatch-side">
+            <div class="dispatch-side-head">
+              <h2>📦 Pedidos</h2>
+              <div class="dispatch-actions">
+                <button class="btn btn-primary btn-sm" id="btn-new-order">+ Nuevo</button>
+                <button class="btn btn-outline btn-sm" id="btn-clear-orders" title="Eliminar pedidos">🧹</button>
+              </div>
             </div>
-          </div>
-          <div class="stat-card success">
-            <div class="stat-icon">🛵</div>
-            <div class="stat-body">
-              <div class="stat-value" id="stat-drivers">0</div>
-              <div class="stat-label">Repartidores Disponibles</div>
-            </div>
-          </div>
-          <div class="stat-card warning">
-            <div class="stat-icon">✅</div>
-            <div class="stat-body">
-              <div class="stat-value" id="stat-deliveries">0</div>
-              <div class="stat-label">Entregas Hoy</div>
-            </div>
-          </div>
-          <div class="stat-card purple">
-            <div class="stat-icon">💰</div>
-            <div class="stat-body">
-              <div class="stat-value" id="stat-revenue">$0</div>
-              <div class="stat-label">Ingresos Hoy</div>
-            </div>
-          </div>
-        </div>
 
-        <div class="toolbar">
-          <div class="search-box">
-            <input type="text" id="order-search" placeholder="Buscar por codigo, cliente o direccion...">
-          </div>
-          <button class="filter-btn active" data-filter="">Todos</button>
-          <button class="filter-btn" data-filter="pending">Pendientes</button>
-          <button class="filter-btn" data-filter="assigned">Asignados</button>
-          <button class="filter-btn" data-filter="picked_up">Recogidos</button>
-          <button class="filter-btn" data-filter="on_the_way">En Camino</button>
-          <button class="filter-btn" data-filter="delivered">Entregados</button>
-          <button class="filter-btn" data-filter="cancelled">Cancelados</button>
-          <button class="btn btn-primary btn-sm" id="btn-new-order" style="margin-left:auto;">+ Nuevo Pedido</button>
-          <button class="btn btn-outline btn-sm" id="btn-clear-orders" title="Eliminar pedidos">🧹 Limpiar</button>
-        </div>
-
-        <div id="orders-list" class="orders-list"></div>
-      </section>
-
-      <!-- Mapa View -->
-      <section id="view-mapa" class="hidden">
-        <div class="view-header"><h2>🗺️ Mapa en vivo</h2><p>Mira en tiempo real dónde está cada persona. Los nombres aparecen sobre el mapa.</p></div>
-        <div class="map-wrap">
-          <div id="map" class="map-container"></div>
-          <div id="live-people" class="live-people">
-            <div class="live-people-head">
-              <span class="live-dot"></span>
-              <strong>En línea ahora</strong>
-              <span id="live-count" class="live-count">0</span>
-              <button id="btn-fit-people" class="btn btn-outline btn-sm" title="Ver a todos" style="margin-left:auto;">Ver a todos</button>
+            <div class="dispatch-stats">
+              <div class="mini-stat primary"><span class="mini-val" id="stat-active">0</span><span class="mini-lbl">📦 Activos</span></div>
+              <div class="mini-stat success"><span class="mini-val" id="stat-drivers">0</span><span class="mini-lbl">🛵 Disponibles</span></div>
+              <div class="mini-stat warning"><span class="mini-val" id="stat-deliveries">0</span><span class="mini-lbl">✅ Entregas hoy</span></div>
+              <div class="mini-stat purple"><span class="mini-val" id="stat-revenue">$0</span><span class="mini-lbl">💰 Ingresos hoy</span></div>
             </div>
-            <div id="live-people-list" class="live-people-list"></div>
-          </div>
+
+            <div class="search-box">
+              <input type="text" id="order-search" placeholder="Buscar codigo, cliente o direccion...">
+            </div>
+
+            <div class="dispatch-filters">
+              <button class="filter-btn active" data-filter="">Todos</button>
+              <button class="filter-btn" data-filter="pending">Pendientes</button>
+              <button class="filter-btn" data-filter="assigned">Asignados</button>
+              <button class="filter-btn" data-filter="picked_up">Recogidos</button>
+              <button class="filter-btn" data-filter="on_the_way">En Camino</button>
+              <button class="filter-btn" data-filter="delivered">Entregados</button>
+              <button class="filter-btn" data-filter="cancelled">Cancelados</button>
+            </div>
+
+            <div id="orders-list" class="orders-list"></div>
+          </aside>
+
+          <!-- CENTRO: Mapa en vivo -->
+          <section class="dispatch-main">
+            <div class="map-wrap">
+              <div id="map" class="map-container"></div>
+              <div id="live-people" class="live-people">
+                <div class="live-people-head">
+                  <span class="live-dot"></span>
+                  <strong>En línea ahora</strong>
+                  <span id="live-count" class="live-count">0</span>
+                  <button id="btn-fit-people" class="btn btn-outline btn-sm" title="Ver a todos" style="margin-left:auto;">Ver a todos</button>
+                </div>
+                <div id="live-people-list" class="live-people-list"></div>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
 
