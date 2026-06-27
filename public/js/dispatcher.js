@@ -85,7 +85,6 @@
 
   // Views
   const viewPedidos = document.getElementById('view-pedidos');
-  const viewMapa = document.getElementById('view-mapa');
   const viewRepartidores = document.getElementById('view-repartidores');
   const viewReportes = document.getElementById('view-reportes');
 
@@ -269,7 +268,6 @@
       btn.classList.add('active');
       const tab = btn.dataset.tab;
       viewPedidos.classList.toggle('hidden', tab !== 'pedidos');
-      viewMapa.classList.toggle('hidden', tab !== 'mapa');
       viewRepartidores.classList.toggle('hidden', tab !== 'repartidores');
       viewReportes.classList.toggle('hidden', tab !== 'reportes');
       const viewChat = document.getElementById('view-chat');
@@ -278,7 +276,7 @@
       if (viewConfig) viewConfig.classList.toggle('hidden', tab !== 'config');
       const viewActividad = document.getElementById('view-actividad');
       if (viewActividad) viewActividad.classList.toggle('hidden', tab !== 'actividad');
-      if (tab === 'mapa') {
+      if (tab === 'pedidos') {
         initMap();
         loadDrivers().then(() => refreshDriverMarkers());
       }
@@ -945,6 +943,9 @@
 
   async function loadData() {
     await Promise.all([loadOrders(), loadStats(), loadDrivers(), loadSettings(), loadZones(), loadBranches(), loadPlaces(), loadRestaurants()]);
+    // The map now lives in the default "Pedidos y Mapa" console view, so init it on load.
+    initMap();
+    refreshDriverMarkers();
   }
 
   async function loadStats() {
@@ -1618,6 +1619,8 @@
     renderOrderPins();
     if (typeof drawZonesOnMainMap === 'function') drawZonesOnMainMap();
     if (typeof drawPlacesOnMainMap === 'function') drawPlacesOnMainMap();
+    // Ensure the map sizes correctly inside the flex console layout
+    setTimeout(() => { if (map) map.invalidateSize(); }, 200);
   }
 
   // Remove and re-add all driver markers from the current `drivers` array
@@ -1851,13 +1854,15 @@
           showToast('No hay datos de ruta para este pedido', 'warning');
           return;
         }
-        // Switch to map tab
+        // The map is in the "Pedidos y Mapa" console view
         tabBtns.forEach((b) => b.classList.remove('active'));
-        document.querySelector('[data-tab="mapa"]').classList.add('active');
-        viewPedidos.classList.add('hidden');
-        viewMapa.classList.remove('hidden');
+        document.querySelector('[data-tab="pedidos"]').classList.add('active');
+        viewPedidos.classList.remove('hidden');
         viewRepartidores.classList.add('hidden');
         viewReportes.classList.add('hidden');
+        const vChat = document.getElementById('view-chat'); if (vChat) vChat.classList.add('hidden');
+        const vConfig = document.getElementById('view-config'); if (vConfig) vConfig.classList.add('hidden');
+        const vAct = document.getElementById('view-actividad'); if (vAct) vAct.classList.add('hidden');
         initMap();
 
         // Remove previous route polyline
