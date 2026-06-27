@@ -15,6 +15,8 @@
   let pickupMarker = null;
   let dropoffMarker = null;
   let currentCode = null;
+  let confirmLat = null;
+  let confirmLng = null;
 
   // Theme
   (function () {
@@ -310,6 +312,112 @@
     // Timeline + Rating
     renderTimeline(order);
     handleRating(order);
+    renderConfirmAddress(order);
+  }
+
+  // ─── Confirmar dirección de entrega (cliente) ────────────────────────────
+  function renderConfirmAddress(order) {
+    var box = document.getElementById('confirm-address-box');
+    if (!box) return;
+    // Solo se puede confirmar mientras el pedido sigue en proceso.
+    if (!order || order.status === 'delivered' || order.status === 'cancelled') {
+      box.classList.add('hidden');
+      return;
+    }
+    box.classList.remove('hidden');
+    var input = document.getElementById('confirm-address-input');
+    var statusEl = document.getElementById('confirm-address-status');
+    if (input && document.activeElement !== input) {
+      var addr = order.dropoff_address;
+      input.value = (addr && addr !== 'Ubicacion compartida por el cliente') ? addr : '';
+    }
+    if (statusEl) {
+      if (order.dropoff_confirmed) {
+        statusEl.textContent = '✅ Dirección confirmada. Puedes actualizarla si lo necesitas.';
+        statusEl.className = 'confirm-hint confirmed';
+      } else {
+        statusEl.textContent = 'Confirma tu dirección para que el repartidor llegue más rápido.';
+        statusEl.className = 'confirm-hint';
+      }
+    }
+  }
+
+  function wireConfirmAddress() {
+    var useBtn = document.getElementById('btn-use-location');
+    var confirmBtn = document.getElementById('btn-confirm-address');
+    var coordsEl = document.getElementById('confirm-coords');
+    if (useBtn) useBtn.onclick = function () {
+      if (!navigator.geolocation) { showToast('Tu dispositivo no permite ubicacion', 'warning'); return; }
+      useBtn.disabled = true;
+      var original = useBtn.textContent;
+      useBtn.textContent = 'Obteniendo ubicacion...';
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        confirmLat = pos.coords.latitude;
+        confirmLng = pos.coords.longitude;
+        if (coordsEl) { coordsEl.classList.remove('hidden'); coordsEl.textContent = '📍 Ubicación lista ✓'; }
+        useBtn.disabled = false;
+        useBtn.textContent = '📍 Actualizar mi ubicación';
+        showToast('Ubicación obtenida', 'success');
+      }, function () {
+        useBtn.disabled = false;
+        useBtn.textContent = original;
+        showToast('No se pudo obtener tu ubicación. Activa el GPS y permite el acceso.', 'error');
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    };
+    if (confirmBtn) confirmBtn.onclick = submitConfirmAddress;
+  }
+
+  async function submitConfirmAddress() {
+    if (!currentCode) return;
+    var input = document.getElementById('confirm-address-input');
+    var address = input ? input.value.trim() : '';
+    if (!address && confirmLat == null) {
+      showToast('Escribe tu dirección o comparte tu ubicación', 'warning');
+      return;
+    }
+    var btn = document.getElementById('btn-confirm-address');
+    if (btn) btn.disabled = true;
+    try {
+      var res = await fetch('/api/track/' + encodeURIComponent(currentCode) + '/address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: address, lat: confirmLat, lng: confirmLng }),
+      });
+      var data = await res.json();
+      if (res.ok) {
+        showToast('¡Dirección confirmada! Gracias.', 'success');
+        if (currentOrder) {
+          currentOrder.dropoff_address = data.dropoff_address;
+          currentOrder.dropoff_lat = data.dropoff_lat;
+          currentOrder.dropoff_lng = data.dropoff_lng;
+          currentOrder.dropoff_confirmed = true;
+        }
+        if (trackDropoff) trackDropoff.textContent = data.dropoff_address || '-';
+        dropoffLat = data.dropoff_lat;
+        dropoffLng = data.dropoff_lng;
+        if (data.dropoff_lat != null && data.dropoff_lng != null) {
+          updateDropoffMarker(data.dropoff_lat, data.dropoff_lng, data.dropoff_address);
+        }
+        renderConfirmAddress(currentOrder);
+      } else {
+        showToast(data.error || 'No se pudo confirmar la dirección', 'error');
+      }
+    } catch (e) {
+      showToast('Error de conexión', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function updateDropoffMarker(lat, lng, address) {
+    if (!map) return;
+    if (dropoffMarker) {
+      dropoffMarker.setLatLng([lat, lng]);
+    } else {
+      dropoffMarker = L.marker([lat, lng], { icon: pinIcon('dropoff', '🔴') }).addTo(map);
+    }
+    dropoffMarker.bindPopup('🔴 Entrega<br>' + escapeHtml(address || ''));
+    try { map.setView([lat, lng], 15); } catch (e) {}
   }
 
   // ─── Timeline ─────────────────────────────────────────────────────────────
@@ -501,6 +609,7 @@
           if (data.status === 'delivered') currentOrder.delivered_at = now;
           renderTimeline(currentOrder);
           handleRating(currentOrder);
+          renderConfirmAddress(currentOrder);
         }
         if (data.status === 'delivered') trackEta.textContent = 'Entregado';
         // Once delivered or cancelled, the customer no longer sees the driver.
@@ -527,6 +636,7 @@
   // ─── Auto-search from URL param ────────────────────────────────────────────
 
   function init() {
+    wireConfirmAddress();
     var params = new URLSearchParams(window.location.search);
     var code = params.get('code');
     if (code) {

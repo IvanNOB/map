@@ -1778,6 +1778,12 @@
       loadStats();
     });
 
+    socket.on('order:address', (data) => {
+      showToast('Cliente confirmo direccion: ' + data.code, 'success');
+      if (window.ghostAlert) window.ghostAlert({ beeps: 2 });
+      loadOrders();
+    });
+
     socket.on('order:assigned', (order) => {
       loadOrders();
     });
