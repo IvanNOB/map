@@ -207,8 +207,10 @@
       payment_method: document.getElementById('o-payment').value,
     };
     showToast('Enviando domicilio...', 'info');
-    const geo = await geocode(dropoff);
-    if (geo) { body.dropoff_lat = geo.lat; body.dropoff_lng = geo.lng; }
+    if (dropoff) {
+      const geo = await geocode(dropoff);
+      if (geo) { body.dropoff_lat = geo.lat; body.dropoff_lng = geo.lng; }
+    }
     try {
       const res = await apiFetch('/api/orders', { method: 'POST', body: JSON.stringify(body) });
       const data = await res.json();

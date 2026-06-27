@@ -216,8 +216,8 @@ export default function createOrdersRouter(io) {
       pickup_lng = prof ? prof.lng : pickup_lng;
     }
 
-    if (!customer_name || !pickup_address || !dropoff_address) {
-      return res.status(400).json({ error: "customer_name, direccion de recogida y de entrega son obligatorias" });
+    if (!customer_name) {
+      return res.status(400).json({ error: "El nombre del cliente es obligatorio" });
     }
 
     // Retry loop to handle code collisions (UNIQUE constraint on code)
@@ -234,10 +234,10 @@ export default function createOrdersRouter(io) {
             code,
             customer_name,
             customer_phone || null,
-            pickup_address,
+            pickup_address || "",
             pickup_lat || null,
             pickup_lng || null,
-            dropoff_address,
+            dropoff_address || "",
             dropoff_lat || null,
             dropoff_lng || null,
             items || null,
@@ -400,7 +400,7 @@ export default function createOrdersRouter(io) {
     io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
 
     logActivity(req.user, "order_assigned", "Pedido " + updated.code + " asignado a repartidor " + driver_id);
-    sendPush(driver_id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
+    sendPush(driver_id, { title: "Nuevo pedido asignado", body: updated.code + " - " + (updated.dropoff_address || "Sin direccion"), url: "/driver.html" });
     notifyRestaurant(updated, "order:assigned", "Tu pedido fue asignado", updated.code + ": un repartidor va en camino");
 
     // Auto WhatsApp to customer (only if Twilio is configured)
@@ -454,7 +454,7 @@ export default function createOrdersRouter(io) {
     io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
 
     logActivity(req.user, "order_auto_assigned", "Pedido " + updated.code + " auto-asignado a " + chosen.name);
-    sendPush(chosen.id, { title: "Nuevo pedido asignado", body: updated.code + " - " + updated.dropoff_address, url: "/driver.html" });
+    sendPush(chosen.id, { title: "Nuevo pedido asignado", body: updated.code + " - " + (updated.dropoff_address || "Sin direccion"), url: "/driver.html" });
     notifyRestaurant(updated, "order:assigned", "Tu pedido fue asignado", updated.code + " asignado a " + chosen.name);
 
     if (updated.customer_phone) {
