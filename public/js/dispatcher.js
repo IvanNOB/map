@@ -270,21 +270,16 @@
       viewPedidos.classList.toggle('hidden', tab !== 'pedidos');
       viewRepartidores.classList.toggle('hidden', tab !== 'repartidores');
       viewReportes.classList.toggle('hidden', tab !== 'reportes');
-      const viewChat = document.getElementById('view-chat');
-      if (viewChat) viewChat.classList.toggle('hidden', tab !== 'chat');
       const viewConfig = document.getElementById('view-config');
       if (viewConfig) viewConfig.classList.toggle('hidden', tab !== 'config');
       const viewActividad = document.getElementById('view-actividad');
       if (viewActividad) viewActividad.classList.toggle('hidden', tab !== 'actividad');
       if (tab === 'pedidos') {
         initMap();
-        loadDrivers().then(() => refreshDriverMarkers());
+        loadDrivers().then(() => { refreshDriverMarkers(); renderChatContacts(); });
       }
       if (tab === 'repartidores') {
         loadDrivers();
-      }
-      if (tab === 'chat') {
-        renderChatContacts();
       }
       if (tab === 'config') {
         loadConfig();
@@ -946,6 +941,7 @@
     // The map now lives in the default "Pedidos y Mapa" console view, so init it on load.
     initMap();
     refreshDriverMarkers();
+    renderChatContacts();
   }
 
   async function loadStats() {
