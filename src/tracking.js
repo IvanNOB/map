@@ -27,6 +27,12 @@ router.get("/:code", async (req, res) => {
   let driver = null;
   let eta = null;
 
+  // The customer should only see the driver's live position while the order is
+  // active (assigned / picked_up / on_the_way). Once delivered or cancelled,
+  // we keep the driver's name/vehicle but hide the live location.
+  const ACTIVE_STATUSES = ["assigned", "picked_up", "on_the_way"];
+  const isActive = ACTIVE_STATUSES.includes(order.status);
+
   if (order.driver_id) {
     driver = await db.get(
       `SELECT u.name, d.vehicle, d.plate, d.lat, d.lng
@@ -36,9 +42,15 @@ router.get("/:code", async (req, res) => {
       [order.driver_id]
     );
 
-    // Calculate dynamic ETA if driver has a position and order has dropoff coordinates
+    if (driver && !isActive) {
+      driver.lat = null;
+      driver.lng = null;
+    }
+
+    // Calculate dynamic ETA only while the order is active and has positions.
     if (
       driver &&
+      isActive &&
       driver.lat != null &&
       driver.lng != null &&
       order.dropoff_lat != null &&
