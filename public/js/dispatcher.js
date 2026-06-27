@@ -1009,7 +1009,9 @@
     list.forEach((order) => {
       const dName = getDriverName(order.driver_id);
       const card = document.createElement('div');
-      card.className = 'order-card status-' + order.status;
+      card.className = 'order-card order-clickable status-' + order.status;
+      card.dataset.orderId = order.id;
+      card.title = 'Clic para ver este pedido en el mapa';
       const waBtn = order.customer_phone
         ? '<button class="btn btn-whatsapp btn-sm" data-wa="' + escapeHtml(order.code) + '" data-phone="' + escapeHtml(order.customer_phone) + '">WhatsApp</button>'
         : '';
@@ -1070,7 +1072,50 @@
       btn.addEventListener('click', () => sendWhatsApp(btn.dataset.phone, btn.dataset.wa));
     });
 
+    // Clic en la tarjeta (no en un boton) -> volar al pedido en el mapa
+    ordersList.querySelectorAll('.order-card').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button, a, input, textarea, select')) return;
+        focusOrderOnMap(parseInt(card.dataset.orderId));
+      });
+    });
+
     renderOrderPins();
+  }
+
+  // ─── Enfocar un pedido en el mapa (despacho rápido) ──────────────────────────
+  let orderHighlight = null;
+  function focusOrderOnMap(orderId) {
+    const o = orders.find((x) => x.id === orderId);
+    if (!o) return;
+
+    // Marcar la tarjeta seleccionada
+    ordersList.querySelectorAll('.order-card.selected').forEach((c) => c.classList.remove('selected'));
+    const card = ordersList.querySelector('[data-order-id="' + orderId + '"]');
+    if (card) card.classList.add('selected');
+
+    if (!map) initMap();
+
+    const pts = [];
+    if (o.pickup_lat && o.pickup_lng) pts.push([o.pickup_lat, o.pickup_lng]);
+    if (o.dropoff_lat && o.dropoff_lng) pts.push([o.dropoff_lat, o.dropoff_lng]);
+
+    if (pts.length === 0) {
+      showToast('Este pedido aun no tiene ubicacion en el mapa', 'warning');
+      return;
+    }
+
+    // Anillo de resaltado sobre el punto de recogida (o entrega)
+    if (orderHighlight) { map.removeLayer(orderHighlight); orderHighlight = null; }
+    orderHighlight = L.circleMarker(pts[0], {
+      radius: 24, color: '#f59e0b', weight: 3, fillColor: '#f59e0b', fillOpacity: 0.15,
+    }).addTo(map);
+
+    if (pts.length === 1) {
+      map.setView(pts[0], 16);
+    } else {
+      try { map.fitBounds(pts, { padding: [60, 60], maxZoom: 16 }); } catch (e) {}
+    }
   }
 
   // ─── WhatsApp notify ─────────────────────────────────────────────────────
@@ -1759,7 +1804,7 @@
       showToast('Nuevo pedido: ' + order.code, 'info');
       if (window.ghostAlert) window.ghostAlert({ beeps: 3 });
       playBeep();
-      loadOrders();
+      loadOrders().then(() => { if (order && order.id) focusOrderOnMap(order.id); });
       loadStats();
     });
 
