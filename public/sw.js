@@ -1,5 +1,5 @@
 /* Service Worker - Servicio Ghost PWA */
-const CACHE = "domicilios-v25";
+const CACHE = "domicilios-v26";
 const ASSETS = [
   "/",
   "/index.html",
@@ -59,13 +59,30 @@ self.addEventListener("push", (event) => {
   try {
     if (event.data) data = Object.assign(data, event.data.json());
   } catch (e) {}
+
+  const options = {
+    body: data.body,
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    data: { url: data.url || "/" },
+    // Make the notification much more noticeable on phones:
+    vibrate: [500, 200, 500, 200, 500],     // strong, repeated vibration
+    requireInteraction: true,                // stays on screen until tapped
+    renotify: true,                          // re-alerts even if grouped
+    tag: data.tag || ("ghost-" + Date.now()), // unique so each one alerts
+    silent: false,
+    timestamp: Date.now(),
+    actions: [{ action: "open", title: "✅ Abrir" }],
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      data: { url: data.url || "/" },
-    })
+    self.registration
+      .showNotification(data.title, options)
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((list) => {
+        // Ask any open page to play an alert sound + vibrate.
+        for (const c of list) c.postMessage({ type: "push-alert", data: data });
+      })
   );
 });
 

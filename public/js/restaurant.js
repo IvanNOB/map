@@ -245,7 +245,7 @@
     if (socket) return;
     socket = io({ auth: { token } });
     socket.on('order:status', (o) => { loadOrders(); if (o && o.code) showToast('Pedido ' + o.code + ': ' + statusLabel(o.status), 'info'); });
-    socket.on('order:assigned', (o) => { loadOrders(); if (o && o.code) showToast('Pedido ' + o.code + ' asignado a un repartidor', 'info'); });
+    socket.on('order:assigned', (o) => { loadOrders(); if (window.ghostAlert) window.ghostAlert({ beeps: 3 }); if (o && o.code) showToast('Pedido ' + o.code + ' asignado a un repartidor', 'info'); });
   }
 
   checkAuth();

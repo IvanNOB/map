@@ -658,6 +658,7 @@
 
     socket.on('order:assigned', (order) => {
       showToast('Nuevo pedido asignado!', 'info');
+      if (window.ghostAlert) window.ghostAlert({ beeps: 4 });
       loadOrders();
     });
 
@@ -670,6 +671,7 @@
     });
 
     socket.on('notification', (data) => {
+      if (window.ghostAlert) window.ghostAlert({ beeps: 4 });
       if ('Notification' in window && Notification.permission === 'granted') {
         let title = 'Notificacion';
         let body = '';
