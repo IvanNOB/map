@@ -45,7 +45,6 @@
       <div class="navbar-tabs">
         <button class="tab-btn active" data-tab="pedidos">Pedidos y Mapa</button>
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
-        <button class="tab-btn" data-tab="chat">Chat</button>
         <button class="tab-btn" data-tab="reportes">Reportes</button>
         <button class="tab-btn" data-tab="actividad">Actividad</button>
         <button class="tab-btn" data-tab="config">Config</button>
@@ -114,6 +113,22 @@
               </div>
             </div>
           </section>
+
+          <!-- DERECHA: Chat con el repartidor -->
+          <aside class="dispatch-chat">
+            <div class="dispatch-chat-title">💬 Chat con repartidor</div>
+            <div class="chat-contacts" id="chat-contacts"></div>
+            <div class="chat-panel">
+              <div class="chat-header" id="chat-header">Selecciona un repartidor</div>
+              <div class="chat-messages" id="chat-messages">
+                <div class="chat-empty">Elige un repartidor para chatear</div>
+              </div>
+              <div class="chat-input-row">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje..." disabled>
+                <button class="btn btn-primary btn-sm" id="chat-send" disabled>Enviar</button>
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -200,23 +215,6 @@
               <button class="btn btn-primary btn-sm" id="btn-load-cash">Ver caja</button>
             </div>
             <div id="cash-table"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Chat View -->
-      <section id="view-chat" class="hidden">
-        <div class="chat-layout">
-          <div class="chat-contacts" id="chat-contacts"></div>
-          <div class="chat-panel">
-            <div class="chat-header" id="chat-header">Selecciona un repartidor</div>
-            <div class="chat-messages" id="chat-messages">
-              <div class="chat-empty">Elige un repartidor para chatear</div>
-            </div>
-            <div class="chat-input-row">
-              <input type="text" id="chat-input" placeholder="Escribe un mensaje..." disabled>
-              <button class="btn btn-primary btn-sm" id="chat-send" disabled>Enviar</button>
-            </div>
           </div>
         </div>
       </section>
