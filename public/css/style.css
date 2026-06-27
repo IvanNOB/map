@@ -1972,3 +1972,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+
+/* ─── Mensaje guía en la página del cliente ──────────────────────────────── */
+.map-hint {
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+.map-hint.success { background: var(--success-soft); border-color: var(--success); }
+.map-hint.danger { background: rgba(220, 38, 38, 0.15); border-color: var(--danger); }

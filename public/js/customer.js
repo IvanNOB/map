@@ -314,6 +314,41 @@
     renderTimeline(order);
     handleRating(order);
     renderConfirmAddress(order);
+    renderStatusHint(order);
+  }
+
+  // ─── Mensaje guía según el estado (para que el cliente no se confunda) ────
+  function renderStatusHint(order) {
+    var el = document.getElementById('map-hint');
+    if (!el || !order) return;
+    var msg = '';
+    var cls = 'map-hint';
+    switch (order.status) {
+      case 'pending':
+        msg = '⏳ Estamos asignando un repartidor a tu pedido...';
+        break;
+      case 'assigned':
+        msg = '📦 Tu repartidor ya fue asignado. Aparecerá en el mapa cuando recoja tu pedido.';
+        break;
+      case 'picked_up':
+      case 'on_the_way':
+        msg = '🛵 ¡Tu repartidor va en camino! Sigue su ubicación en el mapa.';
+        cls += ' success';
+        break;
+      case 'delivered':
+        msg = '✅ ¡Tu pedido fue entregado! Gracias por usar Servicio Ghost.';
+        cls += ' success';
+        break;
+      case 'cancelled':
+        msg = '❌ Este pedido fue cancelado.';
+        cls += ' danger';
+        break;
+      default:
+        msg = '';
+    }
+    if (!msg) { el.classList.add('hidden'); return; }
+    el.textContent = msg;
+    el.className = cls;
   }
 
   // ─── Confirmar dirección de entrega (cliente) ────────────────────────────
@@ -611,6 +646,7 @@
           renderTimeline(currentOrder);
           handleRating(currentOrder);
           renderConfirmAddress(currentOrder);
+          renderStatusHint(currentOrder);
         }
         if (data.status === 'delivered') trackEta.textContent = 'Entregado';
         // Once delivered or cancelled, the customer no longer sees the driver.
