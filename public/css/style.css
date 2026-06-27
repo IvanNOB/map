@@ -2065,3 +2065,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 0 0 2px var(--primary);
   border-color: var(--primary);
 }
+
+
+/* ─── Sugerencia de repartidor mas cercano (pedidos pendientes) ──────────── */
+.near-driver {
+  font-size: 0.8rem;
+  color: var(--success);
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+.near-driver.none { color: var(--warning); }

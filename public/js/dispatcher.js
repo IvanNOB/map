@@ -1025,6 +1025,7 @@
           <div class="order-addresses">
             <strong>🟢 Recogida:</strong> ${escapeHtml(order.pickup_address || '-')} &rarr; <strong>🔴 Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}
           </div>
+          ${order.status === 'pending' ? nearestHintHtml(order) : ''}
           <div class="order-meta">
             ${dName ? '<span>Repartidor: ' + escapeHtml(dName) + '</span>' : ''}
             <span>${escapeHtml(formatTime(order.created_at))}</span>
@@ -1141,6 +1142,20 @@
     if (!driverId) return '';
     const d = drivers.find((dr) => dr.id === driverId);
     return d ? d.name : 'Repartidor #' + driverId;
+  }
+
+  // Sugiere el repartidor disponible mas cercano al punto de recogida (eficiencia)
+  function nearestHintHtml(order) {
+    if (order.pickup_lat == null || order.pickup_lng == null) return '';
+    let best = null, bestKm = Infinity;
+    drivers.forEach((d) => {
+      if (d.status === 'offline' || d.lat == null || d.lng == null) return;
+      const km = haversineKm(order.pickup_lat, order.pickup_lng, d.lat, d.lng);
+      if (km < bestKm) { bestKm = km; best = d; }
+    });
+    if (!best) return '<div class="near-driver none">⚠️ Sin repartidores en linea</div>';
+    return '<div class="near-driver">🛵 Mas cercano: <strong>' + escapeHtml(best.name) +
+      '</strong> · ' + bestKm.toFixed(1) + ' km</div>';
   }
 
   // ─── Filter ─────────────────────────────────────────────────────────────────
