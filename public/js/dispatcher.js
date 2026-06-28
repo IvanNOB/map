@@ -940,6 +940,28 @@
     if (e.key === 'Enter') sendChat();
   });
 
+  // ─── Enviar notificacion (aviso) a repartidores ─────────────────────────────
+  const btnNotify = document.getElementById('btn-notify');
+  if (btnNotify) {
+    btnNotify.addEventListener('click', async () => {
+      const target = chatActiveDriver;
+      const who = target ? (getDriverName(target) || 'el repartidor') : 'TODOS los repartidores';
+      const msg = prompt('Escribe el aviso para ' + who + ':');
+      if (msg == null) return;
+      const body = msg.trim();
+      if (!body) { showToast('Escribe un mensaje', 'warning'); return; }
+      try {
+        const res = await apiFetch('/api/push/notify', {
+          method: 'POST',
+          body: JSON.stringify({ driver_id: target || 'all', title: 'Aviso de Despacho', body }),
+        });
+        const data = await res.json();
+        if (res.ok) showToast('Aviso enviado a ' + data.sent + ' repartidor(es)', 'success');
+        else showToast(data.error || 'No se pudo enviar el aviso', 'error');
+      } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
   // ─── Data Loading ───────────────────────────────────────────────────────────
 
   async function loadData() {

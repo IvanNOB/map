@@ -700,18 +700,23 @@
 
     socket.on('notification', (data) => {
       if (window.ghostAlert) window.ghostAlert({ beeps: 4 });
+      let title = 'Notificacion';
+      let body = '';
+      switch (data.type) {
+        case 'order_assigned':
+          title = 'Nuevo pedido asignado!';
+          body = data.data && data.data.code ? data.data.code : '';
+          break;
+        case 'admin_message':
+          title = (data.data && data.data.title) || 'Aviso de Despacho';
+          body = (data.data && data.data.body) || '';
+          showToast('🔔 ' + (body || title), 'info');
+          break;
+        default:
+          title = 'Notificacion';
+          body = data.type || '';
+      }
       if ('Notification' in window && Notification.permission === 'granted') {
-        let title = 'Notificacion';
-        let body = '';
-        switch (data.type) {
-          case 'order_assigned':
-            title = 'Nuevo pedido asignado!';
-            body = data.data && data.data.code ? data.data.code : '';
-            break;
-          default:
-            title = 'Notificacion';
-            body = data.type || '';
-        }
         new Notification(title, { body: body });
       }
     });
