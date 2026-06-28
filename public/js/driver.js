@@ -435,13 +435,34 @@
   }
   // Re-acquire the wake lock when the app comes back to the foreground
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && sharing) acquireWakeLock();
+    if (document.visibilityState === 'visible' && sharing) {
+      acquireWakeLock();
+      // Reenviar la ultima posicion al volver para volver a aparecer "en linea"
+      if (lastPos) postLocation(lastPos.lat, lastPos.lng, lastPos.speed);
+    }
   });
 
   // ─── Capacitor (native Android) background geolocation, if available ─────────
   function bgPlugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundGeolocation) || null;
   }
+
+  // Avisa al repartidor si la ubicacion seguira en segundo plano o no.
+  function updateBgStatus() {
+    const el = document.getElementById('bg-status');
+    if (!el) return;
+    if (bgPlugin()) {
+      el.className = 'bg-status ok';
+      el.innerHTML = '✅ App instalada: tu ubicación se sigue enviando aunque cierres la app o bloquees la pantalla. ' +
+        '<b>Importante:</b> en los permisos de ubicación elige <b>"Permitir todo el tiempo"</b>.';
+    } else {
+      el.className = 'bg-status warn';
+      el.innerHTML = '⚠️ Estás usando la versión de <b>navegador</b>. Si sales de la app o bloqueas la pantalla, ' +
+        'la ubicación <b>deja de enviarse</b>. Para que siga en segundo plano, instala la <b>APK</b> en el celular.';
+    }
+  }
+  // Capacitor inyecta el plugin un instante despues de cargar.
+  setTimeout(updateBgStatus, 1200);
   let bgWatcherId = null;
   let lastPos = null;
   let heartbeat = null;
@@ -491,6 +512,7 @@
     btnShareLocation.classList.add('hidden');
     btnStopLocation.classList.remove('hidden');
     startHeartbeat();
+    updateBgStatus();
 
     if (bg) {
       // Native app: tracks in the background even with the app closed / screen off
@@ -501,15 +523,21 @@
         stale: false,
         distanceFilter: 20,
       }, (location, error) => {
-        if (error) { showToast('Permiso de ubicacion requerido', 'warning'); return; }
+        if (error) {
+          if (error.code === 'NOT_AUTHORIZED') {
+            showToast('Activa el permiso de ubicacion en "Permitir todo el tiempo"', 'warning');
+          }
+          return;
+        }
         if (location) sendLocation(location.latitude, location.longitude, location.speed, location.bearing, location.accuracy);
       }).then((id) => { bgWatcherId = id; });
-      showToast('Rastreo en segundo plano activado', 'success');
+      showToast('Rastreo en segundo plano activado. Permite la ubicacion "todo el tiempo".', 'success');
       return;
     }
 
     // Web fallback: foreground tracking + keep screen on
     if (!navigator.geolocation) { showToast('Geolocalizacion no disponible', 'error'); return; }
+    showToast('Atencion: en el navegador la ubicacion se detiene si sales de la app. Instala la APK para segundo plano.', 'warning');
     acquireWakeLock();
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
