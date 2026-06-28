@@ -72,13 +72,8 @@
 
   const trackCode = document.getElementById('track-code');
   const trackStatusBadge = document.getElementById('track-status-badge');
-  const trackCustomer = document.getElementById('track-customer');
-  const trackPickup = document.getElementById('track-pickup');
   const trackDropoff = document.getElementById('track-dropoff');
   const trackDriver = document.getElementById('track-driver');
-  const trackVehicle = document.getElementById('track-vehicle');
-  const trackDistance = document.getElementById('track-distance');
-  const trackTime = document.getElementById('track-time');
   const trackEta = document.getElementById('track-eta');
   const trackEtaContainer = document.getElementById('track-eta-container');
 
@@ -259,27 +254,18 @@
     trackCode.textContent = order.code;
     trackStatusBadge.textContent = statusLabel(order.status);
     trackStatusBadge.className = 'badge badge-' + order.status;
-    trackCustomer.textContent = order.customer_name;
-    trackPickup.textContent = order.pickup_address || '-';
-    trackDropoff.textContent = order.dropoff_address || '-';
+    if (trackDropoff) trackDropoff.textContent = order.dropoff_address || 'Por confirmar';
 
+    var rowDriver = document.getElementById('row-driver');
     if (driver) {
-      trackDriver.textContent = driver.name || '-';
-      var vehicleInfo = [];
-      if (driver.vehicle) vehicleInfo.push(driver.vehicle);
-      if (driver.plate) vehicleInfo.push('(' + driver.plate + ')');
-      trackVehicle.textContent = vehicleInfo.length > 0 ? vehicleInfo.join(' ') : '-';
+      var veh = [];
+      if (driver.vehicle) veh.push(driver.vehicle);
+      if (driver.plate) veh.push('(' + driver.plate + ')');
+      trackDriver.textContent = (driver.name || 'Repartidor') + (veh.length ? ' · ' + veh.join(' ') : '');
+      if (rowDriver) rowDriver.classList.remove('hidden');
     } else {
-      trackDriver.textContent = 'Sin asignar';
-      trackVehicle.textContent = '-';
+      if (rowDriver) rowDriver.classList.add('hidden');
     }
-
-    trackDistance.textContent = order.estimated_distance_km
-      ? order.estimated_distance_km.toFixed(1) + ' km'
-      : '-';
-    trackTime.textContent = order.estimated_minutes
-      ? Math.round(order.estimated_minutes) + ' min'
-      : '-';
 
     // ETA
     if (data.eta_minutes != null) {
