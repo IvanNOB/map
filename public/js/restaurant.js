@@ -150,7 +150,7 @@
   function applyParsed(text) {
     const p = parseWhatsApp(text);
     if (p.name) document.getElementById('o-name').value = p.name;
-    if (p.phone) document.getElementById('o-phone').value = p.phone;
+    if (p.phone) document.getElementById('o-phone').value = formatPhone(nationalDigits(p.phone));
     if (p.address) document.getElementById('o-dropoff').value = p.address;
     if (p.items) document.getElementById('o-items').value = p.items;
     const got = [p.name, p.phone, p.address, p.items].filter(Boolean).length;
@@ -197,6 +197,13 @@
 
   // ─── Telefono: limpiar, formatear y validar (para no equivocarse) ───────────
   function onlyDigits(s) { return (s || '').replace(/\D/g, ''); }
+  // Normaliza a numero nacional (10 digitos): quita +57 y el 0 inicial si vienen.
+  function nationalDigits(raw) {
+    let d = onlyDigits(raw);
+    if (d.length === 12 && d.slice(0, 2) === '57') d = d.slice(2);   // +57 300...
+    else if (d.length === 11 && d[0] === '0') d = d.slice(1);        // 0 300...
+    return d.slice(0, 10);
+  }
   function formatPhone(digits) {
     digits = digits.slice(0, 10);
     if (digits.length > 6) return digits.replace(/(\d{3})(\d{3})(\d{0,4})/, '$1 $2 $3').trim();
@@ -208,7 +215,7 @@
     const hint = document.getElementById('phone-hint');
     if (!input) return;
     input.addEventListener('input', () => {
-      const digits = onlyDigits(input.value);
+      const digits = nationalDigits(input.value);
       input.value = formatPhone(digits);
       if (!hint) return;
       if (digits.length === 0) {
@@ -232,7 +239,7 @@
 
   document.getElementById('order-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const phoneDigits = onlyDigits(document.getElementById('o-phone').value);
+    const phoneDigits = nationalDigits(document.getElementById('o-phone').value);
     if (phoneDigits && (phoneDigits.length < 7 || phoneDigits.length > 10)) {
       showToast('Revisa el teléfono: debe tener entre 7 y 10 dígitos', 'warning');
       document.getElementById('o-phone').focus();
