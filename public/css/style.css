@@ -2096,3 +2096,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   justify-content: space-between;
   gap: 0.5rem;
 }
+
+
+/* ─── Validacion de telefono (portal restaurante) ────────────────────────── */
+.phone-hint { display: block; margin-top: 0.25rem; font-size: 0.78rem; color: var(--text-muted); }
+.phone-hint.ok { color: var(--success); }
+.phone-hint.warn { color: var(--warning); }
+
+/* ─── Mensaje de confianza (pagina del cliente) ──────────────────────────── */
+.confirm-trust {
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--success-soft);
+  border: 1px solid var(--success);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
