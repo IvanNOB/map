@@ -195,12 +195,53 @@
     return null;
   }
 
+  // ─── Telefono: limpiar, formatear y validar (para no equivocarse) ───────────
+  function onlyDigits(s) { return (s || '').replace(/\D/g, ''); }
+  function formatPhone(digits) {
+    digits = digits.slice(0, 10);
+    if (digits.length > 6) return digits.replace(/(\d{3})(\d{3})(\d{0,4})/, '$1 $2 $3').trim();
+    if (digits.length > 3) return digits.replace(/(\d{3})(\d{0,3})/, '$1 $2').trim();
+    return digits;
+  }
+  (function bindPhoneField() {
+    const input = document.getElementById('o-phone');
+    const hint = document.getElementById('phone-hint');
+    if (!input) return;
+    input.addEventListener('input', () => {
+      const digits = onlyDigits(input.value);
+      input.value = formatPhone(digits);
+      if (!hint) return;
+      if (digits.length === 0) {
+        hint.textContent = 'Solo números. Celular: 10 dígitos.';
+        hint.className = 'phone-hint';
+      } else if (digits.length === 10 && digits[0] === '3') {
+        hint.textContent = '✓ Número de celular válido';
+        hint.className = 'phone-hint ok';
+      } else if (digits.length < 7) {
+        hint.textContent = 'Faltan dígitos (' + digits.length + '/10)';
+        hint.className = 'phone-hint warn';
+      } else if (digits.length < 10) {
+        hint.textContent = digits.length + ' dígitos. Un celular tiene 10.';
+        hint.className = 'phone-hint warn';
+      } else {
+        hint.textContent = '✓ Número guardado';
+        hint.className = 'phone-hint ok';
+      }
+    });
+  })();
+
   document.getElementById('order-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const phoneDigits = onlyDigits(document.getElementById('o-phone').value);
+    if (phoneDigits && (phoneDigits.length < 7 || phoneDigits.length > 10)) {
+      showToast('Revisa el teléfono: debe tener entre 7 y 10 dígitos', 'warning');
+      document.getElementById('o-phone').focus();
+      return;
+    }
     const dropoff = document.getElementById('o-dropoff').value.trim();
     const body = {
       customer_name: document.getElementById('o-name').value.trim(),
-      customer_phone: document.getElementById('o-phone').value.trim(),
+      customer_phone: phoneDigits ? formatPhone(phoneDigits) : '',
       dropoff_address: dropoff,
       items: document.getElementById('o-items').value.trim(),
       amount: parseFloat(document.getElementById('o-amount').value) || 0,
