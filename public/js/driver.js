@@ -202,6 +202,9 @@
       Notification.requestPermission();
     }
     if (window.enablePush) window.enablePush(token);
+    // En el APK: pedir permiso de notificaciones nativas
+    const ln = localNotifPlugin();
+    if (ln && ln.requestPermissions) { try { ln.requestPermissions(); } catch (e) {} }
   }
 
   loginForm.addEventListener('submit', async (e) => {
@@ -447,6 +450,29 @@
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundGeolocation) || null;
   }
 
+  // Notificaciones NATIVAS del APK (aparecen aunque el repartidor este en otra app)
+  function localNotifPlugin() {
+    return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) || null;
+  }
+  async function notifyDriverDevice(title, body) {
+    const ln = localNotifPlugin();
+    if (ln) {
+      try {
+        await ln.schedule({
+          notifications: [{
+            id: Math.floor(Math.random() * 100000) + 1,
+            title: title || 'Servicio Ghost',
+            body: body || '',
+          }],
+        });
+        return;
+      } catch (e) { /* sigue al fallback web */ }
+    }
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(title || 'Servicio Ghost', { body: body || '' }); } catch (e) {}
+    }
+  }
+
   // Avisa al repartidor si la ubicacion seguira en segundo plano o no.
   function updateBgStatus() {
     const el = document.getElementById('bg-status');
@@ -687,6 +713,7 @@
     socket.on('order:assigned', (order) => {
       showToast('Nuevo pedido asignado!', 'info');
       if (window.ghostAlert) window.ghostAlert({ beeps: 4 });
+      notifyDriverDevice('Nuevo pedido asignado', order && order.code ? order.code : '');
       loadOrders();
     });
 
@@ -695,6 +722,8 @@
       renderDriverChat();
       if (msg.sender_role === 'admin') {
         showToast('Mensaje de Despacho', 'info');
+        if (window.ghostAlert) window.ghostAlert({ beeps: 2 });
+        notifyDriverDevice('Mensaje de Despacho', msg.body || '');
       }
     });
 
@@ -716,9 +745,7 @@
           title = 'Notificacion';
           body = data.type || '';
       }
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body: body });
-      }
+      notifyDriverDevice(title, body);
     });
 
     socket.on('disconnect', () => {
