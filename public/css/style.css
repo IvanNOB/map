@@ -2075,3 +2075,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-weight: 500;
 }
 .near-driver.none { color: var(--warning); }
+
+
+/* ─── Aviso de ubicacion en segundo plano (app del repartidor) ───────────── */
+.bg-status {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.bg-status.ok { background: var(--success-soft); border: 1px solid var(--success); }
+.bg-status.warn { background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warning); }
