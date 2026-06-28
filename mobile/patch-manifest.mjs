@@ -17,6 +17,7 @@ const perms = [
   "android.permission.FOREGROUND_SERVICE",
   "android.permission.FOREGROUND_SERVICE_LOCATION",
   "android.permission.WAKE_LOCK",
+  "android.permission.POST_NOTIFICATIONS",
 ];
 
 const toAdd = perms
