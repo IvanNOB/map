@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa - Servicio Ghost</title>
+
+  <!-- Leaflet (mapa gratis, sin API key) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #111; }
+    #map { width: 100%; height: 100vh; }
+    .leaflet-popup-content { font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    // ── 1) Punto central del mapa (cambia estas coordenadas a tu ciudad) ──────
+    var CENTRO = [4.6097, -74.0817]; // Bogotá (lat, lng)
+
+    var map = L.map('map').setView(CENTRO, 13);
+
+    // ── 2) Capas: Satélite (Esri) y Calles (OpenStreetMap) ────────────────────
+    var satelital = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Tiles © Esri', maxZoom: 19 }
+    ).addTo(map);
+
+    var calles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    });
+
+    L.control.layers({ 'Satelital': satelital, 'Calles': calles }).addTo(map);
+
+    // ── 3) Marcadores de ejemplo (cambia las coordenadas y textos) ────────────
+    // Recogida (verde)
+    L.marker([4.6285, -74.0646]).addTo(map)
+      .bindPopup('🟢 <b>Recogida</b><br>Restaurante / Local');
+
+    // Entrega (rojo)
+    L.marker([4.6431, -74.0628]).addTo(map)
+      .bindPopup('🔴 <b>Entrega</b><br>Casa del cliente');
+
+    // Repartidor (azul)
+    L.marker([4.6360, -74.0640]).addTo(map)
+      .bindPopup('🛵 <b>Repartidor</b><br>Juan Pérez');
+
+    // ── 4) (Opcional) línea recta entre recogida y entrega ────────────────────
+    L.polyline([[4.6285, -74.0646], [4.6431, -74.0628]], {
+      color: '#f59e0b', weight: 3, dashArray: '6,8'
+    }).addTo(map);
+  </script>
+</body>
+</html>
