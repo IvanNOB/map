@@ -2087,3 +2087,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .bg-status.ok { background: var(--success-soft); border: 1px solid var(--success); }
 .bg-status.warn { background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warning); }
+
+
+/* Cabecera del chat con boton de aviso */
+.dispatch-chat-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}

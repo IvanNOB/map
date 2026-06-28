@@ -1,7 +1,7 @@
 import { Router } from "express";
 import webpush from "web-push";
 import db from "../db/database.js";
-import { requireAuth } from "./auth.js";
+import { requireAuth, requireRole } from "./auth.js";
 
 let publicKey = null;
 let enabled = false;
@@ -74,6 +74,40 @@ router.post("/subscribe", requireAuth, async (req, res) => {
     [sub.endpoint, req.user.id, JSON.stringify(sub)]
   );
   res.json({ ok: true });
+});
+
+// POST /api/push/notify - admin envia una notificacion a un repartidor o a todos
+router.post("/notify", requireAuth, requireRole("admin"), async (req, res) => {
+  const { driver_id, title, body } = req.body || {};
+  const text = (body == null ? "" : String(body)).trim();
+  if (!text) return res.status(400).json({ error: "Escribe el mensaje de la notificacion" });
+
+  const t = (title == null || String(title).trim() === "" ? "Aviso de Despacho" : String(title)).slice(0, 80);
+  const b = text.slice(0, 300);
+
+  let targets = [];
+  if (driver_id && driver_id !== "all") {
+    targets = [Number(driver_id)];
+  } else {
+    const rows = await db.all("SELECT user_id FROM drivers");
+    targets = rows.map((r) => Number(r.user_id));
+  }
+
+  const io = req.app.get("io");
+  let sent = 0;
+  for (const id of targets) {
+    if (io) {
+      io.to(`driver:${id}`).emit("notification", {
+        type: "admin_message",
+        data: { title: t, body: b },
+        timestamp: new Date().toISOString(),
+      });
+    }
+    await sendPush(id, { title: t, body: b, url: "/driver.html" });
+    sent++;
+  }
+
+  res.json({ ok: true, sent });
 });
 
 export default router;
