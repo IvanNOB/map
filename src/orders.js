@@ -319,6 +319,11 @@ export default function createOrdersRouter(io) {
     // Emit to tracking room
     io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
 
+    // Notify restaurant if linked
+    if (updated.restaurant_id) {
+      io.to(`restaurant:${updated.restaurant_id}`).emit("order:assigned", updated);
+    }
+
     res.json(updated);
   });
 
@@ -334,7 +339,9 @@ export default function createOrdersRouter(io) {
       return res.status(403).json({ error: "No autorizado para esta orden" });
     }
 
+    // Driver workflow: ready_for_pickup/assigned → picked_up → on_the_way → delivered
     const workflow = {
+      ready_for_pickup: "picked_up",
       assigned: "picked_up",
       picked_up: "on_the_way",
       on_the_way: "delivered",
@@ -364,9 +371,19 @@ export default function createOrdersRouter(io) {
     // Emit to tracking room
     io.to(`tracking:${updated.code}`).emit("order:status", updated);
 
+    // Notify restaurant if linked
+    if (updated.restaurant_id) {
+      io.to(`restaurant:${updated.restaurant_id}`).emit("order:status", updated);
+    }
+
     // Additional notifications for delivered status
     if (status === "delivered") {
       notifyAdmins(io, "order_delivered", updated);
+    }
+
+    // Notify when picked up (restaurant knows it was collected)
+    if (status === "picked_up" && updated.restaurant_id) {
+      io.to(`restaurant:${updated.restaurant_id}`).emit("order:picked_up", updated);
     }
 
     res.json(updated);

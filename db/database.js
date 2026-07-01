@@ -180,7 +180,7 @@ db.exec(`
     name         TEXT NOT NULL,
     email        TEXT NOT NULL UNIQUE,
     password     TEXT NOT NULL,
-    role         TEXT NOT NULL CHECK (role IN ('admin', 'driver')),
+    role         TEXT NOT NULL CHECK (role IN ('admin', 'driver', 'restaurant')),
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -216,12 +216,16 @@ db.exec(`
     estimated_distance_km REAL,
     estimated_minutes REAL,
     status           TEXT NOT NULL DEFAULT 'pending'
-                     CHECK (status IN ('pending', 'assigned', 'picked_up', 'on_the_way', 'delivered', 'cancelled')),
+                     CHECK (status IN ('pending', 'confirmed', 'preparing', 'ready_for_pickup', 'assigned', 'picked_up', 'on_the_way', 'delivered', 'cancelled')),
     driver_id        INTEGER,
+    restaurant_id    INTEGER,
     created_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    confirmed_at     TEXT,
+    ready_at         TEXT,
     assigned_at      TEXT,
     delivered_at     TEXT,
-    FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (restaurant_id) REFERENCES users(id) ON DELETE SET NULL
   );
 
   CREATE TABLE IF NOT EXISTS location_history (
@@ -236,11 +240,26 @@ db.exec(`
   );
 `);
 
+// Restaurants table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS restaurants (
+    user_id      INTEGER PRIMARY KEY,
+    phone        TEXT,
+    address      TEXT,
+    lat          REAL,
+    lng          REAL,
+    category     TEXT DEFAULT 'general',
+    description  TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+`);
+
 // Create indexes (ignore errors if they exist)
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)"); } catch (_) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_orders_driver ON orders(driver_id)"); } catch (_) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_location_history_order ON location_history(order_id)"); } catch (_) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_location_history_driver ON location_history(driver_id)"); } catch (_) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_orders_restaurant ON orders(restaurant_id)"); } catch (_) {}
 
 // Save initial schema to disk
 db._save();

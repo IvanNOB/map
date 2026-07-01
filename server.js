@@ -9,6 +9,7 @@ import db from "./db/database.js";
 import authRouter, { verifyToken } from "./src/auth.js";
 import driversRouter from "./src/drivers.js";
 import createOrdersRouter from "./src/orders.js";
+import createRestaurantRouter from "./src/restaurants.js";
 import createLocationRouter from "./src/location.js";
 import trackingRouter from "./src/tracking.js";
 import reportsRouter from "./src/reports.js";
@@ -99,6 +100,10 @@ app.use("/api/location", locationRouter);
 // Public tracking (no auth)
 app.use("/api/track", trackingRouter);
 
+// Restaurant routes
+const restaurantRouter = createRestaurantRouter(io);
+app.use("/api/restaurant", restaurantRouter);
+
 // Reports (admin only)
 app.use("/api/reports", reportsRouter);
 
@@ -150,6 +155,9 @@ io.on("connection", (socket) => {
   } else if (user.role === "driver") {
     socket.join("drivers");
     socket.join(`driver:${user.id}`);
+  } else if (user.role === "restaurant") {
+    socket.join("restaurants");
+    socket.join(`restaurant:${user.id}`);
   }
 
   // Driver location update
@@ -261,7 +269,8 @@ setTimeout(cleanupLocationHistory, 30_000);
 
 httpServer.listen(PORT, () => {
   logger.info(`Delivery Platform corriendo en http://localhost:${PORT}`);
-  logger.info(`Panel de control:   http://localhost:${PORT}/`);
-  logger.info(`App del repartidor: http://localhost:${PORT}/driver.html`);
-  logger.info(`Health check:       http://localhost:${PORT}/api/health`);
+  logger.info(`Panel de control:     http://localhost:${PORT}/`);
+  logger.info(`App del repartidor:   http://localhost:${PORT}/driver.html`);
+  logger.info(`App del restaurante:  http://localhost:${PORT}/restaurant.html`);
+  logger.info(`Health check:         http://localhost:${PORT}/api/health`);
 });

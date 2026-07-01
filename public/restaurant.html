@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurante - Agencia de Domicilios</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#f97316">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+</head>
+<body>
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <h1>Agencia de Domicilios</h1>
+      <p>Panel del Restaurante</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">Correo electronico</label>
+          <input type="email" id="login-email" placeholder="restaurante@agencia.com" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contrasena</label>
+          <input type="password" id="login-password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Iniciar Sesion</button>
+        <div id="login-error" class="login-error"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App (hidden until login) -->
+  <div id="app" class="app-container hidden">
+    <!-- Header -->
+    <nav class="navbar" style="--navbar-accent: #f97316;">
+      <span class="navbar-brand">Mi Restaurante</span>
+      <div class="navbar-tabs">
+        <button class="tab-btn active" data-tab="pedidos">Pedidos</button>
+        <button class="tab-btn" data-tab="nuevo">+ Nuevo Pedido</button>
+        <button class="tab-btn" data-tab="estadisticas">Estadisticas</button>
+      </div>
+      <div class="navbar-right">
+        <span id="user-name" class="navbar-user"></span>
+        <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
+      </div>
+    </nav>
+
+    <!-- Content Views -->
+    <main class="content">
+      <!-- Pedidos View -->
+      <section id="view-pedidos">
+        <!-- Quick Stats -->
+        <div class="stats-row">
+          <div class="stat-card warning">
+            <div class="stat-value" id="stat-pending">0</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+          <div class="stat-card primary">
+            <div class="stat-value" id="stat-preparing">0</div>
+            <div class="stat-label">Preparando</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-value" id="stat-ready">0</div>
+            <div class="stat-label">Listos</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-value" id="stat-revenue">$0</div>
+            <div class="stat-label">Ingresos Hoy</div>
+          </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="toolbar">
+          <button class="filter-btn active" data-filter="">Todos</button>
+          <button class="filter-btn" data-filter="pending">Pendientes</button>
+          <button class="filter-btn" data-filter="confirmed">Confirmados</button>
+          <button class="filter-btn" data-filter="preparing">Preparando</button>
+          <button class="filter-btn" data-filter="ready_for_pickup">Listos</button>
+          <button class="filter-btn" data-filter="assigned">Asignados</button>
+          <button class="filter-btn" data-filter="on_the_way">En Camino</button>
+          <button class="filter-btn" data-filter="delivered">Entregados</button>
+          <button class="filter-btn" data-filter="cancelled">Cancelados</button>
+        </div>
+
+        <!-- Orders List -->
+        <div id="orders-list" class="orders-list"></div>
+      </section>
+
+      <!-- Nuevo Pedido View -->
+      <section id="view-nuevo" class="hidden">
+        <div class="form-container">
+          <h2 style="margin-bottom:1rem;">Crear Nuevo Pedido</h2>
+          <form id="form-new-order">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nombre del cliente</label>
+                <input type="text" name="customer_name" required>
+              </div>
+              <div class="form-group">
+                <label>Telefono del cliente</label>
+                <div class="phone-input-wrapper">
+                  <span class="phone-prefix">+57</span>
+                  <input type="tel" name="customer_phone" placeholder="300 123 4567" maxlength="15">
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Direccion de entrega</label>
+              <input type="text" name="dropoff_address" required placeholder="Calle, numero, barrio, ciudad">
+            </div>
+            <div class="form-group">
+              <label>Articulos / Pedido</label>
+              <textarea name="items" rows="3" placeholder="Ej: 1 Bandeja Paisa, 2 Jugos Naturales, 1 Postre..." required></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Monto Total ($)</label>
+                <input type="number" name="amount" step="100" min="0" value="0" required>
+              </div>
+              <div class="form-group">
+                <label>Metodo de pago</label>
+                <select name="payment_method">
+                  <option value="cash">Efectivo</option>
+                  <option value="card">Tarjeta</option>
+                  <option value="transfer">Transferencia</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas para el repartidor</label>
+              <textarea name="notes" rows="2" placeholder="Instrucciones especiales de entrega..."></textarea>
+            </div>
+            <div class="modal-actions">
+              <button type="reset" class="btn btn-outline">Limpiar</button>
+              <button type="submit" class="btn btn-primary">Crear Pedido</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Estadisticas View -->
+      <section id="view-estadisticas" class="hidden">
+        <div class="reports-container">
+          <h2 style="margin-bottom:1rem;">Estadisticas del Restaurante</h2>
+          <div id="restaurant-stats" class="summary-grid">
+            <div class="summary-card">
+              <div class="summary-value" id="stats-orders-today">0</div>
+              <div class="summary-label">Pedidos Hoy</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="stats-deliveries-today">0</div>
+              <div class="summary-label">Entregados Hoy</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="stats-revenue-today">$0</div>
+              <div class="summary-label">Ingresos Hoy</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="stats-orders-week">0</div>
+              <div class="summary-label">Pedidos Semana</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="stats-revenue-week">$0</div>
+              <div class="summary-label">Ingresos Semana</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-value" id="stats-avg-prep">--</div>
+              <div class="summary-label">Tiempo Prep. Promedio (min)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/restaurant.js"></script>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(reg) { console.log('SW registrado:', reg.scope); })
+        .catch(function(err) { console.warn('SW error:', err); });
+    }
+  </script>
+</body>
+</html>
