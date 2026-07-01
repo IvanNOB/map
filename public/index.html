@@ -164,7 +164,10 @@
           </div>
           <div class="form-group">
             <label>Telefono</label>
-            <input type="tel" name="customer_phone">
+            <div class="phone-input-wrapper">
+              <span class="phone-prefix">+57</span>
+              <input type="tel" name="customer_phone" placeholder="300 123 4567" maxlength="15" pattern="[\d\s\+\-()]*">
+            </div>
           </div>
         </div>
         <div class="form-group">
@@ -226,7 +229,10 @@
           </div>
           <div class="form-group">
             <label>Telefono</label>
-            <input type="tel" name="phone">
+            <div class="phone-input-wrapper">
+              <span class="phone-prefix">+57</span>
+              <input type="tel" name="phone" placeholder="300 123 4567" maxlength="15" pattern="[\d\s\+\-()]*">
+            </div>
           </div>
         </div>
         <div class="form-row">

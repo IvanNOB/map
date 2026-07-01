@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import db from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
+import { formatColombianPhone } from "./utils.js";
 
 const router = Router();
 
@@ -32,6 +33,15 @@ router.post("/", requireAuth, requireRole("admin"), (req, res) => {
     return res.status(400).json({ error: "Nombre, email y contraseña son obligatorios" });
   }
 
+  // Validate and format Colombian phone number if provided
+  let formattedPhone = null;
+  if (phone && String(phone).trim()) {
+    formattedPhone = formatColombianPhone(phone);
+    if (!formattedPhone) {
+      return res.status(400).json({ error: "Numero de telefono invalido. Debe ser un numero colombiano valido (ej: 3001234567 o +573001234567)" });
+    }
+  }
+
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(String(email).toLowerCase().trim());
   if (existing) return res.status(409).json({ error: "Ya existe un usuario con ese email" });
 
@@ -41,12 +51,12 @@ router.post("/", requireAuth, requireRole("admin"), (req, res) => {
       .run(name.trim(), String(email).toLowerCase().trim(), bcrypt.hashSync(password, 10));
     db.prepare(
       "INSERT INTO drivers (user_id, phone, vehicle, plate, status) VALUES (?, ?, ?, ?, 'offline')"
-    ).run(info.lastInsertRowid, phone || null, vehicle || null, plate || null);
+    ).run(info.lastInsertRowid, formattedPhone, vehicle || null, plate || null);
     return info.lastInsertRowid;
   });
 
   const id = tx();
-  res.status(201).json({ id, name, email, role: "driver", phone, vehicle, plate, status: "offline" });
+  res.status(201).json({ id, name, email, role: "driver", phone: formattedPhone, vehicle, plate, status: "offline" });
 });
 
 export { listDrivers };

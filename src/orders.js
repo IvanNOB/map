@@ -1,7 +1,7 @@
 import { Router } from "express";
 import db from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
-import { haversineDistance, estimateTime } from "./utils.js";
+import { haversineDistance, estimateTime, formatColombianPhone } from "./utils.js";
 import { notifyAdmins, notifyDriver } from "./notifications.js";
 
 /**
@@ -128,6 +128,15 @@ export default function createOrdersRouter(io) {
       return res.status(400).json({ error: "customer_name, pickup_address y dropoff_address son obligatorios" });
     }
 
+    // Validate and format Colombian phone number if provided
+    let formattedPhone = null;
+    if (customer_phone && String(customer_phone).trim()) {
+      formattedPhone = formatColombianPhone(customer_phone);
+      if (!formattedPhone) {
+        return res.status(400).json({ error: "Numero de telefono invalido. Debe ser un numero colombiano valido (ej: 3001234567 o +573001234567)" });
+      }
+    }
+
     // Retry loop to handle code collisions (UNIQUE constraint on code)
     const MAX_RETRIES = 5;
     let order = null;
@@ -143,7 +152,7 @@ export default function createOrdersRouter(io) {
           .run(
             code,
             customer_name,
-            customer_phone || null,
+            formattedPhone,
             pickup_address,
             pickup_lat || null,
             pickup_lng || null,
@@ -209,6 +218,15 @@ export default function createOrdersRouter(io) {
       payment_method,
     } = req.body || {};
 
+    // Validate and format Colombian phone number if provided
+    let formattedPhone = null;
+    if (customer_phone && String(customer_phone).trim()) {
+      formattedPhone = formatColombianPhone(customer_phone);
+      if (!formattedPhone) {
+        return res.status(400).json({ error: "Numero de telefono invalido. Debe ser un numero colombiano valido (ej: 3001234567 o +573001234567)" });
+      }
+    }
+
     db.prepare(
       `UPDATE orders SET
          customer_name = COALESCE(?, customer_name),
@@ -226,7 +244,7 @@ export default function createOrdersRouter(io) {
        WHERE id = ?`
     ).run(
       customer_name || null,
-      customer_phone || null,
+      formattedPhone,
       pickup_address || null,
       pickup_lat || null,
       pickup_lng || null,

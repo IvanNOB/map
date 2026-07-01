@@ -123,6 +123,86 @@
       .replace(/'/g, '&#039;');
   }
 
+  // ─── Colombian Phone Validation & Formatting ─────────────────────────────
+
+  /**
+   * Normalizes and validates a Colombian phone number.
+   * Accepts formats like: 3001234567, 300 123 4567, +573001234567, 573001234567, 03001234567
+   * Returns the formatted number as +57XXXXXXXXXX or null if invalid.
+   */
+  function formatColombianPhone(raw) {
+    if (!raw) return null;
+    // Remove all non-digit characters except leading +
+    let cleaned = String(raw).trim().replace(/[^\d+]/g, '');
+    // Remove leading + if present
+    if (cleaned.startsWith('+')) {
+      cleaned = cleaned.substring(1);
+    }
+    // Remove leading country code 57 if present
+    if (cleaned.startsWith('57') && cleaned.length === 12) {
+      cleaned = cleaned.substring(2);
+    }
+    // Remove leading 0 (some people dial 0 + number)
+    if (cleaned.startsWith('0') && cleaned.length === 11) {
+      cleaned = cleaned.substring(1);
+    }
+    // Colombian mobile numbers: 10 digits starting with 3
+    // Colombian landline numbers: 10 digits (area code + 7 digits), area codes start with non-3
+    if (cleaned.length !== 10) {
+      return null;
+    }
+    // Mobile numbers must start with 3, landlines start with other digits (1-8 for area codes)
+    if (!/^[1-8]\d{9}$/.test(cleaned) && !/^3\d{9}$/.test(cleaned)) {
+      return null;
+    }
+    return '+57' + cleaned;
+  }
+
+  /**
+   * Validates a Colombian phone number. Returns true if valid, false otherwise.
+   */
+  function isValidColombianPhone(raw) {
+    return formatColombianPhone(raw) !== null;
+  }
+
+  /**
+   * Shows inline validation error on a phone input field.
+   */
+  function showPhoneError(input, message) {
+    // Add error styling to the wrapper if it exists, otherwise to input
+    const wrapper = input.closest('.phone-input-wrapper');
+    if (wrapper) {
+      wrapper.classList.add('input-error');
+    } else {
+      input.classList.add('input-error');
+    }
+    const formGroup = input.closest('.form-group');
+    let errorEl = formGroup.querySelector('.phone-error');
+    if (!errorEl) {
+      errorEl = document.createElement('span');
+      errorEl.className = 'phone-error';
+      formGroup.appendChild(errorEl);
+    }
+    errorEl.textContent = message;
+  }
+
+  /**
+   * Clears inline validation error from a phone input field.
+   */
+  function clearPhoneError(input) {
+    const wrapper = input.closest('.phone-input-wrapper');
+    if (wrapper) {
+      wrapper.classList.remove('input-error');
+    } else {
+      input.classList.remove('input-error');
+    }
+    const formGroup = input.closest('.form-group');
+    if (formGroup) {
+      const errorEl = formGroup.querySelector('.phone-error');
+      if (errorEl) errorEl.remove();
+    }
+  }
+
   // ─── Auth ───────────────────────────────────────────────────────────────────
 
   async function checkAuth() {
@@ -338,9 +418,24 @@
   formNewOrder.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(formNewOrder);
+    const rawPhone = fd.get('customer_phone');
+    const phoneInput = formNewOrder.querySelector('[name="customer_phone"]');
+
+    // Validate Colombian phone number if provided
+    if (rawPhone && rawPhone.trim()) {
+      const formatted = formatColombianPhone(rawPhone);
+      if (!formatted) {
+        showPhoneError(phoneInput, 'Ingresa un numero colombiano valido (ej: 3001234567)');
+        return;
+      }
+      clearPhoneError(phoneInput);
+    } else {
+      clearPhoneError(phoneInput);
+    }
+
     const body = {
       customer_name: fd.get('customer_name'),
-      customer_phone: fd.get('customer_phone'),
+      customer_phone: rawPhone && rawPhone.trim() ? formatColombianPhone(rawPhone) : '',
       pickup_address: fd.get('pickup_address'),
       dropoff_address: fd.get('dropoff_address'),
       items: fd.get('items'),
@@ -464,11 +559,26 @@
   formNewDriver.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(formNewDriver);
+    const rawPhone = fd.get('phone');
+    const phoneInput = formNewDriver.querySelector('[name="phone"]');
+
+    // Validate Colombian phone number if provided
+    if (rawPhone && rawPhone.trim()) {
+      const formatted = formatColombianPhone(rawPhone);
+      if (!formatted) {
+        showPhoneError(phoneInput, 'Ingresa un numero colombiano valido (ej: 3001234567)');
+        return;
+      }
+      clearPhoneError(phoneInput);
+    } else {
+      clearPhoneError(phoneInput);
+    }
+
     const body = {
       name: fd.get('name'),
       email: fd.get('email'),
       password: fd.get('password'),
-      phone: fd.get('phone'),
+      phone: rawPhone && rawPhone.trim() ? formatColombianPhone(rawPhone) : '',
       vehicle: fd.get('vehicle'),
       plate: fd.get('plate'),
     };
