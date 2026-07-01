@@ -55,6 +55,68 @@ export function requireRole(...roles) {
 
 const router = Router();
 
+// ─── Login Attempt Limiter ───────────────────────────────────────────────────
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+const loginAttempts = new Map(); // key: email or IP -> { count, lockedUntil }
+
+function getLoginKey(req) {
+  const email = (req.body.email || "").toLowerCase().trim();
+  const ip = req.ip || req.connection.remoteAddress || "unknown";
+  return `${email}|${ip}`;
+}
+
+function isLockedOut(key) {
+  const entry = loginAttempts.get(key);
+  if (!entry) return false;
+  if (entry.lockedUntil && Date.now() < entry.lockedUntil) {
+    return true;
+  }
+  // Lockout expired, reset
+  if (entry.lockedUntil && Date.now() >= entry.lockedUntil) {
+    loginAttempts.delete(key);
+    return false;
+  }
+  return false;
+}
+
+function recordFailedAttempt(key) {
+  const entry = loginAttempts.get(key) || { count: 0, lockedUntil: null };
+  entry.count++;
+  if (entry.count >= MAX_LOGIN_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOCKOUT_MINUTES * 60 * 1000;
+  }
+  loginAttempts.set(key, entry);
+  return entry;
+}
+
+function clearAttempts(key) {
+  loginAttempts.delete(key);
+}
+
+function getRemainingAttempts(key) {
+  const entry = loginAttempts.get(key);
+  if (!entry) return MAX_LOGIN_ATTEMPTS;
+  return Math.max(0, MAX_LOGIN_ATTEMPTS - entry.count);
+}
+
+function getLockoutRemaining(key) {
+  const entry = loginAttempts.get(key);
+  if (!entry || !entry.lockedUntil) return 0;
+  return Math.max(0, Math.ceil((entry.lockedUntil - Date.now()) / 60000));
+}
+
+// Cleanup expired entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of loginAttempts) {
+    if (entry.lockedUntil && now >= entry.lockedUntil) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
 // POST /api/auth/login
 router.post("/login", (req, res) => {
   const { email, password } = req.body || {};
@@ -62,10 +124,39 @@ router.post("/login", (req, res) => {
     return res.status(400).json({ error: "Email y contraseña son obligatorios" });
   }
 
+  const key = getLoginKey(req);
+
+  // Check if locked out
+  if (isLockedOut(key)) {
+    const minRemaining = getLockoutRemaining(key);
+    return res.status(429).json({
+      error: `Cuenta bloqueada por demasiados intentos fallidos. Intenta de nuevo en ${minRemaining} minuto${minRemaining !== 1 ? 's' : ''}.`,
+      locked: true,
+      retry_after_minutes: minRemaining,
+    });
+  }
+
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(String(email).toLowerCase().trim());
   if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    const entry = recordFailedAttempt(key);
+    const remaining = getRemainingAttempts(key);
+
+    if (entry.lockedUntil) {
+      return res.status(429).json({
+        error: `Demasiados intentos fallidos. Cuenta bloqueada por ${LOCKOUT_MINUTES} minutos.`,
+        locked: true,
+        retry_after_minutes: LOCKOUT_MINUTES,
+      });
+    }
+
+    return res.status(401).json({
+      error: `Credenciales invalidas. Te quedan ${remaining} intento${remaining !== 1 ? 's' : ''}.`,
+      attempts_remaining: remaining,
+    });
   }
+
+  // Successful login: clear attempts
+  clearAttempts(key);
 
   const token = signToken(user);
   res.cookie("token", token, {
