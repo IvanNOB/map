@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import db from "./database.js";
+import { formatColombianPhone } from "../src/utils.js";
 
 /**
  * Seeds the database with a demo admin/dispatcher and a few drivers.
@@ -36,9 +37,9 @@ function seed() {
 
   // Drivers
   const drivers = [
-    { name: "Juan Pérez", email: "juan@agencia.com", phone: "300 111 2233", vehicle: "Moto", plate: "ABC12D" },
-    { name: "María Gómez", email: "maria@agencia.com", phone: "300 222 3344", vehicle: "Moto", plate: "XYZ98E" },
-    { name: "Carlos Ruiz", email: "carlos@agencia.com", phone: "300 333 4455", vehicle: "Bicicleta", plate: "—" },
+    { name: "Juan Pérez", email: "juan@agencia.com", phone: formatColombianPhone("300 111 2233"), vehicle: "Moto", plate: "ABC12D" },
+    { name: "María Gómez", email: "maria@agencia.com", phone: formatColombianPhone("300 222 3344"), vehicle: "Moto", plate: "XYZ98E" },
+    { name: "Carlos Ruiz", email: "carlos@agencia.com", phone: formatColombianPhone("300 333 4455"), vehicle: "Bicicleta", plate: "—" },
   ];
 
   for (const d of drivers) {
@@ -67,7 +68,7 @@ function seed() {
                           dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
     ).run(
-      "ORD-1001", "Laura Martínez", "311 555 7788",
+      "ORD-1001", "Laura Martínez", formatColombianPhone("311 555 7788"),
       "Restaurante El Sabor, Cra 7 #45-12", 4.6285, -74.0646,
       "Calle 53 #10-20, Apto 302", 4.6431, -74.0628,
       "1 almuerzo ejecutivo, 1 jugo natural", 28000, "cash"
@@ -78,7 +79,7 @@ function seed() {
                           dropoff_address, dropoff_lat, dropoff_lng, items, amount, payment_method, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
     ).run(
-      "ORD-1002", "Andrés Torres", "312 444 9900",
+      "ORD-1002", "Andrés Torres", formatColombianPhone("312 444 9900"),
       "Farmacia Central, Av. 19 #120-30", 4.6951, -74.0360,
       "Calle 134 #15-40", 4.7110, -74.0410,
       "Medicamentos (1 bolsa)", 15000, "card"

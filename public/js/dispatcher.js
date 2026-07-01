@@ -9,6 +9,9 @@
   let orders = [];
   let drivers = [];
   let currentFilter = '';
+  let currentSearch = '';
+  let currentPage = 1;
+  let totalPages = 1;
   let map = null;
   let driverMarkers = {};
   let socket = null;
@@ -85,6 +88,25 @@
     return res;
   }
 
+  // ─── Loading Spinner ────────────────────────────────────────────────────────
+
+  let spinnerEl = null;
+
+  function showLoading() {
+    if (spinnerEl) return;
+    spinnerEl = document.createElement('div');
+    spinnerEl.className = 'spinner-overlay';
+    spinnerEl.innerHTML = '<div class="spinner"></div>';
+    document.body.appendChild(spinnerEl);
+  }
+
+  function hideLoading() {
+    if (spinnerEl) {
+      spinnerEl.remove();
+      spinnerEl = null;
+    }
+  }
+
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = 'toast ' + type;
@@ -93,6 +115,46 @@
     setTimeout(() => {
       toast.remove();
     }, 4000);
+  }
+
+  // ─── Notification Sound ─────────────────────────────────────────────────────
+
+  let audioCtx = null;
+
+  function playNotificationSound() {
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      // Play a pleasant two-tone chime
+      const now = audioCtx.currentTime;
+
+      // First tone
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.value = 587.33; // D5
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.3);
+
+      // Second tone (higher, slightly delayed)
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.value = 880; // A5
+      gain2.gain.setValueAtTime(0.3, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 0.5);
+    } catch (e) {
+      // Silently fail if AudioContext is not available
+    }
   }
 
   function statusLabel(status) {
@@ -321,10 +383,21 @@
 
   async function loadOrders() {
     try {
-      const url = currentFilter ? '/api/orders?status=' + currentFilter : '/api/orders';
+      let url = '/api/orders?page=' + currentPage + '&limit=50';
+      if (currentFilter) url += '&status=' + currentFilter;
+      if (currentSearch) url += '&search=' + encodeURIComponent(currentSearch);
       const res = await apiFetch(url);
       if (res.ok) {
-        orders = await res.json();
+        const data = await res.json();
+        // Support both paginated (admin) and array (driver) responses
+        if (data.orders) {
+          orders = data.orders;
+          totalPages = data.pagination.pages;
+          currentPage = data.pagination.page;
+        } else {
+          orders = data;
+          totalPages = 1;
+        }
         renderOrders();
       }
     } catch {}
@@ -391,6 +464,41 @@
     ordersList.querySelectorAll('[data-copy-link]').forEach((btn) => {
       btn.addEventListener('click', () => copyTrackingLink(btn.dataset.copyLink));
     });
+
+    // Render pagination controls
+    renderPagination();
+  }
+
+  function renderPagination() {
+    let paginationEl = document.getElementById('orders-pagination');
+    if (!paginationEl) {
+      paginationEl = document.createElement('div');
+      paginationEl.id = 'orders-pagination';
+      paginationEl.className = 'pagination';
+      ordersList.parentElement.appendChild(paginationEl);
+    }
+
+    if (totalPages <= 1) {
+      paginationEl.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    html += `<button class="btn btn-outline btn-sm" ${currentPage <= 1 ? 'disabled' : ''} data-page="${currentPage - 1}">&laquo; Anterior</button>`;
+    html += `<span class="pagination-info">Pagina ${currentPage} de ${totalPages}</span>`;
+    html += `<button class="btn btn-outline btn-sm" ${currentPage >= totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">Siguiente &raquo;</button>`;
+
+    paginationEl.innerHTML = html;
+
+    paginationEl.querySelectorAll('[data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const page = parseInt(btn.dataset.page);
+        if (page >= 1 && page <= totalPages) {
+          currentPage = page;
+          loadOrders();
+        }
+      });
+    });
   }
 
   function getDriverName(driverId) {
@@ -406,9 +514,25 @@
       document.querySelectorAll('.filter-btn').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       currentFilter = btn.dataset.filter;
+      currentPage = 1;
       loadOrders();
     });
   });
+
+  // ─── Search Orders ─────────────────────────────────────────────────────────
+
+  const searchInput = document.getElementById('search-orders');
+  let searchTimeout = null;
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentSearch = searchInput.value.trim();
+        currentPage = 1;
+        loadOrders();
+      }, 400); // debounce 400ms
+    });
+  }
 
   // ─── Create Order ──────────────────────────────────────────────────────────
 
@@ -444,10 +568,12 @@
       payment_method: fd.get('payment_method'),
     };
     try {
+      showLoading();
       const res = await apiFetch('/api/orders', {
         method: 'POST',
         body: JSON.stringify(body),
       });
+      hideLoading();
       if (res.ok) {
         showToast('Pedido creado exitosamente', 'success');
         modalNewOrder.classList.add('hidden');
@@ -459,6 +585,7 @@
         showToast(err.error || 'Error al crear pedido', 'error');
       }
     } catch {
+      hideLoading();
       showToast('Error de conexion', 'error');
     }
   });
@@ -583,10 +710,12 @@
       plate: fd.get('plate'),
     };
     try {
+      showLoading();
       const res = await apiFetch('/api/drivers', {
         method: 'POST',
         body: JSON.stringify(body),
       });
+      hideLoading();
       if (res.ok) {
         showToast('Repartidor creado exitosamente', 'success');
         modalNewDriver.classList.add('hidden');
@@ -597,6 +726,7 @@
         showToast(err.error || 'Error al crear repartidor', 'error');
       }
     } catch {
+      hideLoading();
       showToast('Error de conexion', 'error');
     }
   });
@@ -688,6 +818,7 @@
 
     socket.on('order:new', (order) => {
       showToast('Nuevo pedido: ' + order.code, 'info');
+      playNotificationSound();
       loadOrders();
       loadStats();
     });

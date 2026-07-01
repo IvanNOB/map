@@ -24,18 +24,48 @@ export default function createOrdersRouter(io) {
     const { role, id: userId } = req.user;
 
     if (role === "admin") {
-      const { status } = req.query;
+      const { status, search, page = 1, limit = 50 } = req.query;
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limitNum = Math.min(200, Math.max(1, parseInt(limit) || 50));
+      const offset = (pageNum - 1) * limitNum;
+
+      let whereClause = "WHERE 1=1";
+      const params = [];
+
       if (status) {
-        const orders = db
-          .prepare("SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC")
-          .all(status);
-        return res.json(orders);
+        whereClause += " AND status = ?";
+        params.push(status);
       }
-      const orders = db.prepare("SELECT * FROM orders ORDER BY created_at DESC").all();
-      return res.json(orders);
+
+      if (search && search.trim()) {
+        const term = `%${search.trim()}%`;
+        whereClause += " AND (customer_name LIKE ? OR customer_phone LIKE ? OR code LIKE ? OR pickup_address LIKE ? OR dropoff_address LIKE ?)";
+        params.push(term, term, term, term, term);
+      }
+
+      // Get total count
+      const countRow = db
+        .prepare(`SELECT COUNT(*) as total FROM orders ${whereClause}`)
+        .get(...params);
+      const total = countRow.total;
+
+      // Get paginated results
+      const orders = db
+        .prepare(`SELECT * FROM orders ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+        .all(...params, limitNum, offset);
+
+      return res.json({
+        orders,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum),
+        },
+      });
     }
 
-    // Driver sees only their assigned orders
+    // Driver sees only their assigned orders (no pagination needed, usually small)
     const orders = db
       .prepare("SELECT * FROM orders WHERE driver_id = ? ORDER BY created_at DESC")
       .all(userId);

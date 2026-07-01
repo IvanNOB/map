@@ -121,6 +121,7 @@
     app.classList.remove('hidden');
     driverName.textContent = currentUser.name;
     loadOrders();
+    loadStats();
     initSocket();
     initMap();
     // Request notification permission
@@ -174,6 +175,21 @@
   });
 
   // ─── Orders ─────────────────────────────────────────────────────────────────
+
+  async function loadStats() {
+    try {
+      const res = await apiFetch('/api/drivers/my-stats');
+      if (res.ok) {
+        const s = await res.json();
+        document.getElementById('stat-deliveries-today').textContent = s.today.deliveries;
+        document.getElementById('stat-earnings-today').textContent = '$' + (s.today.earnings || 0).toLocaleString();
+        document.getElementById('stat-deliveries-week').textContent = s.week.deliveries;
+        document.getElementById('stat-earnings-week').textContent = '$' + (s.week.earnings || 0).toLocaleString();
+        document.getElementById('stat-active-orders').textContent = s.active_orders;
+        document.getElementById('stat-avg-time').textContent = s.avg_delivery_minutes != null ? s.avg_delivery_minutes : '--';
+      }
+    } catch {}
+  }
 
   async function loadOrders() {
     try {
@@ -384,11 +400,12 @@
     });
   }
 
-  // ─── Auto Refresh (every 5 minutes) ─────────────────────────────────────────
+  // ─── Auto Refresh (every 2 minutes) ─────────────────────────────────────────
 
   setInterval(() => {
     if (currentUser) {
       loadOrders();
+      loadStats();
     }
   }, 2 * 60 * 1000); // 2 minutos
 

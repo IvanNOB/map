@@ -13,27 +13,74 @@ import createLocationRouter from "./src/location.js";
 import trackingRouter from "./src/tracking.js";
 import reportsRouter from "./src/reports.js";
 import { notifyAdmins } from "./src/notifications.js";
+import {
+  apiRateLimit,
+  authRateLimit,
+  cors,
+  requestLogger,
+  cacheControl,
+  logger,
+} from "./src/middleware.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || "*",
+    credentials: true,
+  },
+});
 
 const PORT = process.env.PORT || 3000;
 
-// ─── Middleware ──────────────────────────────────────────────────────────────
+// ─── Global Middleware ───────────────────────────────────────────────────────
 
+// CORS
+app.use(cors());
+
+// Request logging
+app.use(requestLogger);
+
+// Body parsing
 app.use(express.json());
 app.use(cookieParser());
+
+// Cache headers for static assets
+app.use(cacheControl(86400)); // 24 hours
+
+// Static files
 app.use(express.static(join(__dirname, "public")));
 
 // Make io accessible to routes
 app.set("io", io);
 
+// ─── Health Check ────────────────────────────────────────────────────────────
+
+app.get("/api/health", (req, res) => {
+  const uptime = process.uptime();
+  const memUsage = process.memoryUsage();
+  res.json({
+    status: "ok",
+    uptime: Math.round(uptime),
+    uptime_human: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
+    memory: {
+      rss: Math.round(memUsage.rss / 1024 / 1024) + " MB",
+      heap_used: Math.round(memUsage.heapUsed / 1024 / 1024) + " MB",
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
-app.use("/api/auth", authRouter);
+// Auth routes with stricter rate limiting
+app.use("/api/auth", authRateLimit, authRouter);
+
+// API rate limiting for all other routes
+app.use("/api", apiRateLimit);
+
 app.use("/api/drivers", driversRouter);
 
 const ordersRouter = createOrdersRouter(io);
@@ -189,10 +236,32 @@ setInterval(() => {
   }
 }, 10_000);
 
+// ─── Location History Cleanup (30-day retention) ─────────────────────────────
+
+const RETENTION_DAYS = parseInt(process.env.LOCATION_HISTORY_RETENTION_DAYS || "30", 10);
+
+function cleanupLocationHistory() {
+  try {
+    const cutoffDate = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const result = db.prepare("DELETE FROM location_history WHERE timestamp < ?").run(cutoffDate);
+    if (result.changes > 0) {
+      logger.info(`Limpieza de location_history: ${result.changes} registros eliminados (> ${RETENTION_DAYS} dias)`);
+    }
+  } catch (err) {
+    logger.error("Error limpiando location_history", { error: err.message });
+  }
+}
+
+// Run cleanup every 6 hours
+setInterval(cleanupLocationHistory, 6 * 60 * 60 * 1000);
+// Also run once on startup (after 30 seconds)
+setTimeout(cleanupLocationHistory, 30_000);
+
 // ─── Start Server ────────────────────────────────────────────────────────────
 
 httpServer.listen(PORT, () => {
-  console.log(`\n  Delivery Platform corriendo en http://localhost:${PORT}`);
-  console.log(`  Panel de control:   http://localhost:${PORT}/`);
-  console.log(`  App del repartidor: http://localhost:${PORT}/driver.html\n`);
+  logger.info(`Delivery Platform corriendo en http://localhost:${PORT}`);
+  logger.info(`Panel de control:   http://localhost:${PORT}/`);
+  logger.info(`App del repartidor: http://localhost:${PORT}/driver.html`);
+  logger.info(`Health check:       http://localhost:${PORT}/api/health`);
 });

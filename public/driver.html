@@ -6,6 +6,11 @@
   <title>Repartidor - Agencia de Domicilios</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
 </head>
 <body>
   <!-- Toast Container -->
@@ -46,6 +51,37 @@
       <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
     </header>
 
+    <!-- Stats Section -->
+    <section class="driver-section">
+      <h3>Mis Estadisticas</h3>
+      <div class="driver-stats-grid" id="driver-stats">
+        <div class="driver-stat-card">
+          <div class="driver-stat-value" id="stat-deliveries-today">0</div>
+          <div class="driver-stat-label">Entregas Hoy</div>
+        </div>
+        <div class="driver-stat-card">
+          <div class="driver-stat-value" id="stat-earnings-today">$0</div>
+          <div class="driver-stat-label">Ingresos Hoy</div>
+        </div>
+        <div class="driver-stat-card">
+          <div class="driver-stat-value" id="stat-deliveries-week">0</div>
+          <div class="driver-stat-label">Entregas Semana</div>
+        </div>
+        <div class="driver-stat-card">
+          <div class="driver-stat-value" id="stat-earnings-week">$0</div>
+          <div class="driver-stat-label">Ingresos Semana</div>
+        </div>
+        <div class="driver-stat-card">
+          <div class="driver-stat-value" id="stat-active-orders">0</div>
+          <div class="driver-stat-label">Pedidos Activos</div>
+        </div>
+        <div class="driver-stat-card">
+          <div class="driver-stat-value" id="stat-avg-time">--</div>
+          <div class="driver-stat-label">Tiempo Promedio (min)</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Orders Section -->
     <section class="driver-section">
       <h3>Mis Pedidos</h3>
@@ -75,5 +111,13 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/driver.js"></script>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(reg) { console.log('SW registrado:', reg.scope); })
+        .catch(function(err) { console.warn('SW error:', err); });
+    }
+  </script>
 </body>
 </html>
