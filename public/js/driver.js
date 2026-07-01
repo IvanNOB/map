@@ -251,6 +251,28 @@
     logout();
   });
 
+  // ─── Refresh Button ─────────────────────────────────────────────────────────
+
+  const btnRefreshDriver = document.getElementById('btn-refresh-driver');
+  if (btnRefreshDriver) {
+    btnRefreshDriver.addEventListener('click', async () => {
+      btnRefreshDriver.disabled = true;
+      btnRefreshDriver.style.opacity = '0.5';
+      btnRefreshDriver.style.transition = 'transform 0.3s';
+      btnRefreshDriver.style.transform = 'rotate(360deg)';
+      try {
+        await loadOrders();
+        showToast('Pedidos actualizados', 'success');
+      } catch {
+        showToast('Error al refrescar', 'error');
+      } finally {
+        btnRefreshDriver.disabled = false;
+        btnRefreshDriver.style.opacity = '1';
+        btnRefreshDriver.style.transform = '';
+      }
+    });
+  }
+
   // ─── Orders ─────────────────────────────────────────────────────────────────
 
   async function loadOrders() {
