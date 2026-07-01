@@ -1132,3 +1132,30 @@ input, select, textarea {
   color: var(--text-muted);
   margin-top: 0.25rem;
 }
+
+
+/* ─── Login Error States ─────────────────────────────────────────────────── */
+.login-error {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--danger);
+  text-align: center;
+  min-height: 1.2rem;
+}
+
+.login-error-warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.login-error-locked {
+  color: var(--danger);
+  background: var(--danger-soft);
+  padding: 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  line-height: 1.5;
+}

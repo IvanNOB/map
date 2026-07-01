@@ -305,10 +305,14 @@
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.textContent = '';
+    loginError.className = 'login-error';
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
 
     try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Verificando...';
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -320,11 +324,48 @@
         localStorage.setItem('token', token);
         currentUser = data.user;
         showApp();
+      } else if (res.status === 429) {
+        // Account locked
+        loginError.className = 'login-error login-error-locked';
+        loginError.innerHTML = '<strong>&#128274; Cuenta bloqueada</strong><br>' + (data.error || 'Demasiados intentos. Intenta mas tarde.');
+        submitBtn.disabled = true;
+        // Re-enable after lockout
+        const retryMs = (data.retry_after_minutes || 15) * 60 * 1000;
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Iniciar Sesion';
+          loginError.textContent = '';
+          loginError.className = 'login-error';
+        }, retryMs);
+        // Show countdown
+        let remaining = data.retry_after_minutes || 15;
+        const countdownInterval = setInterval(() => {
+          remaining--;
+          if (remaining <= 0) {
+            clearInterval(countdownInterval);
+            loginError.textContent = '';
+            loginError.className = 'login-error';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Iniciar Sesion';
+          } else {
+            loginError.innerHTML = '<strong>&#128274; Cuenta bloqueada</strong><br>Intenta de nuevo en ' + remaining + ' minuto' + (remaining !== 1 ? 's' : '') + '.';
+          }
+        }, 60000);
       } else {
-        loginError.textContent = data.error || 'Error al iniciar sesion';
+        // Show attempts remaining
+        let msg = data.error || 'Error al iniciar sesion';
+        if (data.attempts_remaining != null) {
+          loginError.className = 'login-error login-error-warning';
+        }
+        loginError.textContent = msg;
       }
     } catch (err) {
       loginError.textContent = 'Error de conexion';
+    } finally {
+      if (!loginError.classList.contains('login-error-locked')) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Iniciar Sesion';
+      }
     }
   });
 
