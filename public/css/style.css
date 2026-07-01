@@ -2113,3 +2113,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-size: 0.8rem;
   line-height: 1.4;
 }
+
+
+/* Refresh button spin animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
