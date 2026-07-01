@@ -21,6 +21,24 @@ export default function createOrdersRouter(io) {
     return `ORD-${ts}${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
   }
 
+  /**
+   * Normalizes a Colombian phone number to +57XXXXXXXXXX format.
+   * Accepts: "300 123 4567", "3001234567", "+573001234567", "573001234567", "03001234567"
+   * Returns: "+573001234567" or null if empty/invalid.
+   */
+  function normalizePhone(raw) {
+    if (!raw) return null;
+    let digits = String(raw).replace(/[^\d]/g, '');
+    if (!digits) return null;
+    // Remove country code 57 if present (12 digits: 57 + 10)
+    if (digits.length === 12 && digits.startsWith('57')) digits = digits.slice(2);
+    // Remove leading 0 (11 digits: 0 + 10)
+    if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+    // Valid Colombian number: 10 digits
+    if (digits.length !== 10) return '+57' + digits; // best effort
+    return '+57' + digits;
+  }
+
   const STATUS_LABELS = {
     pending: "Pendiente", assigned: "Asignado", picked_up: "Recogido",
     on_the_way: "En camino", delivered: "Entregado", cancelled: "Cancelado",
@@ -220,6 +238,9 @@ export default function createOrdersRouter(io) {
       return res.status(400).json({ error: "El nombre del cliente es obligatorio" });
     }
 
+    // Normalize phone to +57 format
+    const normalizedPhone = normalizePhone(customer_phone);
+
     // Retry loop to handle code collisions (UNIQUE constraint on code)
     const MAX_RETRIES = 5;
     let order = null;
@@ -233,7 +254,7 @@ export default function createOrdersRouter(io) {
           [
             code,
             customer_name,
-            customer_phone || null,
+            normalizedPhone,
             pickup_address || "",
             pickup_lat || null,
             pickup_lng || null,
