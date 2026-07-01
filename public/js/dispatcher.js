@@ -382,6 +382,25 @@
     logout();
   });
 
+  // ─── Refresh Button ─────────────────────────────────────────────────────────
+
+  const btnRefresh = document.getElementById('btn-refresh');
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', async () => {
+      btnRefresh.disabled = true;
+      btnRefresh.textContent = '⟳ Cargando...';
+      try {
+        await loadData();
+        showToast('Datos actualizados', 'success');
+      } catch {
+        showToast('Error al refrescar', 'error');
+      } finally {
+        btnRefresh.disabled = false;
+        btnRefresh.textContent = '↻ Refrescar';
+      }
+    });
+  }
+
   // ─── Tab Navigation ─────────────────────────────────────────────────────────
 
   const tabBtns = document.querySelectorAll('.tab-btn');
