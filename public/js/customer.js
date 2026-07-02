@@ -134,15 +134,15 @@
   function initMap() {
     if (map) return;
     map = L.map('tracking-map').setView([4.6097, -74.0817], 13);
-    var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap', maxZoom: 19,
+    var darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; CartoDB', maxZoom: 19,
     });
     var satellite = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
     );
-    satellite.addTo(map);
-    L.control.layers({ 'Satelital': satellite, 'Calles': streets }, null, { position: 'topright' }).addTo(map);
+    darkMatter.addTo(map);
+    L.control.layers({ '🌑 Dark Ghost': darkMatter, '🛰️ Satelital': satellite }, null, { position: 'topright' }).addTo(map);
 
     // Legend
     var legend = L.control({ position: 'bottomleft' });
