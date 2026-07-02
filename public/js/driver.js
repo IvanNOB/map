@@ -734,8 +734,8 @@
     });
 
     socket.on('order:assigned', (order) => {
-      if (window.ghostAlert) window.ghostAlert({ title: '📦 Nuevo pedido!', body: order && order.code ? order.code + ' - Revisa tus pedidos' : 'Tienes un nuevo pedido asignado' });
-      notifyDriverDevice('Nuevo pedido asignado', order && order.code ? order.code : '');
+      if (window.ghostAlert) window.ghostAlert({ title: '👻 ¡Nuevo domicilio asignado!', body: order && order.code ? '📦 ' + order.code + ' - ¡A rodar!' : '¡Tienes un nuevo pedido!' });
+      notifyDriverDevice('👻 ¡SERVICIOS GHOST!', order && order.code ? '📦 Nuevo domicilio: ' + order.code + ' - ¡A entregar!' : '¡Tienes un nuevo pedido asignado!');
       loadOrders();
     });
 
@@ -743,25 +743,25 @@
       dchatMessages.push(msg);
       renderDriverChat();
       if (msg.sender_role === 'admin') {
-        if (window.ghostAlert) window.ghostAlert({ title: '💬 Mensaje de Despacho', body: msg.body || '' });
-        notifyDriverDevice('Mensaje de Despacho', msg.body || '');
+        if (window.ghostAlert) window.ghostAlert({ title: '💬 Mensaje de Central Ghost', body: msg.body || '' });
+        notifyDriverDevice('💬 Central Ghost dice:', msg.body || 'Tienes un nuevo mensaje');
       }
     });
 
     socket.on('notification', (data) => {
-      let title = 'Notificacion';
+      let title = '👻 Servicios Ghost';
       let body = '';
       switch (data.type) {
         case 'order_assigned':
-          title = '📦 Nuevo pedido asignado!';
-          body = data.data && data.data.code ? data.data.code : '';
+          title = '👻 ¡Nuevo domicilio asignado!';
+          body = data.data && data.data.code ? '📦 ' + data.data.code + ' - ¡A rodar!' : '';
           break;
         case 'admin_message':
-          title = (data.data && data.data.title) || '🔔 Aviso de Despacho';
+          title = '🔔 ' + ((data.data && data.data.title) || 'Aviso de Central Ghost');
           body = (data.data && data.data.body) || '';
           break;
         default:
-          title = '👻 Notificacion';
+          title = '👻 Servicios Ghost';
           body = data.type || '';
       }
       if (window.ghostAlert) window.ghostAlert({ title: title, body: body });
