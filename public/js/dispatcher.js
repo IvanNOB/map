@@ -1083,6 +1083,7 @@
           ${order.status !== 'cancelled' ? '<button class="btn btn-outline btn-sm" data-edit="' + order.id + '">✏️ Editar</button>' : ''}
           ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar</button>' : ''}
           ${order.status === 'pending' ? '<button class="btn btn-outline btn-sm" data-auto="' + order.id + '" title="Asignar al repartidor disponible mas cercano">⚡ Auto-asignar</button>' : ''}
+          ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-warning btn-sm" data-reassign="' + order.id + '">🔄 Reasignar</button>' : ''}
           ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-route="' + order.id + '">Ver Ruta</button>' : ''}
           ${order.status === 'delivered' ? '<button class="btn btn-outline btn-sm proof-thumb-btn" data-proof="' + order.id + '">📸 Foto</button>' : ''}
           <button class="btn btn-outline btn-sm" data-copy-link="${escapeHtml(order.code)}">Copiar Link</button>
@@ -1097,6 +1098,9 @@
     // Event delegation for order actions
     ordersList.querySelectorAll('[data-assign]').forEach((btn) => {
       btn.addEventListener('click', () => openAssignModal(parseInt(btn.dataset.assign)));
+    });
+    ordersList.querySelectorAll('[data-reassign]').forEach((btn) => {
+      btn.addEventListener('click', () => openAssignModal(parseInt(btn.dataset.reassign)));
     });
     ordersList.querySelectorAll('[data-edit]').forEach((btn) => {
       btn.addEventListener('click', () => openEditOrder(parseInt(btn.dataset.edit)));
