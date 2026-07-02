@@ -386,11 +386,15 @@
             <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
           </div>
         </div>
-        <!-- Fila 2: Negocio + Destino -->
+        <!-- Fila 2: Lugar guardado + Negocio + Destino -->
         <div class="form-row">
           <div class="form-group" style="flex:1;">
+            <label>🏪 Lugar guardado</label>
+            <select id="order-place"><option value="">— Escribir manual —</option></select>
+          </div>
+          <div class="form-group" style="flex:1;">
             <label>🏢 Negocio (recogida)</label>
-            <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre del negocio o dirección">
+            <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre o dirección">
           </div>
           <div class="form-group" style="flex:1;">
             <label>📍 Destino de entrega</label>
