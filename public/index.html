@@ -371,30 +371,63 @@
 
   <!-- New Order Modal -->
   <div id="modal-new-order" class="modal-overlay hidden">
-    <div class="modal">
-      <h2 id="order-modal-title">Nuevo Pedido</h2>
+    <div class="modal" style="max-width:750px;">
+      <h2 id="order-modal-title">⚡ Nuevo Pedido</h2>
       <form id="form-new-order">
-        <!-- Cliente -->
+        <!-- Fila 1: Cliente + Celular + Pago -->
         <div class="form-row">
-          <div class="form-group">
+          <div class="form-group" style="flex:2;">
             <label>👤 Cliente</label>
             <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required placeholder="Nombre del cliente">
             <datalist id="customers-list"></datalist>
           </div>
-          <div class="form-group">
+          <div class="form-group" style="flex:1;">
             <label>📱 Celular</label>
             <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
           </div>
+          <div class="form-group" style="flex:1;">
+            <label>💳 Pago</label>
+            <select name="payment_method">
+              <option value="cash">Efectivo</option>
+              <option value="card">Tarjeta</option>
+            </select>
+          </div>
         </div>
-        <!-- Direcciones -->
+        <!-- Fila 2: Negocio + Destino + Monto -->
         <div class="form-row">
-          <div class="form-group">
+          <div class="form-group" style="flex:2;">
             <label>🏢 Negocio (recogida)</label>
             <input type="text" name="pickup_address" id="pickup_address" placeholder="Donde se recoge">
           </div>
-          <div class="form-group">
+          <div class="form-group" style="flex:2;">
             <label>📍 Destino de entrega</label>
             <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Donde se entrega">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>💰 Monto ($)</label>
+            <input type="number" name="amount" step="0.01" min="0" value="0">
+          </div>
+        </div>
+        <!-- Fila 3: Articulos + Notas -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>📦 Articulos</label>
+            <input type="text" name="items" placeholder="Que se lleva...">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>📝 Notas</label>
+            <input type="text" name="notes" placeholder="Indicaciones...">
+          </div>
+        </div>
+        <!-- Fila 4: Lugares guardados -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>🏪 Lugar de recogida guardado</label>
+            <select id="order-place"><option value="">— Ninguno —</option></select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>📍 Destino guardado</label>
+            <select name="branch_id" id="order-branch"><option value="">— Seleccionar —</option></select>
           </div>
         </div>
         <!-- Mapa -->
@@ -412,43 +445,14 @@
         <input type="hidden" name="pickup_lng" id="pickup_lng">
         <input type="hidden" name="dropoff_lat" id="dropoff_lat">
         <input type="hidden" name="dropoff_lng" id="dropoff_lng">
-        <!-- Detalles -->
-        <div class="form-group">
-          <label>📦 Articulos</label>
-          <textarea name="items" rows="2" placeholder="Que se lleva..."></textarea>
+        <input type="hidden" name="scheduled_at" id="scheduled_at" value="">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-order">Crear Pedido</button>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>💰 Monto ($)</label>
-            <input type="number" name="amount" step="0.01" min="0" value="0">
-          </div>
-          <div class="form-group">
-            <label>💳 Pago</label>
-            <select name="payment_method">
-              <option value="cash">Efectivo</option>
-              <option value="card">Tarjeta</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>📝 Notas</label>
-          <textarea name="notes" rows="1" placeholder="Indicaciones especiales..."></textarea>
-        </div>
-        <!-- Opciones rapidas -->
-        <div class="form-row">
-          <div class="form-group">
-            <label>⏰ Programar (opcional)</label>
-            <input type="datetime-local" name="scheduled_at" id="scheduled_at">
-          </div>
-          <div class="form-group">
-            <label>📍 Destino guardado</label>
-            <select name="branch_id" id="order-branch"><option value="">— Seleccionar —</option></select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>🏪 Lugar de recogida guardado</label>
-          <select id="order-place"><option value="">— Ninguno —</option></select>
-          <small style="color:var(--text-muted);">Rellena la dirección de recogida automáticamente.</small>
+      </form>
+    </div>
+  </div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
