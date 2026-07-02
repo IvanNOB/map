@@ -327,7 +327,7 @@
   function initZoneMap() {
     if (zoneMap) { zoneMap.invalidateSize(); return; }
     zoneMap = L.map('zone-map').setView([4.6097, -74.0817], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(zoneMap);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 }).addTo(zoneMap);
     zoneMap.on('click', (e) => {
       zoneNewCenter = e.latlng;
       if (zoneNewMarker) zoneNewMarker.setLatLng(e.latlng);
@@ -552,7 +552,7 @@
   function initPlaceMap() {
     if (placeMap) { placeMap.invalidateSize(); return; }
     placeMap = L.map('place-map').setView([4.6097, -74.0817], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(placeMap);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB', maxZoom: 19 }).addTo(placeMap);
     placeMap.on('click', (e) => {
       setPlaceCoords(e.latlng.lat, e.latlng.lng, true);
     });
@@ -1327,8 +1327,8 @@
   function ensurePickerMap() {
     if (!pickerMap) {
       pickerMap = L.map('picker-map').setView([4.6097, -74.0817], 12);
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri', maxZoom: 19,
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CartoDB', maxZoom: 19,
       }).addTo(pickerMap);
       pickerMap.on('click', (e) => {
         if (pickerStep === 'pickup') { placePickerMarker('pickup', e.latlng.lat, e.latlng.lng); pickerStep = 'dropoff'; }
@@ -1776,19 +1776,15 @@
     }
     map = L.map('map').setView([4.6097, -74.0817], 12);
 
-    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap', maxZoom: 19,
+    const darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; CartoDB', maxZoom: 19,
     });
     const satellite = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
     );
-    satellite.addTo(map); // default to satellite as requested
-    L.control.layers(
-      { 'Satelital': satellite, 'Calles': streets },
-      null,
-      { position: 'topright' }
-    ).addTo(map);
+    darkMatter.addTo(map);
+    L.control.layers({ '🌑 Dark Ghost': darkMatter, '🛰️ Satelital': satellite }, null, { position: 'topright' }).addTo(map);
 
     // Legend
     const legend = L.control({ position: 'bottomleft' });
