@@ -1174,7 +1174,23 @@
   function sendWhatsApp(phone, code) {
     const digits = String(phone).replace(/[^0-9]/g, '');
     const url = location.origin + '/customer.html?code=' + encodeURIComponent(code);
-    const msg = `🚨 ¡NUEVA ACTUALIZACIÓN EN SERVICIOS GHOST! 🚨\n\n¡En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! 👻🚀 Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.\n\nA partir de ahora, tendrás el control total de tus entregas:\n✅ Mayor tranquilidad: Sabrás exactamente el estado de tu domicilio.\n✅ Máxima seguridad: Todo monitoreado directamente por nuestra central logística.\n✅ Rapidez garantizada: Rompemos las barreras del tiempo con tecnología premium. ⏱️⚡\n\n🔗 Sigue tu pedido *${code}* en tiempo real aquí:\n${url}\n\n¿Tienes un antojo o necesitas despachar en tu negocio? ¡Pruébalo ya mismo! Tu entrega está en las mejores manos. ⭐⭐⭐⭐⭐\n\n📲 Guarda nuestro contacto y pide al instante: 321 428 6626 📞`;
+    const msg = [
+      '*SERVICIOS GHOST*',
+      '',
+      'En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.',
+      '',
+      'A partir de ahora, tendras el control total de tus entregas:',
+      '- Mayor tranquilidad: Sabras exactamente el estado de tu domicilio.',
+      '- Maxima seguridad: Todo monitoreado directamente por nuestra central logistica.',
+      '- Rapidez garantizada: Rompemos las barreras del tiempo con tecnologia premium.',
+      '',
+      'Sigue tu pedido *' + code + '* en tiempo real aqui:',
+      url,
+      '',
+      'Tienes un antojo o necesitas despachar en tu negocio? Pruebalo ya mismo! Tu entrega esta en las mejores manos.',
+      '',
+      'Guarda nuestro contacto y pide al instante: 321 428 6626',
+    ].join('\n');
     window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(msg), '_blank');
   }
 
@@ -1691,7 +1707,23 @@
     const digits = String(order.customer_phone).replace(/[^0-9]/g, '');
     if (!digits) return;
     const url = location.origin + '/customer.html?code=' + encodeURIComponent(order.code);
-    const msg = `🚨 ¡NUEVA ACTUALIZACIÓN EN SERVICIOS GHOST! 🚨\n\n¡En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! 👻🚀 Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.\n\nA partir de ahora, tendrás el control total de tus entregas:\n✅ Mayor tranquilidad: Sabrás exactamente el estado de tu domicilio.\n✅ Máxima seguridad: Todo monitoreado directamente por nuestra central logística.\n✅ Rapidez garantizada: Rompemos las barreras del tiempo con tecnología premium. ⏱️⚡\n\n🔗 Sigue tu pedido *${order.code}* en tiempo real aquí:\n${url}\n\n¿Tienes un antojo o necesitas despachar en tu negocio? ¡Pruébalo ya mismo! Tu entrega está en las mejores manos. ⭐⭐⭐⭐⭐\n\n📲 Guarda nuestro contacto y pide al instante: 321 428 6626 📞`;
+    const msg = [
+      '*SERVICIOS GHOST*',
+      '',
+      'En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.',
+      '',
+      'A partir de ahora, tendras el control total de tus entregas:',
+      '- Mayor tranquilidad: Sabras exactamente el estado de tu domicilio.',
+      '- Maxima seguridad: Todo monitoreado directamente por nuestra central logistica.',
+      '- Rapidez garantizada: Rompemos las barreras del tiempo con tecnologia premium.',
+      '',
+      'Sigue tu pedido *' + order.code + '* en tiempo real aqui:',
+      url,
+      '',
+      'Tienes un antojo o necesitas despachar en tu negocio? Pruebalo ya mismo! Tu entrega esta en las mejores manos.',
+      '',
+      'Guarda nuestro contacto y pide al instante: 321 428 6626',
+    ].join('\n');
     window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(msg), '_blank');
   }
 
