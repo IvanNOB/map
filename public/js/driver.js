@@ -262,6 +262,7 @@
       btnRefreshDriver.style.transform = 'rotate(360deg)';
       try {
         await loadOrders();
+        await loadEarnings();
         showToast('Pedidos actualizados', 'success');
       } catch {
         showToast('Error al refrescar', 'error');
