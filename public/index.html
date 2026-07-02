@@ -386,19 +386,23 @@
             <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
           </div>
         </div>
-        <!-- Fila 2: Lugar guardado + Negocio + Destino -->
+        <!-- Fila 2: Lugar guardado + Negocio + Destino guardado + Destino -->
         <div class="form-row">
           <div class="form-group" style="flex:1;">
-            <label>🏪 Lugar guardado</label>
-            <select id="order-place"><option value="">— Escribir manual —</option></select>
+            <label>🏪 Recogida guardada</label>
+            <select id="order-place"><option value="">— Manual —</option></select>
           </div>
           <div class="form-group" style="flex:1;">
-            <label>🏢 Negocio (recogida)</label>
+            <label>🏢 Negocio</label>
             <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre o dirección">
           </div>
           <div class="form-group" style="flex:1;">
-            <label>📍 Destino de entrega</label>
-            <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Dirección del cliente">
+            <label>📍 Destino guardado</label>
+            <select name="branch_id" id="order-branch"><option value="">— Manual —</option></select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>📍 Destino</label>
+            <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Dirección de entrega">
           </div>
         </div>
         <!-- Fila 3: Monto + Pago + Articulos -->
@@ -440,7 +444,6 @@
         <input type="hidden" name="dropoff_lat" id="dropoff_lat">
         <input type="hidden" name="dropoff_lng" id="dropoff_lng">
         <input type="hidden" name="scheduled_at" id="scheduled_at" value="">
-        <input type="hidden" name="branch_id" value="">
         <!-- Acciones -->
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>

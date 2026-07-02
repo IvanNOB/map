@@ -449,7 +449,7 @@
   function populateBranchSelect() {
     const sel = document.getElementById('order-branch');
     if (!sel) return;
-    sel.innerHTML = '<option value="">— Sin sucursal —</option>' +
+    sel.innerHTML = '<option value="">— Manual —</option>' +
       branches.map((b) => '<option value="' + b.id + '">' + escapeHtml(b.name) + '</option>').join('');
   }
   function branchName(id) {
