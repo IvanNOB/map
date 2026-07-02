@@ -12,6 +12,12 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    .driver-stats{display:flex;align-items:center;gap:1rem;padding:0.5rem 1rem;background:var(--bg-alt);border-bottom:1px solid var(--border);}
+    .driver-stat{text-align:center;}
+    .driver-stat .val{font-size:1.1rem;font-weight:bold;color:var(--success);}
+    .driver-stat .lbl{font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;}
+    .gps-bar{display:flex;align-items:center;justify-content:space-between;padding:0.4rem 1rem;gap:0.5rem;border-bottom:1px solid var(--border);}
+    .gps-bar .gps-info{font-size:0.65rem;color:var(--text-muted);}
   </style>
 </head>
 <body>
@@ -39,83 +45,81 @@
     </div>
   </div>
 
-  <!-- Main App (hidden until login) -->
+  <!-- Main App -->
   <div id="app" class="app-container hidden">
+
     <!-- Header -->
     <header class="driver-header">
-      <div style="display:flex;align-items:center;gap:0.5rem;">
-        <span class="brand-logo" style="font-size:1.2rem;">👻</span>
-        <h2 id="driver-name" style="margin:0;font-size:1rem;">Repartidor</h2>
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <span style="font-size:1.2rem;">👻</span>
+        <strong id="driver-name" style="font-size:0.9rem;">Repartidor</strong>
         <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>
       </div>
-      <div style="display:flex;align-items:center;gap:0.5rem;">
-        <span style="font-size:0.75rem;color:var(--text-muted);" id="status-label">Desconectado</span>
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <span style="font-size:0.65rem;color:var(--text-muted);" id="status-label">Offline</span>
         <label class="toggle-switch">
           <input type="checkbox" id="toggle-online">
           <span class="toggle-slider"></span>
         </label>
-      </div>
-      <div style="display:flex;align-items:center;gap:0.3rem;">
-        <button id="btn-refresh-driver" class="icon-btn" title="Refrescar pedidos">🔄</button>
-        <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
-        <button id="btn-logout" class="btn btn-outline btn-sm">Salir</button>
+        <button id="btn-refresh-driver" class="icon-btn" title="Refrescar">🔄</button>
+        <button id="btn-theme" class="icon-btn" title="Tema">🌙</button>
+        <button id="btn-logout" class="btn btn-outline btn-sm" style="font-size:0.65rem;padding:0.25rem 0.4rem;">Salir</button>
       </div>
     </header>
 
-    <!-- Earnings -->
-    <div class="earnings-card">
-      <div>
-        <div class="e-label">💰 Ganancia de hoy</div>
-        <div class="e-value" id="earn-today">$0</div>
+    <!-- Estadísticas rápidas -->
+    <div class="driver-stats">
+      <div class="driver-stat">
+        <div class="val" id="earn-today">$0</div>
+        <div class="lbl">Ganancia</div>
       </div>
-      <div class="e-sub">
-        <div id="earn-deliveries">0 entregas</div>
-        <div id="earn-pct"></div>
+      <div class="driver-stat">
+        <div class="val" id="earn-deliveries">0</div>
+        <div class="lbl">Entregas</div>
+      </div>
+      <div class="driver-stat">
+        <div class="val" id="earn-pct">0%</div>
+        <div class="lbl">Comisión</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:0.4rem;">
+        <label style="font-size:0.7rem;display:flex;align-items:center;gap:0.2rem;cursor:pointer;">
+          <input type="checkbox" id="consent-location" style="width:auto;margin:0;">
+          📍
+        </label>
+        <button id="btn-share-location" class="btn btn-primary btn-sm" disabled style="font-size:0.65rem;padding:0.25rem 0.5rem;">Iniciar GPS</button>
+        <button id="btn-stop-location" class="btn btn-danger btn-sm hidden" style="font-size:0.65rem;padding:0.25rem 0.5rem;">Detener</button>
       </div>
     </div>
 
-    <!-- Location Section (compact) -->
-    <section class="driver-section" style="padding:0.6rem 1rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
-        <label class="consent-check" style="margin:0;font-size:0.8rem;">
-          <input type="checkbox" id="consent-location">
-          Compartir ubicacion
-        </label>
-        <div style="display:flex;gap:0.4rem;">
-          <button id="btn-share-location" class="btn btn-primary btn-sm" disabled>📍 Iniciar</button>
-          <button id="btn-stop-location" class="btn btn-danger btn-sm hidden">⏹ Detener</button>
-        </div>
-      </div>
-      <div id="gps-readout" class="gps-readout" style="font-size:0.7rem;margin-top:0.4rem;">
-        Lat: -- | Lng: -- | Velocidad: -- | Precision: -- | Ultima actualizacion: --
-      </div>
-      <div id="bg-status" class="bg-status hidden"></div>
-    </section>
+    <!-- GPS info -->
+    <div class="gps-bar">
+      <div class="gps-info" id="gps-readout">GPS: esperando señal...</div>
+    </div>
+    <div id="bg-status" class="bg-status hidden"></div>
 
-    <!-- Map -->
-    <section class="driver-section" style="padding:0;">
-      <div id="driver-map" class="map-container-mini" style="height:200px;border-radius:10px;margin:0 0.5rem;"></div>
-    </section>
+    <!-- Mapa (edge to edge) -->
+    <div id="driver-map" class="map-container-mini" style="height:180px;margin:0;border-radius:0;"></div>
 
-    <!-- Orders Section -->
-    <section class="driver-section">
-      <h3 style="display:flex;align-items:center;gap:0.4rem;font-size:0.95rem;">📦 Mis Pedidos</h3>
+    <!-- Pedidos -->
+    <section style="padding:0.6rem 0.8rem;">
+      <h3 style="margin:0 0 0.5rem;font-size:0.9rem;display:flex;align-items:center;gap:0.3rem;">📦 Mis Pedidos</h3>
       <div id="driver-orders"></div>
     </section>
 
-    <!-- Chat with dispatch -->
-    <section class="driver-section">
-      <h3 style="font-size:0.95rem;">💬 Chat con Despacho</h3>
+    <!-- Chat -->
+    <section style="padding:0.4rem 0.8rem 1rem;">
+      <h3 style="margin:0 0 0.4rem;font-size:0.9rem;">💬 Chat con Central</h3>
       <div class="driver-chat">
-        <div class="chat-messages" id="dchat-messages">
-          <div class="chat-empty">Escribe a tu central de despacho</div>
+        <div class="chat-messages" id="dchat-messages" style="max-height:130px;">
+          <div class="chat-empty">Escribe a tu central</div>
         </div>
         <div class="chat-input-row">
-          <input type="text" id="dchat-input" placeholder="Escribe un mensaje...">
+          <input type="text" id="dchat-input" placeholder="Mensaje...">
           <button class="btn btn-primary btn-sm" id="dchat-send">Enviar</button>
         </div>
       </div>
     </section>
+
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
