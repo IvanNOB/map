@@ -778,10 +778,19 @@
 
   // ─── Auto Refresh (cada 5 segundos, silencioso) ─────────────────────────────
 
-  setInterval(() => {
+  let syncDot = null;
+  setInterval(async () => {
     if (currentUser) {
-      loadOrders();
-      loadEarnings();
+      syncDot = syncDot || document.getElementById('sync-dot');
+      try {
+        await loadOrders();
+        await loadEarnings();
+        // Flash green = connected
+        if (syncDot) { syncDot.style.background = '#22c55e'; }
+      } catch {
+        // Red = disconnected
+        if (syncDot) { syncDot.style.background = '#ef4444'; }
+      }
     }
   }, 5000);
 

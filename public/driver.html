@@ -10,6 +10,9 @@
   <title>Repartidor - Servicio Ghost</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  </style>
 </head>
 <body>
   <!-- Toast Container -->
@@ -43,6 +46,7 @@
       <div style="display:flex;align-items:center;gap:0.5rem;">
         <span class="brand-logo" style="font-size:1.2rem;">👻</span>
         <h2 id="driver-name" style="margin:0;font-size:1rem;">Repartidor</h2>
+        <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;">
         <span style="font-size:0.75rem;color:var(--text-muted);" id="status-label">Desconectado</span>
