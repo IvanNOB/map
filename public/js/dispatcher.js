@@ -475,11 +475,15 @@
     const box = document.getElementById('restaurant-list');
     if (!box) return;
     if (restaurants.length === 0) { box.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;">Sin restaurantes registrados.</p>'; return; }
-    box.innerHTML = restaurants.map((r) =>
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
-      '<span style="flex:1;">🍴 ' + escapeHtml(r.name) + ' <span style="color:var(--text-muted);font-size:0.8rem;">(' + escapeHtml(r.email) + ')</span></span>' +
-      '<button class="btn btn-danger btn-sm" data-rest-del="' + r.id + '">Eliminar</button></div>'
-    ).join('');
+    box.innerHTML = restaurants.map((r) => {
+      const phoneDigits = r.phone ? String(r.phone).replace(/[^\d]/g, '') : '';
+      const waBtn = phoneDigits ? '<a class="btn btn-whatsapp btn-sm" href="https://wa.me/' + phoneDigits + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;margin-bottom:0.3rem;">' +
+      '<span style="flex:1;">🍴 ' + escapeHtml(r.name) + ' <span style="color:var(--text-muted);font-size:0.8rem;">(' + escapeHtml(r.email) + ')</span>' +
+      (r.phone ? ' <span style="font-size:0.75rem;">📱 ' + escapeHtml(r.phone) + '</span>' : '') + '</span>' +
+      waBtn +
+      '<button class="btn btn-danger btn-sm" data-rest-del="' + r.id + '">Eliminar</button></div>';
+    }).join('');
     box.querySelectorAll('[data-rest-del]').forEach((el) => {
       el.addEventListener('click', async () => {
         if (!confirm('¿Eliminar este restaurante?')) return;
