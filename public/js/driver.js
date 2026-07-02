@@ -298,7 +298,7 @@
       return;
     }
 
-    active.forEach((order) => renderOrderCard(order));
+    active.forEach((order, idx) => renderOrderCard(order, idx));
 
     if (delivered.length > 0) {
       const divider = document.createElement('h4');
@@ -311,9 +311,15 @@
     renderOrderMarkers();
   }
 
-  function renderOrderCard(order) {
+  // Colores para diferenciar pedidos por orden de prioridad
+  const orderColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+  function renderOrderCard(order, idx) {
     const card = document.createElement('div');
+    const colorIdx = (typeof idx === 'number') ? idx % orderColors.length : 0;
+    const color = orderColors[colorIdx];
     card.className = 'driver-order-card';
+    card.style.borderLeft = '4px solid ' + color;
     const action = nextAction(order.status);
 
     // Navigation target: go to pickup while assigned, to dropoff once picked up
@@ -340,7 +346,10 @@
 
     card.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-        <span class="order-code">${escapeHtml(order.code)}</span>
+        <div style="display:flex;align-items:center;gap:0.4rem;">
+          <span style="background:${color};color:#fff;font-weight:bold;font-size:0.75rem;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${typeof idx === 'number' ? idx + 1 : ''}</span>
+          <span class="order-code">${escapeHtml(order.code)}</span>
+        </div>
         <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(statusLabelText(order.status))}</span>
       </div>
       <div class="order-detail"><strong>Cliente:</strong> ${escapeHtml(order.customer_name)}</div>
