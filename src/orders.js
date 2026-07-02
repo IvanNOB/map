@@ -428,7 +428,7 @@ export default function createOrdersRouter(io) {
     if (updated.customer_phone) {
       const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
       const link = `${base}/customer.html?code=${encodeURIComponent(updated.code)}`;
-      sendWhatsApp(updated.customer_phone, `Tu pedido ${updated.code} ya tiene repartidor. Sigue la entrega aqui: ${link}`);
+      sendWhatsApp(updated.customer_phone, `🚨 ¡NUEVA ACTUALIZACIÓN EN SERVICIOS GHOST! 🚨\n\n¡En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! 👻🚀 Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.\n\nA partir de ahora, tendrás el control total de tus entregas:\n✅ Mayor tranquilidad: Sabrás exactamente el estado de tu domicilio.\n✅ Máxima seguridad: Todo monitoreado directamente por nuestra central logística.\n✅ Rapidez garantizada: Rompemos las barreras del tiempo con tecnología premium. ⏱️⚡\n\n🔗 Sigue tu pedido *${updated.code}* en tiempo real aquí:\n${link}\n\n¿Tienes un antojo o necesitas despachar en tu negocio? ¡Pruébalo ya mismo! Tu entrega está en las mejores manos. ⭐⭐⭐⭐⭐\n\n📲 Guarda nuestro contacto y pide al instante: 321 428 6626 📞`);
     }
 
     res.json(updated);
@@ -481,7 +481,7 @@ export default function createOrdersRouter(io) {
     if (updated.customer_phone) {
       const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
       const link = `${base}/customer.html?code=${encodeURIComponent(updated.code)}`;
-      sendWhatsApp(updated.customer_phone, `Tu pedido ${updated.code} ya tiene repartidor (${chosen.name}). Sigue la entrega aqui: ${link}`);
+      sendWhatsApp(updated.customer_phone, `🚨 ¡NUEVA ACTUALIZACIÓN EN SERVICIOS GHOST! 🚨\n\n¡En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! 👻🚀 Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.\n\nA partir de ahora, tendrás el control total de tus entregas:\n✅ Mayor tranquilidad: Sabrás exactamente el estado de tu domicilio.\n✅ Máxima seguridad: Todo monitoreado directamente por nuestra central logística.\n✅ Rapidez garantizada: Rompemos las barreras del tiempo con tecnología premium. ⏱️⚡\n\n🔗 Sigue tu pedido *${updated.code}* en tiempo real aquí:\n${link}\n\n¿Tienes un antojo o necesitas despachar en tu negocio? ¡Pruébalo ya mismo! Tu entrega está en las mejores manos. ⭐⭐⭐⭐⭐\n\n📲 Guarda nuestro contacto y pide al instante: 321 428 6626 📞`);
     }
 
     res.json({ order: updated, driver_name: chosen.name });
