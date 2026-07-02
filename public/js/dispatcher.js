@@ -1481,35 +1481,46 @@
   // ─── Importar datos desde mensaje de WhatsApp (admin) ────────────────────────
 
   function parseOrderMessage(text) {
-    const res = { name: '', phone: '', address: '', items: '' };
+    const res = { name: '', phone: '', address: '', items: '', payment: '', amount: '' };
     if (!text) return res;
     const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    
+    // Detectar teléfono en cualquier parte del texto
     const phoneMatch = text.match(/(\+?\d[\d\s().-]{6,}\d)/);
     if (phoneMatch) res.phone = phoneMatch[1].replace(/[^\d+]/g, '');
+
+    // Etiquetas comunes en mensajes de clientes colombianos
     const labels = {
-      name: /^(nombre|cliente|name)\s*[:\-]\s*(.+)/i,
-      phone: /^(tel[eé]fono|tel|cel(ular)?|whatsapp|wa|n[uú]mero|numero)\s*[:\-]\s*(.+)/i,
-      address: /^(direcci[oó]n|direccion|dir|domicilio|barrio|entrega|destino)\s*[:\-]\s*(.+)/i,
-      items: /^(pedido|orden|productos?|art[ií]culos?|items?|llevar|enviar)\s*[:\-]\s*(.+)/i,
+      name: /^(a\s*nombre\s*(de)?|nombre|cliente|name|para)\s*[:\-]\s*(.+)/i,
+      phone: /^(n[uú]mero\s*(de\s*)?tel[eé]fono|tel[eé]fono|tel|cel(ular)?|whatsapp|wa|n[uú]mero|numero|contacto)\s*[:\-]\s*(.+)/i,
+      address: /^(direcci[oó]n|direccion|dir|domicilio|barrio|entrega|destino|env[ií]o|entregar\s*en|llevar\s*a)\s*[:\-]\s*(.+)/i,
+      items: /^(pedido|orden|productos?|art[ií]culos?|items?|llevar|enviar|descripci[oó]n|detalle)\s*[:\-]\s*(.+)/i,
+      payment: /^(m[eé]todo\s*(de\s*)?pago|pago|forma\s*(de\s*)?pago|pagar\s*con)\s*[:\-]\s*(.+)/i,
+      amount: /^(valor|monto|total|precio|costo)\s*[:\-]\s*(.+)/i,
     };
+
     const remaining = [];
     lines.forEach(line => {
+      if (/^(reenviado|importante|anexar|siguientes datos)/i.test(line)) return;
       let matched = false;
       for (const key in labels) {
         const m = line.match(labels[key]);
         if (m) {
           const val = m[m.length - 1].trim();
-          if (key === 'phone') { if (!res.phone) res.phone = val.replace(/[^\d+]/g, ''); }
+          if (key === 'phone') res.phone = val.replace(/[^\d+]/g, '');
+          else if (key === 'payment') res.payment = val;
+          else if (key === 'amount') res.amount = val.replace(/[^\d.,]/g, '');
           else if (!res[key]) res[key] = val;
           matched = true; break;
         }
       }
       if (!matched) remaining.push(line);
     });
-    const addrKw = /(calle|cra|carrera|av\b|avenida|diagonal|transversal|\bkr\b|\bcl\b|#|barrio|conjunto|edificio|manzana|casa|apto)/i;
+
+    const addrKw = /(calle|cra|carrera|av\b|avenida|diagonal|transversal|\bkr\b|\bcl\b|#|barrio|conjunto|edificio|manzana|casa|apto|vereda|sector)/i;
     const isPhoneLine = l => l.replace(/[^\d]/g, '').length >= 7 && /^[\d\s+().-]+$/.test(l);
     if (!res.address) {
-      const a = remaining.find(l => addrKw.test(l) && /[#\d]/.test(l) && !isPhoneLine(l));
+      const a = remaining.find(l => addrKw.test(l) && !isPhoneLine(l));
       if (a) res.address = a;
     }
     if (!res.name) {
@@ -1530,7 +1541,17 @@
     if (p.address) document.getElementById('dropoff_address').value = p.address;
     const itemsField = formNewOrder.querySelector('[name="items"]');
     if (p.items && itemsField) itemsField.value = p.items;
-    const got = [p.name, p.phone, p.address, p.items].filter(Boolean).length;
+    if (p.payment) {
+      const paySelect = formNewOrder.querySelector('[name="payment_method"]');
+      if (paySelect) {
+        paySelect.value = /(bancolombia|nequi|daviplata|transferencia|pse|banco|consignaci)/i.test(p.payment) ? 'card' : 'cash';
+      }
+    }
+    if (p.amount) {
+      const amountField = formNewOrder.querySelector('[name="amount"]');
+      if (amountField) amountField.value = parseFloat(p.amount.replace(/,/g, '')) || 0;
+    }
+    const got = [p.name, p.phone, p.address, p.items, p.payment, p.amount].filter(Boolean).length;
     showToast(got ? '✅ ' + got + ' datos importados. Revisa y crea el pedido.' : 'No se reconocieron datos, llénalos manual.', got ? 'success' : 'warning');
   }
 
