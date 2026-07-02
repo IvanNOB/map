@@ -1602,9 +1602,13 @@
     if (!order) return;
     const today = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const phone = order.customer_phone ? String(order.customer_phone).replace(/[^0-9+]/g, '') : 'No registrado';
-    const pickup = order.pickup_address || 'No especificado';
+    const negocio = order.pickup_address || 'No especificado';
     const dropoff = order.dropoff_address || 'No especificada';
-    const msg = `⚡ SERVICIO GHOST ⚡\n${today}\n🛵 DOMI #${order.code}\n👤 Repartidor: ${driverName || 'Por asignar'}\n🏢 Negocio: ${pickup}\n📍 Dirección: ${dropoff}\n📱 Celular: ${phone}`;
+    // Contar domicilios realizados hoy por este repartidor
+    const driverId = order.driver_id;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const domiCount = orders.filter(o => o.driver_id === driverId && o.status !== 'cancelled' && o.created_at && o.created_at.slice(0, 10) === todayStr).length;
+    const msg = `⚡ SERVICIO GHOST ⚡\n${today}\n🛵 DOMI #${domiCount} del día\n👤 Repartidor: ${driverName || 'Por asignar'}\n🏢 Negocio: ${negocio}\n📍 Dirección: ${dropoff}\n📱 Celular: ${phone}`;
     // Copiar mensaje al portapapeles y abrir el grupo
     if (navigator.clipboard) {
       navigator.clipboard.writeText(msg).then(() => {
