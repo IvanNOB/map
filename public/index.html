@@ -371,10 +371,10 @@
 
   <!-- New Order Modal -->
   <div id="modal-new-order" class="modal-overlay hidden">
-    <div class="modal" style="max-width:750px;">
+    <div class="modal" style="max-width:720px;">
       <h2 id="order-modal-title">⚡ Nuevo Pedido</h2>
       <form id="form-new-order">
-        <!-- Fila 1: Cliente + Celular + Pago -->
+        <!-- Fila 1: Cliente + Celular -->
         <div class="form-row">
           <div class="form-group" style="flex:2;">
             <label>👤 Cliente</label>
@@ -385,58 +385,54 @@
             <label>📱 Celular</label>
             <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
           </div>
+        </div>
+        <!-- Fila 2: Lugar guardado + Negocio manual -->
+        <div class="form-row">
+          <div class="form-group" style="flex:1;">
+            <label>🏪 Lugar guardado (recogida)</label>
+            <select id="order-place"><option value="">— Escribir manual —</option></select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>🏢 O escribir negocio</label>
+            <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre o dirección">
+          </div>
+        </div>
+        <!-- Fila 3: Destino + Valor + Pago -->
+        <div class="form-row">
+          <div class="form-group" style="flex:2;">
+            <label>📍 Destino de entrega</label>
+            <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Dirección del cliente">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>💰 Valor ($)</label>
+            <input type="number" name="amount" step="100" min="0" value="0">
+          </div>
           <div class="form-group" style="flex:1;">
             <label>💳 Pago</label>
             <select name="payment_method">
               <option value="cash">Efectivo</option>
-              <option value="card">Tarjeta</option>
+              <option value="card">Transferencia</option>
             </select>
           </div>
         </div>
-        <!-- Fila 2: Negocio + Destino + Monto -->
-        <div class="form-row">
-          <div class="form-group" style="flex:2;">
-            <label>🏢 Negocio (recogida)</label>
-            <input type="text" name="pickup_address" id="pickup_address" placeholder="Donde se recoge">
-          </div>
-          <div class="form-group" style="flex:2;">
-            <label>📍 Destino de entrega</label>
-            <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Donde se entrega">
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>💰 Monto ($)</label>
-            <input type="number" name="amount" step="0.01" min="0" value="0">
-          </div>
-        </div>
-        <!-- Fila 3: Articulos + Notas -->
+        <!-- Fila 4: Artículos + Notas -->
         <div class="form-row">
           <div class="form-group" style="flex:1;">
-            <label>📦 Articulos</label>
-            <input type="text" name="items" placeholder="Que se lleva...">
+            <label>📦 Artículos</label>
+            <input type="text" name="items" placeholder="Qué se lleva...">
           </div>
           <div class="form-group" style="flex:1;">
             <label>📝 Notas</label>
             <input type="text" name="notes" placeholder="Indicaciones...">
           </div>
         </div>
-        <!-- Fila 4: Lugares guardados -->
-        <div class="form-row">
-          <div class="form-group" style="flex:1;">
-            <label>🏪 Lugar de recogida guardado</label>
-            <select id="order-place"><option value="">— Ninguno —</option></select>
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>📍 Destino guardado</label>
-            <select name="branch_id" id="order-branch"><option value="">— Seleccionar —</option></select>
-          </div>
-        </div>
         <!-- Mapa -->
         <div class="form-group">
-          <label>🗺️ Ubicar en el mapa</label>
+          <label>🗺️ Ubicar en el mapa (opcional)</label>
           <div id="picker-map" class="picker-map"></div>
           <div class="picker-hint">
-            Clic en el mapa: primero <span class="step-pickup">recogida</span> 🟢, luego <span class="step-dropoff">entrega</span> 🔴.
-            <button type="button" id="btn-geocode" class="btn btn-outline btn-sm" style="margin-left:0.4rem;">Buscar en mapa</button>
+            Clic: primero <span class="step-pickup">recogida</span> 🟢, luego <span class="step-dropoff">entrega</span> 🔴.
+            <button type="button" id="btn-geocode" class="btn btn-outline btn-sm">Buscar en mapa</button>
             <button type="button" id="btn-reset-pins" class="btn btn-outline btn-sm">Reiniciar</button>
           </div>
           <div id="fare-hint" class="fare-hint"></div>
@@ -446,28 +442,11 @@
         <input type="hidden" name="dropoff_lat" id="dropoff_lat">
         <input type="hidden" name="dropoff_lng" id="dropoff_lng">
         <input type="hidden" name="scheduled_at" id="scheduled_at" value="">
+        <input type="hidden" name="branch_id" id="order-branch" value="">
+        <!-- Acciones -->
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-order">Crear Pedido</button>
-        </div>
-      </form>
-    </div>
-  </div>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-order">Crear Pedido</button>
-        </div>
-      </form>
-    </div>
-  </div>
-          <label>Usar lugar guardado para la recogida (opcional)</label>
-          <select id="order-place"><option value="">— Ninguno —</option></select>
-          <small style="color:var(--text-muted);">Rellena la dirección y ubicación de recogida automáticamente.</small>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-order">Crear Pedido</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-order">✅ Crear Pedido</button>
         </div>
       </form>
     </div>
