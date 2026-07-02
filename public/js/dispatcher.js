@@ -449,7 +449,7 @@
   function populateBranchSelect() {
     const sel = document.getElementById('order-branch');
     if (!sel) return;
-    sel.innerHTML = '<option value="">— Sin sucursal —</option>' +
+    sel.innerHTML = '<option value="">— Manual —</option>' +
       branches.map((b) => '<option value="' + b.id + '">' + escapeHtml(b.name) + '</option>').join('');
   }
   function branchName(id) {
@@ -726,7 +726,7 @@
       const p = places.find((x) => String(x.id) === orderPlaceSel.value);
       if (!p) return;
       const pickAddr = document.getElementById('pickup_address');
-      if (pickAddr) pickAddr.value = p.address || p.name;
+      if (pickAddr) pickAddr.value = p.name || p.address;
       document.getElementById('pickup_lat').value = p.lat;
       document.getElementById('pickup_lng').value = p.lng;
       if (typeof placePickerMarker === 'function' && pickerMap) {
@@ -1602,7 +1602,20 @@
     if (!order) return;
     const today = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const phone = order.customer_phone ? String(order.customer_phone).replace(/[^0-9+]/g, '') : 'No registrado';
-    const negocio = order.pickup_address || 'No especificado';
+    // Buscar el nombre del lugar guardado si las coordenadas coinciden
+    let negocio = order.pickup_address || 'No especificado';
+    if (order.pickup_lat && order.pickup_lng && typeof places !== 'undefined') {
+      const matchPlace = places.find(p => p.lat && p.lng && Math.abs(p.lat - order.pickup_lat) < 0.001 && Math.abs(p.lng - order.pickup_lng) < 0.001);
+      if (matchPlace) negocio = matchPlace.name;
+    }
+    // Si parece coordenada (contiene ° o empieza con número y tiene N/S/E/W), buscar nombre
+    if (/[\d°'"NSEW]/.test(negocio) && negocio.length > 15 && typeof places !== 'undefined' && places.length > 0) {
+      const firstPlace = places.find(p => p.name);
+      if (firstPlace && order.pickup_lat) {
+        const matchP = places.find(p => p.lat && Math.abs(p.lat - order.pickup_lat) < 0.001);
+        if (matchP) negocio = matchP.name;
+      }
+    }
     const dropoff = order.dropoff_address || 'No especificada';
     // Contar domicilios realizados hoy por este repartidor
     const driverId = order.driver_id;
