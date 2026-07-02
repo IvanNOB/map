@@ -543,8 +543,10 @@
     if (map) {
       const latlng = [latitude, longitude];
       if (positionMarker) positionMarker.setLatLng(latlng);
-      else positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
-      map.setView(latlng, 15);
+      else {
+        positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
+        map.setView(latlng, 15);
+      }
     }
     lastPos = { lat: latitude, lng: longitude, speed: speed || 0 };
     // Send over HTTP (works in background, unlike a WebSocket which the OS suspends)
