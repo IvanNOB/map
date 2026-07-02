@@ -1814,6 +1814,7 @@
         </div>
         <div class="order-actions" style="margin-top:0.6rem;">
           <button class="btn btn-outline btn-sm" data-edit-driver="${d.id}">Editar</button>
+          <button class="btn btn-warning btn-sm" data-vibrate-driver="${d.id}" title="Enviar alerta para que active la ubicacion">📍 Activar UBI</button>
           <button class="btn btn-danger btn-sm" data-del-driver="${d.id}">Eliminar</button>
         </div>
       `;
@@ -1826,6 +1827,25 @@
     driversGrid.querySelectorAll('[data-del-driver]').forEach((b) => {
       b.addEventListener('click', () => deleteDriver(parseInt(b.dataset.delDriver)));
     });
+    driversGrid.querySelectorAll('[data-vibrate-driver]').forEach((b) => {
+      b.addEventListener('click', () => vibrateDriver(parseInt(b.dataset.vibrateDriver)));
+    });
+  }
+
+  // ─── Vibrar/alertar repartidor para que active ubicación ────────────────────
+  async function vibrateDriver(driverId) {
+    try {
+      const res = await apiFetch('/api/push/notify', {
+        method: 'POST',
+        body: JSON.stringify({ driver_id: driverId, title: '📍 ACTIVA TU UBICACION', body: 'La central necesita tu ubicacion en tiempo real. Abre la app y activa el GPS.' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Alerta enviada al repartidor', 'success');
+      } else {
+        showToast(data.error || 'No se pudo enviar la alerta', 'error');
+      }
+    } catch { showToast('Error de conexion', 'error'); }
   }
 
   // ─── Edit / Delete driver ───────────────────────────────────────────────────
