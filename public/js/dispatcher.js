@@ -995,6 +995,23 @@
     initMap();
     refreshDriverMarkers();
     renderChatContacts();
+    renderRestaurantWaPanel();
+  }
+
+  // Render restaurant WhatsApp buttons in main panel
+  function renderRestaurantWaPanel() {
+    const box = document.getElementById('restaurant-wa-list');
+    if (!box) return;
+    if (!restaurants || restaurants.length === 0) {
+      box.innerHTML = '<span style="color:var(--text-muted);font-size:0.75rem;">Sin restaurantes</span>';
+      return;
+    }
+    box.innerHTML = restaurants.map(r => {
+      const phoneDigits = r.phone ? String(r.phone).replace(/[^\d]/g, '') : '';
+      if (!phoneDigits) return '<span style="font-size:0.75rem;color:var(--text-muted);">' + escapeHtml(r.name) + ' (sin tel)</span>';
+      return '<a href="https://wa.me/' + phoneDigits + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:6px;text-decoration:none;color:var(--text);font-size:0.75rem;">' +
+        '<span style="color:#25d366;">💬</span> ' + escapeHtml(r.name) + '</a>';
+    }).join('');
   }
 
   async function loadStats() {
