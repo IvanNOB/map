@@ -1551,6 +1551,8 @@
         showToast('Repartidor asignado', 'success');
         modalAssign.classList.add('hidden');
         if (wantWa) notifyCustomerWhatsApp(order, driver ? driver.name : '');
+        const notifyGroup = document.getElementById('notify-group-wa');
+        if (notifyGroup && notifyGroup.checked) notifyGroupWhatsApp(order, driver ? driver.name : '');
         loadOrders();
         loadStats();
       } else {
@@ -1570,6 +1572,7 @@
       if (res.ok) {
         showToast('Asignado automaticamente a ' + (data.driver_name || 'repartidor'), 'success');
         notifyCustomerWhatsApp(data.order, data.driver_name || '');
+        notifyGroupWhatsApp(data.order, data.driver_name || '');
         loadOrders();
         loadStats();
       } else {
@@ -1586,10 +1589,29 @@
     const digits = String(order.customer_phone).replace(/[^0-9]/g, '');
     if (!digits) return;
     const url = location.origin + '/customer.html?code=' + encodeURIComponent(order.code);
-    let msg = 'Hola! Tu pedido ' + order.code + ' ya tiene repartidor';
-    if (driverName) msg += ' (' + driverName + ')';
-    msg += '. Sigue tu entrega en tiempo real aqui: ' + url;
+    const msg = `🚨 ¡NUEVA ACTUALIZACIÓN EN SERVICIOS GHOST! 🚨\n\n¡En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! 👻🚀 Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.\n\nA partir de ahora, tendrás el control total de tus entregas:\n✅ Mayor tranquilidad: Sabrás exactamente el estado de tu domicilio.\n✅ Máxima seguridad: Todo monitoreado directamente por nuestra central logística.\n✅ Rapidez garantizada: Rompemos las barreras del tiempo con tecnología premium. ⏱️⚡\n\n🔗 Sigue tu pedido *${order.code}* en tiempo real aquí:\n${url}\n\n¿Tienes un antojo o necesitas despachar en tu negocio? ¡Pruébalo ya mismo! Tu entrega está en las mejores manos. ⭐⭐⭐⭐⭐\n\n📲 Guarda nuestro contacto y pide al instante: 321 428 6626 📞`;
     window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  // Enviar al grupo de WhatsApp de Servicio Ghost
+  function notifyGroupWhatsApp(order, driverName) {
+    if (!order) return;
+    const today = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const phone = order.customer_phone ? String(order.customer_phone).replace(/[^0-9+]/g, '') : 'No registrado';
+    const pickup = order.pickup_address || 'No especificado';
+    const dropoff = order.dropoff_address || 'No especificada';
+    const msg = `⚡ SERVICIO GHOST ⚡\n${today}\n🛵 DOMI #${order.code}\n👤 Repartidor: ${driverName || 'Por asignar'}\n🏢 Negocio: ${pickup}\n📍 Dirección: ${dropoff}\n📱 Celular: ${phone}`;
+    // Copiar mensaje al portapapeles y abrir el grupo
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(msg).then(() => {
+        showToast('Mensaje copiado. Pega en el grupo de WhatsApp.', 'success');
+        window.open('https://chat.whatsapp.com/FO1HRzeU8YMGpsoJNyahlQ', '_blank');
+      }).catch(() => {
+        window.open('https://chat.whatsapp.com/FO1HRzeU8YMGpsoJNyahlQ', '_blank');
+      });
+    } else {
+      window.open('https://chat.whatsapp.com/FO1HRzeU8YMGpsoJNyahlQ', '_blank');
+    }
   }
 
   // ─── Cancel Order ──────────────────────────────────────────────────────────

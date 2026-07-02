@@ -374,32 +374,36 @@
     <div class="modal">
       <h2 id="order-modal-title">Nuevo Pedido</h2>
       <form id="form-new-order">
+        <!-- Cliente -->
         <div class="form-row">
           <div class="form-group">
-            <label>Nombre del cliente</label>
-            <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required>
+            <label>👤 Cliente</label>
+            <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required placeholder="Nombre del cliente">
             <datalist id="customers-list"></datalist>
           </div>
           <div class="form-group">
-            <label>Telefono</label>
-            <input type="tel" name="customer_phone" id="customer_phone">
+            <label>📱 Celular</label>
+            <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
           </div>
         </div>
-        <div class="form-group">
-          <label>Direccion de recogida (opcional)</label>
-          <input type="text" name="pickup_address" id="pickup_address" placeholder="Opcional">
+        <!-- Direcciones -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>🏢 Negocio (recogida)</label>
+            <input type="text" name="pickup_address" id="pickup_address" placeholder="Donde se recoge">
+          </div>
+          <div class="form-group">
+            <label>📍 Destino de entrega</label>
+            <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Donde se entrega">
+          </div>
         </div>
+        <!-- Mapa -->
         <div class="form-group">
-          <label>Direccion de entrega (opcional)</label>
-          <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Opcional">
-        </div>
-        <div class="form-group">
-          <label>Ubicar en el mapa (opcional)</label>
+          <label>🗺️ Ubicar en el mapa</label>
           <div id="picker-map" class="picker-map"></div>
           <div class="picker-hint">
-            Haz clic en el mapa: primero la <span class="step-pickup">recogida</span> 🟢,
-            luego la <span class="step-dropoff">entrega</span> 🔴.
-            <button type="button" id="btn-geocode" class="btn btn-outline btn-sm" style="margin-left:0.4rem;">Buscar direcciones en el mapa</button>
+            Clic en el mapa: primero <span class="step-pickup">recogida</span> 🟢, luego <span class="step-dropoff">entrega</span> 🔴.
+            <button type="button" id="btn-geocode" class="btn btn-outline btn-sm" style="margin-left:0.4rem;">Buscar en mapa</button>
             <button type="button" id="btn-reset-pins" class="btn btn-outline btn-sm">Reiniciar</button>
           </div>
           <div id="fare-hint" class="fare-hint"></div>
@@ -408,17 +412,18 @@
         <input type="hidden" name="pickup_lng" id="pickup_lng">
         <input type="hidden" name="dropoff_lat" id="dropoff_lat">
         <input type="hidden" name="dropoff_lng" id="dropoff_lng">
+        <!-- Detalles -->
         <div class="form-group">
-          <label>Articulos</label>
-          <textarea name="items" rows="2" placeholder="Descripcion de los articulos..."></textarea>
+          <label>📦 Articulos</label>
+          <textarea name="items" rows="2" placeholder="Que se lleva..."></textarea>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Monto ($)</label>
+            <label>💰 Monto ($)</label>
             <input type="number" name="amount" step="0.01" min="0" value="0">
           </div>
           <div class="form-group">
-            <label>Metodo de pago</label>
+            <label>💳 Pago</label>
             <select name="payment_method">
               <option value="cash">Efectivo</option>
               <option value="card">Tarjeta</option>
@@ -426,19 +431,32 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Notas</label>
-          <textarea name="notes" rows="2" placeholder="Notas adicionales..."></textarea>
+          <label>📝 Notas</label>
+          <textarea name="notes" rows="1" placeholder="Indicaciones especiales..."></textarea>
+        </div>
+        <!-- Opciones rapidas -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>⏰ Programar (opcional)</label>
+            <input type="datetime-local" name="scheduled_at" id="scheduled_at">
+          </div>
+          <div class="form-group">
+            <label>📍 Destino guardado</label>
+            <select name="branch_id" id="order-branch"><option value="">— Seleccionar —</option></select>
+          </div>
         </div>
         <div class="form-group">
-          <label>Programar para (opcional)</label>
-          <input type="datetime-local" name="scheduled_at" id="scheduled_at">
-          <small style="color:var(--text-muted);">Dejar vacio para un pedido inmediato.</small>
+          <label>🏪 Lugar de recogida guardado</label>
+          <select id="order-place"><option value="">— Ninguno —</option></select>
+          <small style="color:var(--text-muted);">Rellena la dirección de recogida automáticamente.</small>
         </div>
-        <div class="form-group">
-          <label>Sucursal (opcional)</label>
-          <select name="branch_id" id="order-branch"><option value="">— Sin sucursal —</option></select>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-order">Crear Pedido</button>
         </div>
-        <div class="form-group">
+      </form>
+    </div>
+  </div>
           <label>Usar lugar guardado para la recogida (opcional)</label>
           <select id="order-place"><option value="">— Ninguno —</option></select>
           <small style="color:var(--text-muted);">Rellena la dirección y ubicación de recogida automáticamente.</small>
@@ -555,6 +573,10 @@
       <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
         <input type="checkbox" id="notify-wa" checked style="width:auto;">
         <label for="notify-wa" style="margin:0;cursor:pointer;">Avisar al cliente por WhatsApp al asignar</label>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" id="notify-group-wa" checked style="width:auto;">
+        <label for="notify-group-wa" style="margin:0;cursor:pointer;">📢 Publicar en grupo de WhatsApp</label>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" id="btn-cancel-assign">Cancelar</button>
