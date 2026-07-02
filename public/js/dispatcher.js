@@ -1478,6 +1478,83 @@
     }
   });
 
+  // ─── Importar datos desde mensaje de WhatsApp (admin) ────────────────────────
+
+  function parseOrderMessage(text) {
+    const res = { name: '', phone: '', address: '', items: '' };
+    if (!text) return res;
+    const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    const phoneMatch = text.match(/(\+?\d[\d\s().-]{6,}\d)/);
+    if (phoneMatch) res.phone = phoneMatch[1].replace(/[^\d+]/g, '');
+    const labels = {
+      name: /^(nombre|cliente|name)\s*[:\-]\s*(.+)/i,
+      phone: /^(tel[eé]fono|tel|cel(ular)?|whatsapp|wa|n[uú]mero|numero)\s*[:\-]\s*(.+)/i,
+      address: /^(direcci[oó]n|direccion|dir|domicilio|barrio|entrega|destino)\s*[:\-]\s*(.+)/i,
+      items: /^(pedido|orden|productos?|art[ií]culos?|items?|llevar|enviar)\s*[:\-]\s*(.+)/i,
+    };
+    const remaining = [];
+    lines.forEach(line => {
+      let matched = false;
+      for (const key in labels) {
+        const m = line.match(labels[key]);
+        if (m) {
+          const val = m[m.length - 1].trim();
+          if (key === 'phone') { if (!res.phone) res.phone = val.replace(/[^\d+]/g, ''); }
+          else if (!res[key]) res[key] = val;
+          matched = true; break;
+        }
+      }
+      if (!matched) remaining.push(line);
+    });
+    const addrKw = /(calle|cra|carrera|av\b|avenida|diagonal|transversal|\bkr\b|\bcl\b|#|barrio|conjunto|edificio|manzana|casa|apto)/i;
+    const isPhoneLine = l => l.replace(/[^\d]/g, '').length >= 7 && /^[\d\s+().-]+$/.test(l);
+    if (!res.address) {
+      const a = remaining.find(l => addrKw.test(l) && /[#\d]/.test(l) && !isPhoneLine(l));
+      if (a) res.address = a;
+    }
+    if (!res.name) {
+      const c = remaining.find(l => l !== res.address && /[a-záéíóúñ]/i.test(l) && !/\d{4,}/.test(l) && !isPhoneLine(l) && l.split(' ').length <= 5);
+      if (c) res.name = c;
+    }
+    if (!res.items) {
+      const left = remaining.filter(l => l !== res.address && l !== res.name && !isPhoneLine(l));
+      if (left.length) res.items = left.join(', ');
+    }
+    return res;
+  }
+
+  function applyParsedOrder(text) {
+    const p = parseOrderMessage(text);
+    if (p.name) document.getElementById('customer_name').value = p.name;
+    if (p.phone) document.getElementById('customer_phone').value = p.phone;
+    if (p.address) document.getElementById('dropoff_address').value = p.address;
+    const itemsField = formNewOrder.querySelector('[name="items"]');
+    if (p.items && itemsField) itemsField.value = p.items;
+    const got = [p.name, p.phone, p.address, p.items].filter(Boolean).length;
+    showToast(got ? '✅ ' + got + ' datos importados. Revisa y crea el pedido.' : 'No se reconocieron datos, llénalos manual.', got ? 'success' : 'warning');
+  }
+
+  const btnPasteOrder = document.getElementById('btn-paste-order');
+  const btnParseOrder = document.getElementById('btn-parse-order');
+  const orderImport = document.getElementById('order-import');
+
+  if (btnPasteOrder) {
+    btnPasteOrder.addEventListener('click', async () => {
+      try {
+        const txt = await navigator.clipboard.readText();
+        if (orderImport) orderImport.value = txt;
+        applyParsedOrder(txt);
+      } catch (e) {
+        showToast('No se pudo leer el portapapeles. Pega el texto manualmente.', 'warning');
+      }
+    });
+  }
+  if (btnParseOrder) {
+    btnParseOrder.addEventListener('click', () => {
+      if (orderImport) applyParsedOrder(orderImport.value);
+    });
+  }
+
   formNewOrder.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(formNewOrder);
