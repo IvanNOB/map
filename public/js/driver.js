@@ -734,8 +734,7 @@
     });
 
     socket.on('order:assigned', (order) => {
-      showToast('Nuevo pedido asignado!', 'info');
-      if (window.ghostAlert) window.ghostAlert({ beeps: 4 });
+      if (window.ghostAlert) window.ghostAlert({ title: '📦 Nuevo pedido!', body: order && order.code ? order.code + ' - Revisa tus pedidos' : 'Tienes un nuevo pedido asignado' });
       notifyDriverDevice('Nuevo pedido asignado', order && order.code ? order.code : '');
       loadOrders();
     });
@@ -744,30 +743,28 @@
       dchatMessages.push(msg);
       renderDriverChat();
       if (msg.sender_role === 'admin') {
-        showToast('Mensaje de Despacho', 'info');
-        if (window.ghostAlert) window.ghostAlert({ beeps: 2 });
+        if (window.ghostAlert) window.ghostAlert({ title: '💬 Mensaje de Despacho', body: msg.body || '' });
         notifyDriverDevice('Mensaje de Despacho', msg.body || '');
       }
     });
 
     socket.on('notification', (data) => {
-      if (window.ghostAlert) window.ghostAlert({ beeps: 4 });
       let title = 'Notificacion';
       let body = '';
       switch (data.type) {
         case 'order_assigned':
-          title = 'Nuevo pedido asignado!';
+          title = '📦 Nuevo pedido asignado!';
           body = data.data && data.data.code ? data.data.code : '';
           break;
         case 'admin_message':
-          title = (data.data && data.data.title) || 'Aviso de Despacho';
+          title = (data.data && data.data.title) || '🔔 Aviso de Despacho';
           body = (data.data && data.data.body) || '';
-          showToast('🔔 ' + (body || title), 'info');
           break;
         default:
-          title = 'Notificacion';
+          title = '👻 Notificacion';
           body = data.type || '';
       }
+      if (window.ghostAlert) window.ghostAlert({ title: title, body: body });
       notifyDriverDevice(title, body);
     });
 

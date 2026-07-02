@@ -63,30 +63,114 @@
     window.addEventListener(ev, ensureAudio, { once: true, passive: true });
   });
 
-  function beep(times) {
+  // Sonido de susto fantasmal: grave que sube como un "BOO!" espectral
+  function ghostScareSound() {
     var ctx = ensureAudio();
     if (!ctx) return;
-    var n = times || 3;
-    for (var i = 0; i < n; i++) {
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = 880;
-      var start = ctx.currentTime + i * 0.35;
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.5, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.3);
-      osc.start(start);
-      osc.stop(start + 0.32);
+    var now = ctx.currentTime;
+
+    // Capa 1: "Boooo" grave subiendo
+    var osc1 = ctx.createOscillator();
+    var gain1 = ctx.createGain();
+    osc1.connect(gain1); gain1.connect(ctx.destination);
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(80, now);
+    osc1.frequency.exponentialRampToValueAtTime(300, now + 0.3);
+    osc1.frequency.exponentialRampToValueAtTime(150, now + 0.8);
+    gain1.gain.setValueAtTime(0.0001, now);
+    gain1.gain.exponentialRampToValueAtTime(0.6, now + 0.1);
+    gain1.gain.setValueAtTime(0.5, now + 0.3);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+    osc1.start(now);
+    osc1.stop(now + 1.0);
+
+    // Capa 2: Ruido soplante (viento fantasmal)
+    var bufSize = ctx.sampleRate * 1;
+    var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+    var noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    var noiseGain = ctx.createGain();
+    var noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.value = 400;
+    noiseFilter.Q.value = 2;
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseGain.gain.setValueAtTime(0.0001, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.25, now + 0.15);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+    noise.start(now);
+    noise.stop(now + 1.0);
+
+    // Capa 3: Eco agudo final (el susto)
+    var osc2 = ctx.createOscillator();
+    var gain2 = ctx.createGain();
+    osc2.connect(gain2); gain2.connect(ctx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(600, now + 0.2);
+    osc2.frequency.exponentialRampToValueAtTime(200, now + 0.8);
+    gain2.gain.setValueAtTime(0.0001, now + 0.2);
+    gain2.gain.exponentialRampToValueAtTime(0.3, now + 0.25);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+    osc2.start(now + 0.2);
+    osc2.stop(now + 1.0);
+  }
+
+  // Notificación visual tipo fantasma: overlay que aparece y desaparece
+  function showGhostNotification(title, body) {
+    // Remover notificación anterior si existe
+    var prev = document.getElementById('ghost-notif');
+    if (prev) prev.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'ghost-notif';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;' +
+      'display:flex;align-items:center;gap:0.8rem;padding:1rem 1.2rem;' +
+      'background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);' +
+      'border-bottom:3px solid #d4af37;box-shadow:0 4px 20px rgba(212,175,55,0.3);' +
+      'animation:ghostSlideIn 0.4s ease-out;font-family:inherit;';
+
+    overlay.innerHTML =
+      '<div style="font-size:2.2rem;animation:ghostBounce 0.6s ease infinite alternate;">👻</div>' +
+      '<div style="flex:1;">' +
+        '<div style="color:#d4af37;font-weight:bold;font-size:0.95rem;">' + (title || 'Servicio Ghost') + '</div>' +
+        '<div style="color:#e0e0e0;font-size:0.85rem;margin-top:2px;">' + (body || '') + '</div>' +
+      '</div>' +
+      '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:#888;font-size:1.3rem;cursor:pointer;">✕</button>';
+
+    // Inyectar animaciones si no existen
+    if (!document.getElementById('ghost-notif-styles')) {
+      var style = document.createElement('style');
+      style.id = 'ghost-notif-styles';
+      style.textContent =
+        '@keyframes ghostSlideIn{from{transform:translateY(-100%);opacity:0;}to{transform:translateY(0);opacity:1;}}' +
+        '@keyframes ghostBounce{from{transform:translateY(0) scale(1);}to{transform:translateY(-5px) scale(1.1);}}' +
+        '@keyframes ghostFadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-100%);}}';
+      document.head.appendChild(style);
     }
+
+    document.body.appendChild(overlay);
+
+    // Auto-remover después de 5 segundos con animación
+    setTimeout(function () {
+      if (overlay.parentElement) {
+        overlay.style.animation = 'ghostFadeOut 0.4s ease-in forwards';
+        setTimeout(function () { if (overlay.parentElement) overlay.remove(); }, 400);
+      }
+    }, 5000);
   }
 
   // Llamable desde cualquier pantalla para avisar de forma llamativa.
   window.ghostAlert = function (opts) {
     opts = opts || {};
-    try { beep(opts.beeps || 3); } catch (e) {}
-    try { if (navigator.vibrate) navigator.vibrate(opts.vibrate || [500, 200, 500, 200, 500]); } catch (e) {}
+    try { ghostScareSound(); } catch (e) {}
+    try { if (navigator.vibrate) navigator.vibrate(opts.vibrate || [300, 100, 500, 100, 300]); } catch (e) {}
+    if (opts.title || opts.body) {
+      showGhostNotification(opts.title, opts.body);
+    }
   };
 
   // Cuando el service worker recibe una notificación push y la app está abierta.
