@@ -40,22 +40,28 @@
   <div id="app" class="app-container hidden">
     <!-- Header -->
     <header class="driver-header">
-      <h2 id="driver-name">Repartidor</h2>
       <div style="display:flex;align-items:center;gap:0.5rem;">
-        <span style="font-size:0.8rem;color:var(--text-muted);" id="status-label">Desconectado</span>
+        <span class="brand-logo" style="font-size:1.2rem;">👻</span>
+        <h2 id="driver-name" style="margin:0;font-size:1rem;">Repartidor</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="font-size:0.75rem;color:var(--text-muted);" id="status-label">Desconectado</span>
         <label class="toggle-switch">
           <input type="checkbox" id="toggle-online">
           <span class="toggle-slider"></span>
         </label>
       </div>
-      <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
-      <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
+      <div style="display:flex;align-items:center;gap:0.3rem;">
+        <button id="btn-refresh-driver" class="icon-btn" title="Refrescar pedidos">🔄</button>
+        <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
+        <button id="btn-logout" class="btn btn-outline btn-sm">Salir</button>
+      </div>
     </header>
 
     <!-- Earnings -->
     <div class="earnings-card">
       <div>
-        <div class="e-label">Ganancia de hoy</div>
+        <div class="e-label">💰 Ganancia de hoy</div>
         <div class="e-value" id="earn-today">$0</div>
       </div>
       <div class="e-sub">
@@ -64,35 +70,38 @@
       </div>
     </div>
 
-    <!-- Orders Section -->
-    <section class="driver-section">
-      <h3>Mis Pedidos</h3>
-      <div id="driver-orders"></div>
-    </section>
-
-    <!-- Location Section -->
-    <section class="driver-section">
-      <h3>Mi Ubicacion</h3>
-      <div class="location-controls">
-        <label class="consent-check">
+    <!-- Location Section (compact, arriba del mapa) -->
+    <section class="driver-section" style="padding:0.6rem 1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+        <label class="consent-check" style="margin:0;font-size:0.8rem;">
           <input type="checkbox" id="consent-location">
-          Acepto compartir mi ubicacion en tiempo real
+          Compartir ubicacion
         </label>
+        <div style="display:flex;gap:0.4rem;">
+          <button id="btn-share-location" class="btn btn-primary btn-sm" disabled>📍 Iniciar</button>
+          <button id="btn-stop-location" class="btn btn-danger btn-sm hidden">⏹ Detener</button>
+        </div>
       </div>
-      <div class="location-controls">
-        <button id="btn-share-location" class="btn btn-primary btn-sm" disabled>Compartir Ubicacion</button>
-        <button id="btn-stop-location" class="btn btn-danger btn-sm hidden">Dejar de Compartir</button>
-      </div>
-      <div id="gps-readout" class="gps-readout">
+      <div id="gps-readout" class="gps-readout" style="font-size:0.7rem;margin-top:0.4rem;">
         Lat: -- | Lng: -- | Velocidad: -- | Precision: -- | Ultima actualizacion: --
       </div>
       <div id="bg-status" class="bg-status hidden"></div>
-      <div id="driver-map" class="map-container-mini"></div>
+    </section>
+
+    <!-- Map -->
+    <section class="driver-section" style="padding:0;">
+      <div id="driver-map" class="map-container-mini" style="height:200px;border-radius:10px;margin:0 0.5rem;"></div>
+    </section>
+
+    <!-- Orders Section -->
+    <section class="driver-section">
+      <h3 style="display:flex;align-items:center;gap:0.4rem;font-size:0.95rem;">📦 Mis Pedidos</h3>
+      <div id="driver-orders"></div>
     </section>
 
     <!-- Chat with dispatch -->
     <section class="driver-section">
-      <h3>💬 Chat con Despacho</h3>
+      <h3 style="font-size:0.95rem;">💬 Chat con Despacho</h3>
       <div class="driver-chat">
         <div class="chat-messages" id="dchat-messages">
           <div class="chat-empty">Escribe a tu central de despacho</div>
