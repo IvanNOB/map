@@ -776,6 +776,15 @@
     });
   }
 
+  // ─── Auto Refresh (cada 5 segundos, silencioso) ─────────────────────────────
+
+  setInterval(() => {
+    if (currentUser) {
+      loadOrders();
+      loadEarnings();
+    }
+  }, 5000);
+
   // ─── Init ──────────────────────────────────────────────────────────────────
 
   checkAuth();
