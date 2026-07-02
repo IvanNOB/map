@@ -374,6 +374,15 @@
     <div class="modal" style="max-width:720px;">
       <h2 id="order-modal-title">⚡ Nuevo Pedido</h2>
       <form id="form-new-order">
+        <!-- Importar desde WhatsApp -->
+        <div class="form-group" style="background:var(--bg-alt);border:1px dashed var(--border);border-radius:8px;padding:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem;">
+            <span style="font-size:0.85rem;">📋 Pegar mensaje de WhatsApp</span>
+            <button type="button" id="btn-paste-order" class="btn btn-primary btn-sm" style="font-size:0.7rem;">Pegar</button>
+            <button type="button" id="btn-parse-order" class="btn btn-outline btn-sm" style="font-size:0.7rem;">Importar</button>
+          </div>
+          <textarea id="order-import" rows="2" placeholder="Pega aquí el mensaje del cliente (nombre, dirección, teléfono...)" style="font-size:0.8rem;"></textarea>
+        </div>
         <!-- Fila 1: Cliente + Celular -->
         <div class="form-row">
           <div class="form-group" style="flex:2;">
