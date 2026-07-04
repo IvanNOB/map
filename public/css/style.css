@@ -169,7 +169,6 @@ input, select, textarea {
 .phone-input-wrapper.input-error,
 .phone-input-wrapper:has(.input-error) {
   border-color: var(--danger);
-}
   min-height: 60px;
 }
 
@@ -1173,10 +1172,6 @@ input, select, textarea {
 }
 
 .compass-widget {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1189,6 +1184,8 @@ input, select, textarea {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   justify-content: center;
   backdrop-filter: blur(4px);
+  pointer-events: auto;
+  position: relative;
 }
 
 .compass-rose {

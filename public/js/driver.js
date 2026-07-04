@@ -399,7 +399,35 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
+    // Leaflet needs invalidateSize when container was hidden at init
+    setTimeout(function () { map.invalidateSize(); }, 200);
+    addCompassControl();
     initCompass();
+  }
+
+  // ─── Compass Control (Leaflet Custom Control) ──────────────────────────────
+
+  function addCompassControl() {
+    var CompassControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function () {
+        var container = L.DomUtil.create('div', 'compass-widget');
+        container.id = 'compass-widget';
+        container.innerHTML =
+          '<div class="compass-rose" id="compass-rose">' +
+            '<div class="compass-needle"></div>' +
+            '<span class="compass-label compass-n">N</span>' +
+            '<span class="compass-label compass-e">E</span>' +
+            '<span class="compass-label compass-s">S</span>' +
+            '<span class="compass-label compass-w">O</span>' +
+          '</div>' +
+          '<div class="compass-heading" id="compass-heading">--&deg;</div>';
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+        return container;
+      }
+    });
+    map.addControl(new CompassControl());
   }
 
   // ─── Compass & Orientation ─────────────────────────────────────────────────
