@@ -104,26 +104,14 @@
       <div id="gps-readout" class="gps-readout">
         Lat: -- | Lng: -- | Velocidad: -- | Precision: -- | Ultima actualizacion: --
       </div>
-      <div class="map-wrapper">
-        <div id="driver-map" class="map-container-mini"></div>
-        <!-- Compass Widget -->
-        <div id="compass-widget" class="compass-widget">
-          <div class="compass-rose" id="compass-rose">
-            <div class="compass-needle"></div>
-            <span class="compass-label compass-n">N</span>
-            <span class="compass-label compass-e">E</span>
-            <span class="compass-label compass-s">S</span>
-            <span class="compass-label compass-w">O</span>
-          </div>
-          <div class="compass-heading" id="compass-heading">--°</div>
-        </div>
-      </div>
+      <div id="driver-map" class="map-container-mini"></div>
     </section>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/driver.js"></script>
+  <script src="/js/compass.js"></script>
   <script>
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
