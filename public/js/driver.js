@@ -334,7 +334,7 @@
 
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude, speed, accuracy } = pos.coords;
+        const { latitude, longitude, speed, accuracy, heading } = pos.coords;
         const now = new Date().toLocaleTimeString('es-CO');
         gpsReadout.textContent = `Lat: ${latitude.toFixed(5)} | Lng: ${longitude.toFixed(5)} | Velocidad: ${(speed || 0).toFixed(1)} m/s | Precision: ${(accuracy || 0).toFixed(0)} m | Ultima actualizacion: ${now}`;
 
@@ -354,13 +354,18 @@
           map.setView(latlng, 15);
         }
 
+        // Update compass from GPS heading (fallback when device orientation not available)
+        if (heading != null && !isNaN(heading)) {
+          updateCompassFromGPS(heading);
+        }
+
         // Emit via Socket.IO
         if (socket && socket.connected) {
           socket.emit('driver:update', {
             lat: latitude,
             lng: longitude,
             speed: speed || 0,
-            heading: pos.coords.heading || 0,
+            heading: heading || 0,
             accuracy: accuracy || 0,
           });
         }
@@ -394,6 +399,110 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
+    initCompass();
+  }
+
+  // ─── Compass & Orientation ─────────────────────────────────────────────────
+
+  let currentHeading = null;
+  let compassInitialized = false;
+
+  function initCompass() {
+    if (compassInitialized) return;
+    compassInitialized = true;
+
+    const compassRose = document.getElementById('compass-rose');
+    const compassHeading = document.getElementById('compass-heading');
+
+    if (!compassRose || !compassHeading) return;
+
+    // Try DeviceOrientationEvent (mobile devices with magnetometer)
+    if (window.DeviceOrientationEvent) {
+      // iOS 13+ requires permission request
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // Add a tap-to-enable interaction for iOS
+        const compassWidget = document.getElementById('compass-widget');
+        compassWidget.style.cursor = 'pointer';
+        compassWidget.title = 'Toca para activar la brujula';
+
+        compassWidget.addEventListener('click', async function requestPermission() {
+          try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission === 'granted') {
+              startDeviceOrientation(compassRose, compassHeading);
+              compassWidget.style.cursor = '';
+              compassWidget.title = '';
+              compassWidget.removeEventListener('click', requestPermission);
+            } else {
+              showToast('Permiso de orientacion denegado', 'warning');
+            }
+          } catch (err) {
+            showToast('Error al solicitar orientacion: ' + err.message, 'error');
+          }
+        });
+      } else {
+        // Android and other platforms - no permission needed
+        startDeviceOrientation(compassRose, compassHeading);
+      }
+    }
+
+    // Also use GPS heading as fallback/supplement (from watchPosition)
+    // This is handled in the startSharing watchPosition callback
+  }
+
+  function startDeviceOrientation(compassRose, compassHeading) {
+    window.addEventListener('deviceorientation', function (event) {
+      let heading = null;
+
+      // Use webkitCompassHeading for iOS (degrees from magnetic north)
+      if (event.webkitCompassHeading != null) {
+        heading = event.webkitCompassHeading;
+      }
+      // Use absolute orientation with alpha for Android
+      else if (event.alpha != null) {
+        // alpha is 0-360, represents compass direction when device is flat
+        // On Android with event.absolute = true, alpha gives heading relative to north
+        heading = event.absolute ? (360 - event.alpha) : (360 - event.alpha);
+      }
+
+      if (heading != null) {
+        updateCompass(heading, compassRose, compassHeading);
+      }
+    }, true);
+  }
+
+  function updateCompass(heading, compassRose, compassHeading) {
+    if (heading == null || isNaN(heading)) return;
+
+    currentHeading = heading;
+
+    // Rotate compass rose so North always points to geographic north
+    if (compassRose) {
+      compassRose.style.transform = 'rotate(' + (-heading) + 'deg)';
+    }
+
+    // Show heading in degrees with cardinal direction
+    if (compassHeading) {
+      const cardinal = getCardinalDirection(heading);
+      compassHeading.textContent = Math.round(heading) + '° ' + cardinal;
+    }
+  }
+
+  function getCardinalDirection(degree) {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+    const index = Math.round(degree / 45) % 8;
+    return directions[index];
+  }
+
+  // Update compass from GPS heading (called in watchPosition callback)
+  function updateCompassFromGPS(gpsHeading) {
+    if (gpsHeading == null || isNaN(gpsHeading)) return;
+    // Only use GPS heading if device orientation is not available
+    if (currentHeading === null) {
+      const compassRose = document.getElementById('compass-rose');
+      const compassHeading = document.getElementById('compass-heading');
+      updateCompass(gpsHeading, compassRose, compassHeading);
+    }
   }
 
   // ─── Socket.IO ──────────────────────────────────────────────────────────────
