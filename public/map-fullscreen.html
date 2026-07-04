@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa en Vivo - Servicio Ghost</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; width: 100%; overflow: hidden; background: #111; }
+    #map { width: 100%; height: 100%; }
+    .leaflet-popup-content { font-family: system-ui, sans-serif; }
+    .map-legend {
+      background: rgba(17,17,17,0.9);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #ccc;
+      font-family: system-ui, sans-serif;
+    }
+    .lg-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+    .lg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .lg-pickup { background: #22c55e; }
+    .lg-dropoff { background: #ef4444; }
+    .lg-driver { background: #3b82f6; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var token = localStorage.getItem('token') || '';
+    if (!token) {
+      document.body.innerHTML = '<p style="color:#fff;padding:2rem;font-family:system-ui;">No autenticado. Inicia sesion en el panel principal primero.</p>';
+      return;
+    }
+
+    // Map setup
+    var map = L.map('map').setView([4.6097, -74.0817], 12);
+
+    var darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; CartoDB', maxZoom: 19
+    });
+    var satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
+    );
+    darkMatter.addTo(map);
+    L.control.layers({ '🌑 Dark Ghost': darkMatter, '🛰️ Satelital': satellite }, null, { position: 'topright' }).addTo(map);
+
+    // Legend
+    var legend = L.control({ position: 'bottomleft' });
+    legend.onAdd = function () {
+      var div = L.DomUtil.create('div', 'map-legend');
+      div.innerHTML =
+        '<div class="lg-row"><span class="lg-dot lg-pickup"></span> Recogida</div>' +
+        '<div class="lg-row"><span class="lg-dot lg-dropoff"></span> Entrega</div>' +
+        '<div class="lg-row"><span class="lg-dot lg-driver"></span> Repartidor</div>';
+      return div;
+    };
+    legend.addTo(map);
+
+    var driverMarkers = {};
+    var orderLayerGroup = L.layerGroup().addTo(map);
+
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function apiHeaders() {
+      return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+    }
+
+    // Load initial data
+    async function loadDrivers() {
+      try {
+        var res = await fetch('/api/drivers', { headers: apiHeaders() });
+        if (res.status === 401) { document.body.innerHTML = '<p style="color:#fff;padding:2rem;">Sesion expirada.</p>'; return; }
+        if (res.ok) {
+          var drivers = await res.json();
+          drivers.forEach(function (d) {
+            if (d.lat && d.lng && d.status !== 'offline') addDriverMarker(d);
+          });
+        }
+      } catch (e) {}
+    }
+
+    async function loadOrders() {
+      try {
+        var res = await fetch('/api/orders?limit=200', { headers: apiHeaders() });
+        if (res.ok) {
+          var data = await res.json();
+          var orders = data.orders || data;
+          orderLayerGroup.clearLayers();
+          orders.forEach(function (o) {
+            if (!['pending','assigned','picked_up','on_the_way'].includes(o.status)) return;
+            if (o.pickup_lat && o.pickup_lng) {
+              L.circleMarker([o.pickup_lat, o.pickup_lng], { radius: 7, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.9, weight: 2 })
+                .bindPopup('<strong>' + escapeHtml(o.code) + '</strong><br>🟢 ' + escapeHtml(o.pickup_address || ''))
+                .addTo(orderLayerGroup);
+            }
+            if (o.dropoff_lat && o.dropoff_lng) {
+              L.circleMarker([o.dropoff_lat, o.dropoff_lng], { radius: 7, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9, weight: 2 })
+                .bindPopup('<strong>' + escapeHtml(o.code) + '</strong><br>🔴 ' + escapeHtml(o.dropoff_address || ''))
+                .addTo(orderLayerGroup);
+            }
+          });
+        }
+      } catch (e) {}
+    }
+
+    function addDriverMarker(d) {
+      if (!d.lat || !d.lng) return;
+      var marker = L.circleMarker([d.lat, d.lng], {
+        radius: 10, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2
+      }).bindPopup('<strong>' + escapeHtml(d.name) + '</strong><br>🛵 ' + escapeHtml(d.vehicle || '-') + '<br>Vel: ' + (d.speed || 0) + ' km/h');
+      marker.addTo(map);
+      driverMarkers[d.id || d.user_id] = marker;
+    }
+
+    // Socket.IO real-time
+    var socket = io({ auth: { token: token } });
+
+    socket.on('driver:location', function (data) {
+      var id = data.id || data.user_id;
+      if (driverMarkers[id]) {
+        driverMarkers[id].setLatLng([data.lat, data.lng]);
+        driverMarkers[id].setPopupContent('<strong>' + escapeHtml(data.name) + '</strong><br>Vel: ' + (data.speed || 0) + ' km/h');
+      } else {
+        var m = L.circleMarker([data.lat, data.lng], {
+          radius: 10, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2
+        }).bindPopup('<strong>' + escapeHtml(data.name) + '</strong><br>Vel: ' + (data.speed || 0) + ' km/h');
+        m.addTo(map);
+        driverMarkers[id] = m;
+      }
+    });
+
+    socket.on('driver:offline', function (data) {
+      var id = data.id || data.user_id;
+      if (driverMarkers[id]) {
+        map.removeLayer(driverMarkers[id]);
+        delete driverMarkers[id];
+      }
+    });
+
+    socket.on('order:new', function () { loadOrders(); });
+    socket.on('order:status', function () { loadOrders(); });
+
+    loadDrivers();
+    loadOrders();
+    setInterval(loadOrders, 30000);
+  })();
+  </script>
+</body>
+</html>

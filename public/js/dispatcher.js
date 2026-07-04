@@ -2108,6 +2108,17 @@
     if (btnFitPeople) btnFitPeople.addEventListener('click', fitDriversBounds);
   })();
 
+  // ─── Pop-out Map ────────────────────────────────────────────────────────────
+  (function () {
+    const btnPopout = document.getElementById('btn-popout-map');
+    if (btnPopout) {
+      btnPopout.addEventListener('click', function () {
+        var w = window.open('/map-fullscreen.html', 'ghost-map-proyeccion', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+        if (!w) showToast('Permite ventanas emergentes para proyectar', 'warning');
+      });
+    }
+  })();
+
   function removeDriverMarker(data) {
     if (!map) return;
     if (driverMarkers[data.id]) {
