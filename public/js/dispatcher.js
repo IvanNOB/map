@@ -401,6 +401,20 @@
     });
   }
 
+  // ─── Pop-out Map ─────────────────────────────────────────────────────────────
+
+  const btnPopoutMap = document.getElementById('btn-popout-map');
+  if (btnPopoutMap) {
+    btnPopoutMap.addEventListener('click', function () {
+      var w = window.open('/map-fullscreen.html', 'mapa-proyeccion', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+      if (w) {
+        showToast('Mapa abierto en ventana separada', 'success');
+      } else {
+        showToast('Permite ventanas emergentes para proyectar el mapa', 'warning');
+      }
+    });
+  }
+
   // ─── Tab Navigation ─────────────────────────────────────────────────────────
 
   const tabBtns = document.querySelectorAll('.tab-btn');
