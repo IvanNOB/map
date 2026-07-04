@@ -1172,20 +1172,25 @@ input, select, textarea {
 }
 
 .compass-widget {
-  display: flex;
+  display: flex !important;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  background: rgba(26, 30, 43, 0.92);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 72px;
-  height: 72px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  justify-content: center;
+  background: rgba(26, 30, 43, 0.92) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  width: 80px;
+  height: 96px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  justify-content: flex-start;
+  padding-top: 8px;
   backdrop-filter: blur(4px);
   pointer-events: auto;
-  position: relative;
+}
+
+.compass-widget.leaflet-bar {
+  border-radius: var(--radius-lg) !important;
+  overflow: visible;
 }
 
 .compass-rose {
@@ -1255,17 +1260,9 @@ input, select, textarea {
 }
 
 .compass-heading {
-  position: absolute;
-  bottom: -22px;
-  left: 50%;
-  transform: translateX(-50%);
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--text);
-  background: rgba(26, 30, 43, 0.92);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 2px 8px;
   white-space: nowrap;
-  backdrop-filter: blur(4px);
+  margin-top: 2px;
 }

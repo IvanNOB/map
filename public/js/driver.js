@@ -395,12 +395,16 @@
 
   function initMap() {
     if (map) return;
-    map = L.map('driver-map').setView([4.6097, -74.0817], 13);
+    var mapEl = document.getElementById('driver-map');
+    if (!mapEl) return;
+    map = L.map(mapEl).setView([4.6097, -74.0817], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
-    // Leaflet needs invalidateSize when container was hidden at init
-    setTimeout(function () { map.invalidateSize(); }, 200);
+    // Leaflet needs invalidateSize after container becomes visible
+    setTimeout(function () { if (map) map.invalidateSize(); }, 100);
+    setTimeout(function () { if (map) map.invalidateSize(); }, 400);
+    setTimeout(function () { if (map) map.invalidateSize(); }, 1000);
     addCompassControl();
     initCompass();
   }
@@ -411,7 +415,7 @@
     var CompassControl = L.Control.extend({
       options: { position: 'topright' },
       onAdd: function () {
-        var container = L.DomUtil.create('div', 'compass-widget');
+        var container = L.DomUtil.create('div', 'compass-widget leaflet-bar');
         container.id = 'compass-widget';
         container.innerHTML =
           '<div class="compass-rose" id="compass-rose">' +
