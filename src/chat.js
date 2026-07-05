@@ -22,4 +22,23 @@ router.get("/:driverId", requireAuth, async (req, res) => {
   res.json(msgs);
 });
 
+// POST /api/chat/broadcast - send a message to all drivers (admin only)
+router.post("/broadcast", requireAuth, async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Solo administradores" });
+  }
+  const { message } = req.body;
+  if (!message || !String(message).trim()) {
+    return res.status(400).json({ error: "Mensaje requerido" });
+  }
+  const io = req.app.get("io");
+  if (io) {
+    io.to("drivers").emit("notification", {
+      type: "admin_message",
+      data: { title: "Aviso de Central Ghost", body: String(message).trim() },
+    });
+  }
+  res.json({ ok: true, message: "Broadcast enviado" });
+});
+
 export default router;
