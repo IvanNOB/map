@@ -620,28 +620,6 @@ input, select, textarea {
 /* Live tracking: map + "online now" overlay panel */
 .map-wrap { position: relative; }
 
-.btn-popout-map {
-  position: absolute;
-  top: 60px;
-  right: 10px;
-  z-index: 1001;
-  width: 34px;
-  height: 34px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(17,17,17,0.92);
-  color: #fff;
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.15);
-  transition: background 0.2s;
-}
-.btn-popout-map:hover { background: rgba(59,130,246,0.7); }
-
 .live-people {
   position: absolute;
   top: 12px;

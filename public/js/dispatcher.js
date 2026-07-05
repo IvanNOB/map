@@ -1994,6 +1994,24 @@
     renderOrderPins();
     if (typeof drawZonesOnMainMap === 'function') drawZonesOnMainMap();
     if (typeof drawPlacesOnMainMap === 'function') drawPlacesOnMainMap();
+
+    // Boton para proyectar mapa en ventana separada
+    var PopoutControl = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function () {
+        var btn = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        btn.innerHTML = '<a href="#" title="Proyectar mapa en otra pantalla" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;font-size:1.2rem;text-decoration:none;color:#333;background:#fff;">⤢</a>';
+        L.DomEvent.disableClickPropagation(btn);
+        btn.querySelector('a').addEventListener('click', function (e) {
+          e.preventDefault();
+          var w = window.open('/map-fullscreen.html', 'ghost-map-proyeccion', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+          if (!w) showToast('Permite ventanas emergentes para proyectar', 'warning');
+        });
+        return btn;
+      }
+    });
+    map.addControl(new PopoutControl());
+
     // Ensure the map sizes correctly inside the flex console layout
     setTimeout(() => { if (map) map.invalidateSize(); }, 200);
   }
@@ -2106,17 +2124,6 @@
   (function () {
     const btnFitPeople = document.getElementById('btn-fit-people');
     if (btnFitPeople) btnFitPeople.addEventListener('click', fitDriversBounds);
-  })();
-
-  // ─── Pop-out Map ────────────────────────────────────────────────────────────
-  (function () {
-    const btnPopout = document.getElementById('btn-popout-map');
-    if (btnPopout) {
-      btnPopout.addEventListener('click', function () {
-        var w = window.open('/map-fullscreen.html', 'ghost-map-proyeccion', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
-        if (!w) showToast('Permite ventanas emergentes para proyectar', 'warning');
-      });
-    }
   })();
 
   function removeDriverMarker(data) {
