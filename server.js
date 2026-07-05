@@ -234,6 +234,19 @@ io.on("connection", (socket) => {
     notifyAdmins(io, "driver_offline", { id: user.id, name: user.name });
   });
 
+  // Driver SOS emergency
+  socket.on("driver:sos", (payload) => {
+    if (user.role !== "driver") return;
+    io.to("admins").emit("driver:sos", {
+      id: user.id,
+      name: user.name,
+      lat: payload && payload.lat,
+      lng: payload && payload.lng,
+      timestamp: payload && payload.timestamp || new Date().toISOString(),
+    });
+    notifyAdmins(io, "driver_sos", { id: user.id, name: user.name, lat: payload && payload.lat, lng: payload && payload.lng });
+  });
+
   // Disconnect
   socket.on("disconnect", async () => {
     if (user.role === "driver") {

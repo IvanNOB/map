@@ -57,6 +57,55 @@
     } catch (e) { /* ignore */ }
   }
 
+  // ─── SOS Alert Sound (urgent siren-like) ────────────────────────────────────
+  function playSOSSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Play 3 alternating tones like a siren
+      for (let i = 0; i < 3; i++) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(800, ctx.currentTime + i * 0.4);
+        o.frequency.linearRampToValueAtTime(400, ctx.currentTime + i * 0.4 + 0.2);
+        o.frequency.linearRampToValueAtTime(800, ctx.currentTime + i * 0.4 + 0.4);
+        g.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.4);
+        g.gain.setValueAtTime(0, ctx.currentTime + i * 0.4 + 0.4);
+        o.start(ctx.currentTime + i * 0.4);
+        o.stop(ctx.currentTime + i * 0.4 + 0.4);
+      }
+    } catch (e) {}
+  }
+
+  // ─── SOS Alert Modal ────────────────────────────────────────────────────────
+  function showSOSAlert(data) {
+    // Remove previous SOS modal if exists
+    var prev = document.getElementById('sos-alert-modal');
+    if (prev) prev.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'sos-alert-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(239,68,68,0.15);backdrop-filter:blur(4px);animation:pulse 1s infinite;';
+    overlay.innerHTML =
+      '<div style="background:var(--panel);border:2px solid #ef4444;border-radius:16px;padding:1.5rem;max-width:360px;width:90%;text-align:center;box-shadow:0 0 40px rgba(239,68,68,0.4);">' +
+        '<div style="font-size:3rem;margin-bottom:0.5rem;">🚨</div>' +
+        '<h2 style="color:#ef4444;margin:0 0 0.5rem;font-size:1.3rem;">SOS — Emergencia</h2>' +
+        '<p style="font-size:1rem;margin:0 0 0.3rem;"><strong>' + escapeHtml(data.name || 'Repartidor') + '</strong></p>' +
+        '<p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 1rem;">necesita ayuda urgente</p>' +
+        (data.lat && data.lng ? '<p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.5rem;">📍 ' + Number(data.lat).toFixed(5) + ', ' + Number(data.lng).toFixed(5) + '</p>' : '') +
+        '<p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 1rem;">' + new Date(data.timestamp || Date.now()).toLocaleTimeString('es-CO') + '</p>' +
+        '<div style="display:flex;gap:0.5rem;justify-content:center;">' +
+          (data.lat && data.lng ? '<a href="https://www.google.com/maps?q=' + data.lat + ',' + data.lng + '" target="_blank" rel="noopener" class="btn btn-primary" style="font-size:0.85rem;">🗺️ Ver en Google Maps</a>' : '') +
+          '<button id="sos-dismiss" class="btn btn-outline" style="font-size:0.85rem;">Entendido</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    document.getElementById('sos-dismiss').addEventListener('click', function () { overlay.remove(); });
+    // Auto-dismiss after 2 minutes
+    setTimeout(function () { if (overlay.parentNode) overlay.remove(); }, 120000);
+  }
+
   // ─── Theme toggle ───────────────────────────────────────────────────────────
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -2210,6 +2259,39 @@
     socket.on('driver:offline', (data) => {
       removeDriverMarker(data);
       loadDrivers();
+    });
+
+    // ─── SOS Alert from Driver ──────────────────────────────────────────────
+    socket.on('driver:sos', (data) => {
+      // Strong vibration
+      if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+      // Sound alert
+      playSOSSound();
+      // Browser notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🚨 SOS - ' + (data.name || 'Repartidor'), { body: 'Un repartidor necesita ayuda urgente!', requireInteraction: true });
+      }
+      // Toast
+      showToast('🚨 SOS de ' + (data.name || 'Repartidor') + ' — Necesita ayuda!', 'error');
+      // Show SOS modal
+      showSOSAlert(data);
+      // Mark on map
+      if (map && data.lat && data.lng) {
+        var sosMarker = L.circleMarker([data.lat, data.lng], {
+          radius: 18, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.4, weight: 3
+        }).bindPopup('<strong>🚨 SOS</strong><br>' + escapeHtml(data.name || '') + '<br>' + new Date(data.timestamp).toLocaleTimeString('es-CO'));
+        sosMarker.addTo(map);
+        map.setView([data.lat, data.lng], 16);
+        // Pulse the marker
+        var pulseCount = 0;
+        var pulseInterval = setInterval(function () {
+          pulseCount++;
+          sosMarker.setStyle({ fillOpacity: pulseCount % 2 === 0 ? 0.4 : 0.8 });
+          if (pulseCount > 20) clearInterval(pulseInterval);
+        }, 500);
+        // Remove after 5 minutes
+        setTimeout(function () { if (map) map.removeLayer(sosMarker); }, 300000);
+      }
     });
 
     socket.on('notification', (data) => {
