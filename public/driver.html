@@ -2,7 +2,7 @@
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#d4af37">
   <link rel="manifest" href="/manifest-driver.json">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -11,178 +11,13 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    /* ─── Driver App Layout ─────────────────────────────────────────── */
     @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-
-    #app.app-container {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-    }
-
-    /* Header compacto */
-    .drv-header {
-      display: flex;
-      align-items: center;
-      padding: 0.4rem 0.8rem;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      gap: 0.5rem;
-      flex-shrink: 0;
-    }
-    .drv-header .drv-name {
-      font-weight: 700;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      flex: 1;
-    }
-    .drv-header .drv-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    /* Mapa principal - ocupa toda la parte superior */
-    .drv-map-section {
-      position: relative;
-      flex: 1 1 50%;
-      min-height: 200px;
-    }
-    .drv-map-section #driver-map {
-      width: 100%;
-      height: 100%;
-      border-radius: 0;
-      border: none;
-      margin: 0;
-    }
-
-    /* GPS overlay en el mapa */
-    .gps-overlay {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      right: 10px;
-      z-index: 800;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(10,10,12,0.88);
-      backdrop-filter: blur(6px);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 0.5rem 0.7rem;
-    }
-    .gps-overlay .gps-text {
-      flex: 1;
-      font-size: 0.68rem;
-      color: var(--text-muted);
-      font-family: monospace;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .gps-overlay .gps-btn {
-      flex-shrink: 0;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-    .gps-overlay .gps-btn:active { transform: scale(0.95); }
-    .gps-btn-start { background: var(--success); color: #fff; }
-    .gps-btn-stop { background: var(--danger); color: #fff; }
-
-    /* Stats compactos */
-    .drv-stats {
-      display: flex;
-      align-items: center;
-      padding: 0.4rem 0.8rem;
-      background: var(--bg-alt);
-      border-bottom: 1px solid var(--border);
-      gap: 0.8rem;
-      flex-shrink: 0;
-    }
-    .drv-stat { text-align: center; }
-    .drv-stat .val { font-size: 1rem; font-weight: 700; color: var(--gold); }
-    .drv-stat .lbl { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; }
-
-    /* Bottom section con scroll */
-    .drv-bottom {
-      flex: 1 1 50%;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Tabs de pedidos/chat */
-    .drv-tabs {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
-    }
-    .drv-tab {
-      flex: 1;
-      padding: 0.6rem;
-      text-align: center;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-    }
-    .drv-tab.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
-    }
-
-    /* Panel de contenido */
-    .drv-panel { flex: 1; overflow-y: auto; padding: 0.6rem 0.8rem; }
-    .drv-panel.hidden { display: none; }
-
-    /* Pedidos */
-    .drv-panel .driver-order-card {
-      margin-bottom: 0.6rem;
-      padding: 0.9rem;
-    }
-
-    /* Chat */
-    .drv-chat-wrap {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-    .drv-chat-wrap .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      max-height: none;
-      padding: 0.8rem;
-    }
-
-    /* BG status */
-    .bg-status { margin: 0.4rem 0.8rem; font-size: 0.78rem; }
-    .bg-status.hidden { display: none; }
-
-    /* Responsive: si la pantalla es muy alta, dar más espacio al mapa */
-    @media (min-height: 700px) {
-      .drv-map-section { flex: 1 1 55%; }
-      .drv-bottom { flex: 1 1 45%; }
-    }
-    @media (max-height: 550px) {
-      .drv-map-section { flex: 1 1 35%; min-height: 150px; }
-      .drv-bottom { flex: 1 1 65%; }
-    }
+    .driver-stats{display:flex;align-items:center;gap:1rem;padding:0.5rem 1rem;background:var(--bg-alt);border-bottom:1px solid var(--border);}
+    .driver-stat{text-align:center;}
+    .driver-stat .val{font-size:1.1rem;font-weight:bold;color:var(--success);}
+    .driver-stat .lbl{font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;}
+    .gps-bar{display:flex;align-items:center;justify-content:space-between;padding:0.4rem 1rem;gap:0.5rem;border-bottom:1px solid var(--border);}
+    .gps-bar .gps-info{font-size:0.65rem;color:var(--text-muted);}
   </style>
 </head>
 <body>
@@ -213,81 +48,77 @@
   <!-- Main App -->
   <div id="app" class="app-container hidden">
 
-    <!-- Header compacto -->
-    <header class="drv-header">
-      <div class="drv-name">
-        <span>👻</span>
-        <span id="driver-name">Repartidor</span>
-        <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>
+    <!-- Header -->
+    <header class="driver-header">
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <span style="font-size:1.2rem;">👻</span>
+        <strong id="driver-name" style="font-size:0.9rem;">Repartidor</strong>
+        <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>
       </div>
-      <div class="drv-actions">
-        <span style="font-size:0.6rem;color:var(--text-muted);" id="status-label">Offline</span>
-        <label class="toggle-switch" style="width:40px;height:22px;">
+      <div style="display:flex;align-items:center;gap:0.4rem;">
+        <span style="font-size:0.65rem;color:var(--text-muted);" id="status-label">Offline</span>
+        <label class="toggle-switch">
           <input type="checkbox" id="toggle-online">
-          <span class="toggle-slider" style="border-radius:22px;"></span>
+          <span class="toggle-slider"></span>
         </label>
-        <button id="btn-refresh-driver" class="icon-btn" style="width:30px;height:30px;font-size:0.85rem;" title="Refrescar">🔄</button>
-        <button id="btn-theme" class="icon-btn" style="width:30px;height:30px;font-size:0.85rem;" title="Tema">🌙</button>
-        <button id="btn-logout" class="btn btn-outline btn-sm" style="font-size:0.6rem;padding:0.2rem 0.4rem;">Salir</button>
+        <button id="btn-refresh-driver" class="icon-btn" title="Refrescar">🔄</button>
+        <button id="btn-theme" class="icon-btn" title="Tema">🌙</button>
+        <button id="btn-logout" class="btn btn-outline btn-sm" style="font-size:0.65rem;padding:0.25rem 0.4rem;">Salir</button>
       </div>
     </header>
 
-    <!-- Mapa principal (prioridad) -->
-    <section class="drv-map-section">
-      <div id="driver-map"></div>
-      <!-- GPS overlay en el mapa -->
-      <div class="gps-overlay">
-        <label style="display:flex;align-items:center;gap:0.2rem;cursor:pointer;flex-shrink:0;">
-          <input type="checkbox" id="consent-location" style="width:14px;height:14px;margin:0;accent-color:var(--success);">
-          <span style="font-size:0.65rem;color:var(--text-muted);">📍</span>
-        </label>
-        <div class="gps-text" id="gps-readout">GPS: esperando señal...</div>
-        <button id="btn-share-location" class="gps-btn gps-btn-start" disabled>▶ Iniciar</button>
-        <button id="btn-stop-location" class="gps-btn gps-btn-stop hidden">⏹ Detener</button>
-      </div>
-    </section>
-
-    <div id="bg-status" class="bg-status hidden"></div>
-
-    <!-- Stats rápidos -->
-    <div class="drv-stats">
-      <div class="drv-stat">
+    <!-- Estadísticas rápidas -->
+    <div class="driver-stats">
+      <div class="driver-stat">
         <div class="val" id="earn-today">$0</div>
         <div class="lbl">Ganancia</div>
       </div>
-      <div class="drv-stat">
+      <div class="driver-stat">
         <div class="val" id="earn-deliveries">0</div>
         <div class="lbl">Entregas</div>
       </div>
-      <div class="drv-stat">
-        <div class="val" id="earn-pct">Comision</div>
+      <div class="driver-stat">
+        <div class="val" id="earn-pct">0%</div>
         <div class="lbl">Comisión</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:0.4rem;">
+        <label style="font-size:0.7rem;display:flex;align-items:center;gap:0.2rem;cursor:pointer;">
+          <input type="checkbox" id="consent-location" style="width:auto;margin:0;">
+          📍
+        </label>
+        <button id="btn-share-location" class="btn btn-primary btn-sm" disabled style="font-size:0.65rem;padding:0.25rem 0.5rem;">Iniciar GPS</button>
+        <button id="btn-stop-location" class="btn btn-danger btn-sm hidden" style="font-size:0.65rem;padding:0.25rem 0.5rem;">Detener</button>
       </div>
     </div>
 
-    <!-- Bottom: Pedidos + Chat en tabs -->
-    <div class="drv-bottom">
-      <div class="drv-tabs">
-        <button class="drv-tab active" data-panel="panel-pedidos">📦 Pedidos</button>
-        <button class="drv-tab" data-panel="panel-chat">💬 Chat</button>
-      </div>
-      <!-- Panel Pedidos -->
-      <div id="panel-pedidos" class="drv-panel">
-        <div id="driver-orders"></div>
-      </div>
-      <!-- Panel Chat -->
-      <div id="panel-chat" class="drv-panel hidden">
-        <div class="drv-chat-wrap">
-          <div class="chat-messages" id="dchat-messages">
-            <div class="chat-empty">Escribe a tu central</div>
-          </div>
-          <div class="chat-input-row">
-            <input type="text" id="dchat-input" placeholder="Mensaje...">
-            <button class="btn btn-primary btn-sm" id="dchat-send">Enviar</button>
-          </div>
+    <!-- GPS info -->
+    <div class="gps-bar">
+      <div class="gps-info" id="gps-readout">GPS: esperando señal...</div>
+    </div>
+    <div id="bg-status" class="bg-status hidden"></div>
+
+    <!-- Mapa (edge to edge) -->
+    <div id="driver-map" class="map-container-mini" style="height:180px;margin:0;border-radius:0;"></div>
+
+    <!-- Pedidos -->
+    <section style="padding:0.6rem 0.8rem;">
+      <h3 style="margin:0 0 0.5rem;font-size:0.9rem;display:flex;align-items:center;gap:0.3rem;">📦 Mis Pedidos</h3>
+      <div id="driver-orders"></div>
+    </section>
+
+    <!-- Chat -->
+    <section style="padding:0.4rem 0.8rem 1rem;">
+      <h3 style="margin:0 0 0.4rem;font-size:0.9rem;">💬 Chat con Central</h3>
+      <div class="driver-chat">
+        <div class="chat-messages" id="dchat-messages" style="max-height:130px;">
+          <div class="chat-empty">Escribe a tu central</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="dchat-input" placeholder="Mensaje...">
+          <button class="btn btn-primary btn-sm" id="dchat-send">Enviar</button>
         </div>
       </div>
-    </div>
+    </section>
 
   </div>
 
@@ -295,17 +126,5 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/driver.js"></script>
   <script src="/js/pwa.js"></script>
-  <script>
-    // Tab switching
-    document.querySelectorAll('.drv-tab').forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.drv-tab').forEach(function(t) { t.classList.remove('active'); });
-        tab.classList.add('active');
-        var target = tab.getAttribute('data-panel');
-        document.querySelectorAll('.drv-panel').forEach(function(p) { p.classList.add('hidden'); });
-        document.getElementById(target).classList.remove('hidden');
-      });
-    });
-  </script>
 </body>
 </html>
