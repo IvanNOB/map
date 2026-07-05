@@ -18,7 +18,19 @@
   let driverRoutePolyline = null;
   let lastRouteTs = 0;
 
-  // Fastest driving route via OSRM (free, no key)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 2: DISTANCE/TIME ETA CACHE
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const etaCache = {}; // key: "orderId_lat_lng" => { ts, distanceKm, minutes }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 10: ANIMATED DASHED ROUTE LINE STATE
+  // ═══════════════════════════════════════════════════════════════════════════════
+  let routeAnimInterval = null;
+  let routeDashOffset = 0;
+
+
+  // ─── OSRM Routing ──────────────────────────────────────────────────────────
   async function osrmRoute(lat1, lng1, lat2, lng2) {
     try {
       var url = 'https://router.project-osrm.org/route/v1/driving/' + lng1 + ',' + lat1 + ';' + lng2 + ',' + lat2 + '?overview=full&geometries=geojson';
@@ -31,14 +43,17 @@
     } catch (e) { return null; }
   }
 
-  // Draw the fastest route from the driver to the current target:
-  // - going to pickup while the order is 'assigned'
-  // - going to dropoff once 'picked_up' / 'on_the_way'
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 10: ANIMATED DASHED ROUTE LINE
+  // Draw the fastest route with animated "marching ants" dashes
+  // ═══════════════════════════════════════════════════════════════════════════════
   async function updateDriverRoute(curLat, curLng) {
     if (!map) return;
-    const active = orders.find((o) => ['assigned', 'picked_up', 'on_the_way'].includes(o.status));
+    const active = orders.find(function (o) { return ['assigned', 'picked_up', 'on_the_way'].includes(o.status); });
     if (!active) {
       if (driverRoutePolyline) { map.removeLayer(driverRoutePolyline); driverRoutePolyline = null; }
+      if (routeAnimInterval) { clearInterval(routeAnimInterval); routeAnimInterval = null; }
       return;
     }
     const toPickup = active.status === 'assigned';
@@ -54,10 +69,26 @@
     const route = await osrmRoute(curLat, curLng, tLat, tLng);
     if (!route || !map) return;
     if (driverRoutePolyline) map.removeLayer(driverRoutePolyline);
+    if (routeAnimInterval) { clearInterval(routeAnimInterval); routeAnimInterval = null; }
+
     driverRoutePolyline = L.polyline(route.latlngs, {
-      color: toPickup ? '#22c55e' : '#3b82f6', weight: 5, opacity: 0.8,
+      color: toPickup ? '#22c55e' : '#3b82f6',
+      weight: 5,
+      opacity: 0.8,
+      dashArray: '12, 8',
+      dashOffset: '0'
     }).addTo(map);
+
+    // Animate the dashes ("marching ants" effect)
+    routeDashOffset = 0;
+    routeAnimInterval = setInterval(function () {
+      routeDashOffset -= 1;
+      if (driverRoutePolyline && driverRoutePolyline._path) {
+        driverRoutePolyline._path.style.strokeDashoffset = routeDashOffset + 'px';
+      }
+    }, 100);
   }
+
 
   // ─── Pin icons ──────────────────────────────────────────────────────────────
   function pinIcon(kind, emoji) {
@@ -70,36 +101,59 @@
     });
   }
 
-  // ─── Theme ────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 5: AUTO DARK/LIGHT MODE
+  // Apply theme based on time of day unless user manually set a preference.
+  // ═══════════════════════════════════════════════════════════════════════════════
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
-    const btn = document.getElementById('btn-theme');
-    if (btn) btn.textContent = theme === 'light' ? '☀️' : '🌙';
+    var btn = document.getElementById('btn-theme');
+    if (btn) btn.textContent = theme === 'light' ? '☀️ Cambiar tema' : '🌙 Cambiar tema';
   }
-  applyTheme(localStorage.getItem('theme') || 'dark');
-  document.addEventListener('click', (e) => {
+
+  function autoThemeCheck() {
+    if (localStorage.getItem('theme_manual') === 'true') return;
+    var hour = new Date().getHours();
+    var autoTheme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
+    applyTheme(autoTheme);
+  }
+
+  // Apply on load
+  if (localStorage.getItem('theme_manual') === 'true') {
+    applyTheme(localStorage.getItem('theme') || 'dark');
+  } else {
+    autoThemeCheck();
+  }
+  // Re-check every 60 seconds
+  setInterval(autoThemeCheck, 60000);
+
+  document.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'btn-theme') {
-      const cur = document.documentElement.getAttribute('data-theme');
-      applyTheme(cur === 'light' ? 'dark' : 'light');
+      var cur = document.documentElement.getAttribute('data-theme');
+      var next = cur === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+      // Mark as manual preference
+      localStorage.setItem('theme_manual', 'true');
     }
   });
 
+
   // ─── DOM References ─────────────────────────────────────────────────────────
-  const loginScreen = document.getElementById('login-screen');
-  const app = document.getElementById('app');
-  const loginForm = document.getElementById('login-form');
-  const loginError = document.getElementById('login-error');
-  const driverName = document.getElementById('driver-name');
-  const btnLogout = document.getElementById('btn-logout');
-  const toastContainer = document.getElementById('toast-container');
-  const driverOrders = document.getElementById('driver-orders');
-  const toggleOnline = document.getElementById('toggle-online');
-  const statusLabel = document.getElementById('status-label');
-  const consentLocation = document.getElementById('consent-location');
-  const btnShareLocation = document.getElementById('btn-share-location');
-  const btnStopLocation = document.getElementById('btn-stop-location');
-  const gpsReadout = document.getElementById('gps-readout');
+  var loginScreen = document.getElementById('login-screen');
+  var app = document.getElementById('app');
+  var loginForm = document.getElementById('login-form');
+  var loginError = document.getElementById('login-error');
+  var driverName = document.getElementById('driver-name');
+  var btnLogout = document.getElementById('btn-logout');
+  var toastContainer = document.getElementById('toast-container');
+  var driverOrders = document.getElementById('driver-orders');
+  var toggleOnline = document.getElementById('toggle-online');
+  var statusLabel = document.getElementById('status-label');
+  var consentLocation = document.getElementById('consent-location');
+  var btnShareLocation = document.getElementById('btn-share-location');
+  var btnStopLocation = document.getElementById('btn-stop-location');
+  var gpsReadout = document.getElementById('gps-readout');
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -110,9 +164,10 @@
     };
   }
 
-  async function apiFetch(url, opts = {}) {
-    opts.headers = { ...apiHeaders(), ...opts.headers };
-    const res = await fetch(url, opts);
+  async function apiFetch(url, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({}, apiHeaders(), opts.headers || {});
+    var res = await fetch(url, opts);
     if (res.status === 401) {
       logout();
       throw new Error('No autorizado');
@@ -120,16 +175,17 @@
     return res;
   }
 
-  function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
+  function showToast(message, type) {
+    type = type || 'info';
+    var toast = document.createElement('div');
     toast.className = 'toast ' + type;
     toast.textContent = message;
     toastContainer.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
+    setTimeout(function () { toast.remove(); }, 4000);
   }
 
   function statusLabelText(status) {
-    const labels = {
+    var labels = {
       pending: 'Pendiente',
       assigned: 'Asignado',
       picked_up: 'Recogido',
@@ -141,7 +197,7 @@
   }
 
   function nextAction(status) {
-    const actions = {
+    var actions = {
       assigned: { next: 'picked_up', label: 'Recogido' },
       picked_up: { next: 'on_the_way', label: 'En Camino' },
       on_the_way: { next: 'delivered', label: 'Entregado' },
@@ -159,6 +215,50 @@
       .replace(/'/g, '&#039;');
   }
 
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 1: VIBRATION + GHOST SOUND ON NEW ORDER
+  // Play a spooky descending tone (600Hz→300Hz) and vibrate on order:assigned
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function playGhostSound() {
+    try {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      var ctx = new AudioContext();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(300, ctx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.6);
+    } catch (e) { /* Web Audio not supported */ }
+  }
+
+  function vibrateNewOrder() {
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 400]);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 7: SOS BUTTON
+  // Sends driver:sos socket event with current position, vibrates long
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function triggerSOS() {
+    var pos = lastPos || { lat: 0, lng: 0 };
+    if (socket && socket.connected) {
+      socket.emit('driver:sos', { lat: pos.lat, lng: pos.lng, timestamp: new Date().toISOString() });
+    }
+    showToast('SOS enviado a la central', 'warning');
+    if (navigator.vibrate) navigator.vibrate(1000);
+  }
+
+
   // ─── Auth ───────────────────────────────────────────────────────────────────
 
   async function checkAuth() {
@@ -167,7 +267,7 @@
       return;
     }
     try {
-      const res = await fetch('/api/auth/me', { headers: apiHeaders() });
+      var res = await fetch('/api/auth/me', { headers: apiHeaders() });
       if (res.ok) {
         currentUser = (await res.json()).user;
         if (currentUser.role !== 'driver') {
@@ -178,7 +278,7 @@
       } else {
         showLogin();
       }
-    } catch {
+    } catch (e) {
       showLogin();
     }
   }
@@ -197,29 +297,35 @@
     initMap();
     loadDriverChat();
     loadEarnings();
+    initSOSButton();
+    initBatteryMonitor();
+    initActiveOrderBar();
+    initWeeklyTab();
+    scheduleEndOfDaySummary();
+    showTutorialIfNeeded();
     // Request notification permission + subscribe to push
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
     if (window.enablePush) window.enablePush(token);
     // En el APK: pedir permiso de notificaciones nativas
-    const ln = localNotifPlugin();
+    var ln = localNotifPlugin();
     if (ln && ln.requestPermissions) { try { ln.requestPermissions(); } catch (e) {} }
   }
 
-  loginForm.addEventListener('submit', async (e) => {
+  loginForm.addEventListener('submit', async function (e) {
     e.preventDefault();
     loginError.textContent = '';
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
+    var email = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
 
     try {
-      const res = await fetch('/api/auth/login', {
+      var res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email, password: password }),
       });
-      const data = await res.json();
+      var data = await res.json();
       if (res.ok) {
         if (data.user.role !== 'driver') {
           loginError.textContent = 'Esta app es solo para repartidores';
@@ -232,7 +338,7 @@
       } else {
         loginError.textContent = data.error || 'Error al iniciar sesion';
       }
-    } catch {
+    } catch (err) {
       loginError.textContent = 'Error de conexion';
     }
   });
@@ -246,16 +352,17 @@
     showLogin();
   }
 
-  btnLogout.addEventListener('click', async () => {
-    try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch {}
+  btnLogout.addEventListener('click', async function () {
+    try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
     logout();
   });
 
+
   // ─── Refresh Button ─────────────────────────────────────────────────────────
 
-  const btnRefreshDriver = document.getElementById('btn-refresh-driver');
+  var btnRefreshDriver = document.getElementById('btn-refresh-driver');
   if (btnRefreshDriver) {
-    btnRefreshDriver.addEventListener('click', async () => {
+    btnRefreshDriver.addEventListener('click', async function () {
       btnRefreshDriver.disabled = true;
       btnRefreshDriver.style.opacity = '0.5';
       btnRefreshDriver.style.transition = 'transform 0.3s';
@@ -264,7 +371,7 @@
         await loadOrders();
         await loadEarnings();
         showToast('Pedidos actualizados', 'success');
-      } catch {
+      } catch (e) {
         showToast('Error al refrescar', 'error');
       } finally {
         btnRefreshDriver.disabled = false;
@@ -274,27 +381,29 @@
     });
   }
 
+
   // ─── Orders ─────────────────────────────────────────────────────────────────
 
   async function loadOrders() {
     try {
-      const res = await apiFetch('/api/orders');
+      var res = await apiFetch('/api/orders');
       if (res.ok) {
         orders = await res.json();
         lastRouteTs = 0; // force route recompute when orders/targets change
         renderOrders();
+        updateActiveOrderBar();
         if (lastPos) updateDriverRoute(lastPos.lat, lastPos.lng);
       }
-    } catch {}
+    } catch (e) {}
   }
 
   function renderOrders() {
     driverOrders.innerHTML = '';
-    const active = orders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled');
-    const delivered = orders.filter((o) => o.status === 'delivered');
+    var active = orders.filter(function (o) { return o.status !== 'delivered' && o.status !== 'cancelled'; });
+    var delivered = orders.filter(function (o) { return o.status === 'delivered'; });
 
     // Update active orders count in stats
-    const activeEl = document.getElementById('stat-active-orders');
+    var activeEl = document.getElementById('stat-active-orders');
     if (activeEl) activeEl.textContent = active.length;
 
     if (active.length === 0 && delivered.length === 0) {
@@ -302,46 +411,52 @@
       return;
     }
 
-    active.forEach((order, idx) => renderOrderCard(order, idx));
+    active.forEach(function (order, idx) { renderOrderCard(order, idx); });
 
     if (delivered.length > 0) {
-      const divider = document.createElement('h4');
+      var divider = document.createElement('h4');
       divider.textContent = 'Completados';
       divider.style.cssText = 'color:var(--text-muted);font-size:0.85rem;margin:1rem 0 0.5rem;';
       driverOrders.appendChild(divider);
-      delivered.slice(0, 3).forEach((order) => renderOrderCard(order));
+      delivered.slice(0, 3).forEach(function (order) { renderOrderCard(order); });
     }
 
     renderOrderMarkers();
+    // FEATURE 2: calculate ETA for active orders
+    computeETAsForOrders(active);
+    // FEATURE 11: mark urgent orders
+    markUrgentOrders();
   }
 
+
   // Colores para diferenciar pedidos por orden de prioridad
-  const orderColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
+  var orderColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
 
   function renderOrderCard(order, idx) {
-    const card = document.createElement('div');
-    const colorIdx = (typeof idx === 'number') ? idx % orderColors.length : 0;
-    const color = orderColors[colorIdx];
+    var card = document.createElement('div');
+    var colorIdx = (typeof idx === 'number') ? idx % orderColors.length : 0;
+    var color = orderColors[colorIdx];
     card.className = 'driver-order-card';
+    card.setAttribute('data-order-id', order.id);
     card.style.borderLeft = '4px solid ' + color;
-    const action = nextAction(order.status);
+    var action = nextAction(order.status);
 
     // Navigation target: go to pickup while assigned, to dropoff once picked up
-    let navBtn = '';
-    const toPickup = order.status === 'assigned';
-    const navLat = toPickup ? order.pickup_lat : order.dropoff_lat;
-    const navLng = toPickup ? order.pickup_lng : order.dropoff_lng;
+    var navBtn = '';
+    var toPickup = order.status === 'assigned';
+    var navLat = toPickup ? order.pickup_lat : order.dropoff_lat;
+    var navLng = toPickup ? order.pickup_lng : order.dropoff_lng;
     if (navLat && navLng) {
-      const navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + navLat + ',' + navLng + '&travelmode=driving';
+      var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + navLat + ',' + navLng + '&travelmode=driving';
       navBtn = '<a class="btn btn-nav btn-sm" href="' + navUrl + '" target="_blank" rel="noopener">🧭 Navegar</a>';
     }
 
     // Contact the customer via WhatsApp / call
-    let contactBtns = '';
+    var contactBtns = '';
     if (order.customer_phone) {
-      const digits = String(order.customer_phone).replace(/[^0-9]/g, '');
+      var digits = String(order.customer_phone).replace(/[^0-9]/g, '');
       if (digits) {
-        const waMsg = encodeURIComponent('Hola! Soy tu repartidor de Servicio Ghost con tu pedido ' + order.code + '.');
+        var waMsg = encodeURIComponent('Hola! Soy tu repartidor de Servicio Ghost con tu pedido ' + order.code + '.');
         contactBtns =
           '<a class="btn btn-whatsapp btn-sm" href="https://wa.me/' + digits + '?text=' + waMsg + '" target="_blank" rel="noopener">💬 WA</a>' +
           '<a class="btn btn-outline btn-sm" href="tel:' + digits + '">📞</a>';
@@ -349,103 +464,245 @@
     }
 
     // Main action button (big)
-    let mainActionHtml = '';
+    var mainActionHtml = '';
     if (action) {
-      const actionClass = action.next === 'picked_up' ? 'action-pickup' : action.next === 'on_the_way' ? 'action-enroute' : 'action-deliver';
-      const actionEmoji = action.next === 'picked_up' ? '📦 ' : action.next === 'on_the_way' ? '🛵 ' : '✅ ';
+      var actionClass = action.next === 'picked_up' ? 'action-pickup' : action.next === 'on_the_way' ? 'action-enroute' : 'action-deliver';
+      var actionEmoji = action.next === 'picked_up' ? '📦 ' : action.next === 'on_the_way' ? '🛵 ' : '✅ ';
       mainActionHtml = '<button class="order-main-action ' + actionClass + '" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + actionEmoji + escapeHtml(action.label) + '</button>';
     }
 
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
-        <div style="display:flex;align-items:center;gap:0.4rem;">
-          <span style="background:${color};color:#fff;font-weight:bold;font-size:0.7rem;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${typeof idx === 'number' ? idx + 1 : ''}</span>
-          <span class="order-code">${escapeHtml(order.code)}</span>
-        </div>
-        <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(statusLabelText(order.status))}</span>
-      </div>
-      <div class="order-detail"><strong>${escapeHtml(order.customer_name)}</strong></div>
-      <div class="order-detail">🟢 ${escapeHtml(order.pickup_address || '-')}</div>
-      <div class="order-detail">🔴 ${escapeHtml(order.dropoff_address || '-')}</div>
-      ${order.amount ? '<div class="order-detail" style="color:var(--gold);font-weight:600;">💰 $' + escapeHtml(String(order.amount)) + '</div>' : ''}
-      ${mainActionHtml}
-      ${order.status !== 'delivered' ? '<div class="order-secondary-actions">' + navBtn + contactBtns + (['on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-proof="' + order.id + '">📸 Prueba</button>' : '') + '</div>' : '<span class="badge badge-delivered" style="margin-top:0.5rem;">✅ Completado</span>'}
-    `;
+    // FEATURE 2: ETA placeholder span
+    var etaSpan = '<span class="data-eta" data-eta-order="' + order.id + '" style="font-size:0.72rem;color:var(--text-muted);display:block;margin-top:0.3rem;"></span>';
+
+    card.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">' +
+        '<div style="display:flex;align-items:center;gap:0.4rem;">' +
+          '<span style="background:' + color + ';color:#fff;font-weight:bold;font-size:0.7rem;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;">' + (typeof idx === 'number' ? idx + 1 : '') + '</span>' +
+          '<span class="order-code">' + escapeHtml(order.code) + '</span>' +
+        '</div>' +
+        '<span class="badge badge-' + escapeHtml(order.status) + '">' + escapeHtml(statusLabelText(order.status)) + '</span>' +
+      '</div>' +
+      '<div class="order-detail"><strong>' + escapeHtml(order.customer_name) + '</strong></div>' +
+      '<div class="order-detail">🟢 ' + escapeHtml(order.pickup_address || '-') + '</div>' +
+      '<div class="order-detail">🔴 ' + escapeHtml(order.dropoff_address || '-') + '</div>' +
+      (order.amount ? '<div class="order-detail" style="color:var(--gold);font-weight:600;">💰 $' + escapeHtml(String(order.amount)) + '</div>' : '') +
+      etaSpan +
+      mainActionHtml +
+      (order.status !== 'delivered' ? '<div class="order-secondary-actions">' + navBtn + contactBtns + (['on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-proof="' + order.id + '">📸 Prueba</button>' : '') + '</div>' : '<span class="badge badge-delivered" style="margin-top:0.5rem;">✅ Completado</span>');
+
     driverOrders.appendChild(card);
 
     // Bind main action button
-    const btn = card.querySelector('[data-order-id]');
+    var btn = card.querySelector('[data-order-id][data-next-status]');
     if (btn) {
-      btn.addEventListener('click', () => updateOrderStatus(btn.dataset.orderId, btn.dataset.nextStatus));
+      btn.addEventListener('click', function () { updateOrderStatus(btn.dataset.orderId, btn.dataset.nextStatus); });
     }
-    const proofBtn = card.querySelector('[data-proof]');
+    var proofBtn = card.querySelector('[data-proof]');
     if (proofBtn) {
-      proofBtn.addEventListener('click', () => uploadProof(proofBtn.dataset.proof));
+      proofBtn.addEventListener('click', function () { uploadProof(proofBtn.dataset.proof); });
+    }
+
+    // FEATURE 9: Swipe to change status
+    if (action) {
+      initSwipeOnCard(card, order.id, action.next);
     }
   }
 
-  // Capture/resize a photo and upload as proof of delivery
-  function uploadProof(orderId) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.onchange = function () {
-      const file = input.files && input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const img = new Image();
-        img.onload = async function () {
-          // Resize to max 800px wide, JPEG ~0.6 quality
-          const max = 800;
-          let w = img.width, h = img.height;
-          if (w > max) { h = Math.round(h * max / w); w = max; }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-          try {
-            const res = await apiFetch('/api/orders/' + orderId + '/proof', {
-              method: 'POST',
-              body: JSON.stringify({ image: dataUrl }),
-            });
-            if (res.ok) showToast('Foto de entrega subida', 'success');
-            else { const er = await res.json(); showToast(er.error || 'Error al subir', 'error'); }
-          } catch { showToast('Error de conexion', 'error'); }
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    };
-    input.click();
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 9: SWIPE TO CHANGE STATUS
+  // If user swipes right >100px on a card, trigger next status change
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function initSwipeOnCard(card, orderId, nextStatus) {
+    var startX = 0;
+    var startY = 0;
+    var swiping = false;
+
+    card.addEventListener('touchstart', function (e) {
+      var touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      swiping = true;
+    }, { passive: true });
+
+    card.addEventListener('touchmove', function (e) {
+      if (!swiping) return;
+      var touch = e.touches[0];
+      var dx = touch.clientX - startX;
+      var dy = Math.abs(touch.clientY - startY);
+      // If vertical scroll is more dominant, cancel swipe
+      if (dy > 30 && dy > Math.abs(dx)) { swiping = false; card.style.transform = ''; return; }
+      if (dx > 0) {
+        card.style.transform = 'translateX(' + Math.min(dx, 150) + 'px)';
+        card.style.transition = 'none';
+      }
+    }, { passive: true });
+
+    card.addEventListener('touchend', function (e) {
+      if (!swiping) { card.style.transform = ''; return; }
+      var touch = e.changedTouches[0];
+      var dx = touch.clientX - startX;
+      swiping = false;
+      if (dx > 100) {
+        // Green flash + slide out
+        card.style.transition = 'transform 0.3s, background 0.3s';
+        card.style.transform = 'translateX(300px)';
+        card.style.background = 'rgba(34,197,94,0.3)';
+        setTimeout(function () {
+          updateOrderStatus(orderId, nextStatus);
+        }, 300);
+      } else {
+        card.style.transition = 'transform 0.2s';
+        card.style.transform = '';
+      }
+    }, { passive: true });
   }
 
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 2: DISTANCE/TIME ON ORDER CARDS
+  // Calculate ETA from driver's position to pickup/dropoff using OSRM. Cache 30s.
+  // ═══════════════════════════════════════════════════════════════════════════════
+  async function computeETAsForOrders(activeOrders) {
+    if (!lastPos) return;
+    for (var i = 0; i < activeOrders.length; i++) {
+      var order = activeOrders[i];
+      var toPickup = order.status === 'assigned';
+      var tLat = toPickup ? order.pickup_lat : order.dropoff_lat;
+      var tLng = toPickup ? order.pickup_lng : order.dropoff_lng;
+      if (!tLat || !tLng) continue;
+
+      var cacheKey = order.id + '_' + lastPos.lat.toFixed(3) + '_' + lastPos.lng.toFixed(3);
+      var cached = etaCache[cacheKey];
+      var now = Date.now();
+
+      var result = null;
+      if (cached && (now - cached.ts < 30000)) {
+        result = cached;
+      } else {
+        var route = await osrmRoute(lastPos.lat, lastPos.lng, tLat, tLng);
+        if (route) {
+          result = { ts: now, distanceKm: route.distanceKm, minutes: route.minutes };
+          etaCache[cacheKey] = result;
+        }
+      }
+
+      if (result) {
+        var etaEl = document.querySelector('[data-eta-order="' + order.id + '"]');
+        if (etaEl) {
+          etaEl.textContent = '~' + result.distanceKm.toFixed(1) + ' km · ~' + Math.round(result.minutes) + ' min';
+        }
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 11: URGENT ORDER PULSING RED
+  // If order created_at >15 min ago and still assigned/picked_up, add pulse class
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function markUrgentOrders() {
+    var now = Date.now();
+    orders.forEach(function (order) {
+      if (!['assigned', 'picked_up'].includes(order.status)) return;
+      if (!order.created_at) return;
+      var created = new Date(order.created_at).getTime();
+      if (isNaN(created)) return;
+      var elapsedMin = (now - created) / 60000;
+      if (elapsedMin > 15) {
+        var card = document.querySelector('.driver-order-card[data-order-id="' + order.id + '"]');
+        if (card) card.classList.add('order-urgent');
+      }
+    });
+  }
+
+
+  // ─── Upload Proof (photo) ───────────────────────────────────────────────────
+  function uploadProof(orderId) {
+    return new Promise(function (resolve, reject) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      input.onchange = function () {
+        var file = input.files && input.files[0];
+        if (!file) { reject(new Error('No file')); return; }
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var img = new Image();
+          img.onload = async function () {
+            var max = 800;
+            var w = img.width, h = img.height;
+            if (w > max) { h = Math.round(h * max / w); w = max; }
+            var canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            var dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            try {
+              var res = await apiFetch('/api/orders/' + orderId + '/proof', {
+                method: 'POST',
+                body: JSON.stringify({ image: dataUrl }),
+              });
+              if (res.ok) { showToast('Foto de entrega subida', 'success'); resolve(true); }
+              else { var er = await res.json(); showToast(er.error || 'Error al subir', 'error'); reject(new Error('Upload failed')); }
+            } catch (err) { showToast('Error de conexion', 'error'); reject(err); }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      };
+      // If user cancels the file picker
+      input.addEventListener('cancel', function () { reject(new Error('Cancelled')); });
+      input.click();
+    });
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 12: MANDATORY PHOTO BEFORE DELIVERED
+  // If next status is 'delivered', require a photo first via uploadProof
+  // ═══════════════════════════════════════════════════════════════════════════════
   async function updateOrderStatus(orderId, status) {
+    // If delivering, require photo proof first
+    if (status === 'delivered') {
+      showToast('Toma foto de la entrega primero', 'info');
+      try {
+        await uploadProof(orderId);
+      } catch (e) {
+        showToast('Foto requerida para marcar como entregado', 'warning');
+        return;
+      }
+    }
+
     try {
-      const res = await apiFetch('/api/orders/' + orderId + '/status', {
+      var res = await apiFetch('/api/orders/' + orderId + '/status', {
         method: 'POST',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: status }),
       });
       if (res.ok) {
         showToast('Estado actualizado: ' + statusLabelText(status), 'success');
         loadOrders();
         loadEarnings();
       } else {
-        const err = await res.json();
+        var err = await res.json();
         showToast(err.error || 'Error al actualizar', 'error');
       }
-    } catch {
+    } catch (e) {
       showToast('Error de conexion', 'error');
     }
   }
 
-  // ─── Online/Offline Toggle ──────────────────────────────────────────────────
 
-  toggleOnline.addEventListener('change', () => {
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 3: AUTO-START GPS WHEN GOING ONLINE
+  // ═══════════════════════════════════════════════════════════════════════════════
+  toggleOnline.addEventListener('change', function () {
     if (toggleOnline.checked) {
       statusLabel.textContent = 'En linea';
       statusLabel.style.color = 'var(--success)';
+      // Auto-start GPS if not already sharing
+      if (!sharing) {
+        startSharing();
+      }
     } else {
       statusLabel.textContent = 'Desconectado';
       statusLabel.style.color = 'var(--text-muted)';
@@ -455,7 +712,7 @@
 
   // ─── Location Sharing ──────────────────────────────────────────────────────
 
-  consentLocation.addEventListener('change', () => {
+  consentLocation.addEventListener('change', function () {
     btnShareLocation.disabled = !consentLocation.checked;
   });
   // Auto-enable GPS button (consent is auto-accepted)
@@ -465,7 +722,7 @@
   btnStopLocation.addEventListener('click', stopSharing);
 
   // ─── Wake Lock (keep screen on while sharing) ───────────────────────────────
-  let wakeLock = null;
+  var wakeLock = null;
   async function acquireWakeLock() {
     try {
       if ('wakeLock' in navigator) {
@@ -477,25 +734,25 @@
     try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
   }
   // Re-acquire the wake lock when the app comes back to the foreground
-  document.addEventListener('visibilitychange', () => {
+  document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible' && sharing) {
       acquireWakeLock();
-      // Reenviar la ultima posicion al volver para volver a aparecer "en linea"
       if (lastPos) postLocation(lastPos.lat, lastPos.lng, lastPos.speed);
     }
   });
+
 
   // ─── Capacitor (native Android) background geolocation, if available ─────────
   function bgPlugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundGeolocation) || null;
   }
 
-  // Notificaciones NATIVAS del APK (aparecen aunque el repartidor este en otra app)
+  // Notificaciones NATIVAS del APK
   function localNotifPlugin() {
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) || null;
   }
   async function notifyDriverDevice(title, body) {
-    const ln = localNotifPlugin();
+    var ln = localNotifPlugin();
     if (ln) {
       try {
         await ln.schedule({
@@ -513,9 +770,8 @@
     }
   }
 
-  // Avisa al repartidor si la ubicacion seguira en segundo plano o no.
   function updateBgStatus() {
-    const el = document.getElementById('bg-status');
+    var el = document.getElementById('bg-status');
     if (!el) return;
     if (bgPlugin()) {
       el.className = 'bg-status ok';
@@ -527,11 +783,11 @@
         'la ubicación <b>deja de enviarse</b>. Para que siga en segundo plano, instala la <b>APK</b> en el celular.';
     }
   }
-  // Capacitor inyecta el plugin un instante despues de cargar.
   setTimeout(updateBgStatus, 1200);
-  let bgWatcherId = null;
-  let lastPos = null;
-  let heartbeat = null;
+
+  var bgWatcherId = null;
+  var lastPos = null;
+  var heartbeat = null;
 
   function postLocation(lat, lng, speed) {
     fetch('/api/location/ping', {
@@ -539,14 +795,12 @@
       headers: apiHeaders(),
       body: JSON.stringify({ lat: lat, lng: lng, speed: speed || 0 }),
       keepalive: true,
-    }).catch(() => {});
+    }).catch(function () {});
   }
 
   function startHeartbeat() {
     stopHeartbeat();
-    // Re-send the last known position every 15s so the driver stays "online"
-    // even while stationary (GPS only emits on movement).
-    heartbeat = setInterval(() => {
+    heartbeat = setInterval(function () {
       if (lastPos) postLocation(lastPos.lat, lastPos.lng, lastPos.speed);
     }, 15000);
   }
@@ -554,14 +808,15 @@
     if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
   }
 
+
   function sendLocation(latitude, longitude, speed, heading, accuracy) {
-    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-    const speedKmh = ((speed || 0) * 3.6).toFixed(0);
-    const speedEl = document.getElementById('gps-speed');
+    var now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    var speedKmh = ((speed || 0) * 3.6).toFixed(0);
+    var speedEl = document.getElementById('gps-speed');
     if (speedEl) speedEl.textContent = speedKmh + ' km/h';
     gpsReadout.textContent = 'Precision: ' + (accuracy || 0).toFixed(0) + 'm · ' + now;
     if (map) {
-      const latlng = [latitude, longitude];
+      var latlng = [latitude, longitude];
       if (positionMarker) positionMarker.setLatLng(latlng);
       else {
         positionMarker = L.marker(latlng, { icon: pinIcon('driver', '🛵') }).addTo(map);
@@ -569,16 +824,14 @@
       }
     }
     lastPos = { lat: latitude, lng: longitude, speed: speed || 0 };
-    // Send over HTTP (works in background, unlike a WebSocket which the OS suspends)
     postLocation(latitude, longitude, speed);
-    // Draw/refresh the fastest route to the current target (in-app, no Google Maps)
     updateDriverRoute(latitude, longitude);
   }
 
   function startSharing() {
     if (!consentLocation.checked) return;
 
-    const bg = bgPlugin();
+    var bg = bgPlugin();
     sharing = true;
     btnShareLocation.classList.add('hidden');
     btnStopLocation.classList.remove('hidden');
@@ -586,14 +839,13 @@
     updateBgStatus();
 
     if (bg) {
-      // Native app: tracks in the background even with the app closed / screen off
       bg.addWatcher({
         backgroundMessage: "Compartiendo tu ubicacion con la central",
         backgroundTitle: "Repartidor en linea",
         requestPermissions: true,
         stale: false,
         distanceFilter: 20,
-      }, (location, error) => {
+      }, function (location, error) {
         if (error) {
           if (error.code === 'NOT_AUTHORIZED') {
             showToast('Activa el permiso de ubicacion en "Permitir todo el tiempo"', 'warning');
@@ -601,27 +853,27 @@
           return;
         }
         if (location) sendLocation(location.latitude, location.longitude, location.speed, location.bearing, location.accuracy);
-      }).then((id) => { bgWatcherId = id; });
+      }).then(function (id) { bgWatcherId = id; });
       showToast('Rastreo en segundo plano activado. Permite la ubicacion "todo el tiempo".', 'success');
       return;
     }
 
-    // Web fallback: foreground tracking + keep screen on
+    // Web fallback
     if (!navigator.geolocation) { showToast('Geolocalizacion no disponible', 'error'); return; }
     showToast('Atencion: en el navegador la ubicacion se detiene si sales de la app. Instala la APK para segundo plano.', 'warning');
     acquireWakeLock();
     watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude, speed, accuracy, heading } = pos.coords;
-        sendLocation(latitude, longitude, speed, heading, accuracy);
+      function (pos) {
+        var coords = pos.coords;
+        sendLocation(coords.latitude, coords.longitude, coords.speed, coords.heading, coords.accuracy);
       },
-      (err) => { showToast('Error de geolocalizacion: ' + err.message, 'error'); },
+      function (err) { showToast('Error de geolocalizacion: ' + err.message, 'error'); },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
   }
 
   function stopSharing() {
-    const bg = bgPlugin();
+    var bg = bgPlugin();
     if (bg && bgWatcherId) {
       bg.removeWatcher({ id: bgWatcherId });
       bgWatcherId = null;
@@ -636,22 +888,22 @@
     btnShareLocation.classList.remove('hidden');
     btnStopLocation.classList.add('hidden');
 
-    // Notify the server over HTTP (reliable) and via socket if connected
-    fetch('/api/location/offline', { method: 'POST', headers: apiHeaders(), keepalive: true }).catch(() => {});
+    fetch('/api/location/offline', { method: 'POST', headers: apiHeaders(), keepalive: true }).catch(function () {});
     if (socket && socket.connected) {
       socket.emit('driver:stop');
     }
   }
+
 
   // ─── Map ────────────────────────────────────────────────────────────────────
 
   function initMap() {
     if (map) return;
     map = L.map('driver-map').setView([4.6097, -74.0817], 13);
-    const darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    var darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; CartoDB', maxZoom: 19,
     });
-    const satellite = L.tileLayer(
+    var satellite = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { attribution: 'Tiles &copy; Esri', maxZoom: 19 }
     );
@@ -681,24 +933,25 @@
   // Show pickup (green) and dropoff (red) markers for active orders
   function renderOrderMarkers() {
     if (!map) return;
-    orderMarkers.forEach((m) => map.removeLayer(m));
+    orderMarkers.forEach(function (m) { map.removeLayer(m); });
     orderMarkers = [];
-    const bounds = [];
-    orders.forEach((o) => {
+    var bounds = [];
+    orders.forEach(function (o) {
       if (!['assigned', 'picked_up', 'on_the_way'].includes(o.status)) return;
       if (o.pickup_lat && o.pickup_lng) {
-        const m = L.marker([o.pickup_lat, o.pickup_lng], { icon: pinIcon('pickup', '🟢') })
+        var m = L.marker([o.pickup_lat, o.pickup_lng], { icon: pinIcon('pickup', '🟢') })
           .bindPopup('🟢 Recogida ' + escapeHtml(o.code) + '<br>' + escapeHtml(o.pickup_address || '')).addTo(map);
         orderMarkers.push(m); bounds.push([o.pickup_lat, o.pickup_lng]);
       }
       if (o.dropoff_lat && o.dropoff_lng) {
-        const m = L.marker([o.dropoff_lat, o.dropoff_lng], { icon: pinIcon('dropoff', '🔴') })
+        var m2 = L.marker([o.dropoff_lat, o.dropoff_lng], { icon: pinIcon('dropoff', '🔴') })
           .bindPopup('🔴 Entrega ' + escapeHtml(o.code) + '<br>' + escapeHtml(o.dropoff_address || '')).addTo(map);
-        orderMarkers.push(m); bounds.push([o.dropoff_lat, o.dropoff_lng]);
+        orderMarkers.push(m2); bounds.push([o.dropoff_lat, o.dropoff_lng]);
       }
     });
     if (bounds.length) { try { map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 }); } catch (e) {} }
   }
+
 
   // ─── Socket.IO ──────────────────────────────────────────────────────────────
 
@@ -752,40 +1005,48 @@
 
   async function loadEarnings() {
     if (!currentUser) return;
-    const today = new Date().toISOString().slice(0, 10);
+    var today = new Date().toISOString().slice(0, 10);
     try {
-      const res = await fetch('/api/reports/my-earnings?from=' + today + '&to=' + today, { headers: apiHeaders() });
+      var res = await fetch('/api/reports/my-earnings?from=' + today + '&to=' + today, { headers: apiHeaders() });
       if (!res.ok) return;
-      const e = await res.json();
-      const v = document.getElementById('earn-today');
-      const d = document.getElementById('earn-deliveries');
-      const p = document.getElementById('earn-pct');
+      var e = await res.json();
+      var v = document.getElementById('earn-today');
+      var d = document.getElementById('earn-deliveries');
+      var p = document.getElementById('earn-pct');
       if (v) v.textContent = '$' + Number(e.earning || 0).toLocaleString();
       if (d) d.textContent = (e.deliveries || 0) + ' entregas';
       if (p) p.textContent = 'Comision ' + (e.commission_pct || 0) + '%';
     } catch (err) {}
   }
 
+
   function initSocket() {
     if (socket) return;
-    socket = io({ auth: { token } });
-    socket.on('connect', () => {
+    socket = io({ auth: { token: token } });
+    socket.on('connect', function () {
       console.log('Socket conectado (repartidor)');
     });
 
-    socket.on('order:assigned', (order) => {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FEATURE 1: VIBRATION + GHOST SOUND ON NEW ORDER (order:assigned)
+    // ═══════════════════════════════════════════════════════════════════════════
+    socket.on('order:assigned', function (order) {
+      // Vibrate phone
+      vibrateNewOrder();
+      // Play ghost sound
+      playGhostSound();
+
       if (window.ghostAlert) window.ghostAlert({ title: '👻 ¡Nuevo domicilio asignado!', body: order && order.code ? '📦 ' + order.code + ' - ¡A rodar!' : '¡Tienes un nuevo pedido!' });
       notifyDriverDevice('👻 ¡SERVICIOS GHOST!', order && order.code ? '📦 Nuevo domicilio: ' + order.code + ' - ¡A entregar!' : '¡Tienes un nuevo pedido asignado!');
       loadOrders();
     });
 
-    socket.on('chat:message', (msg) => {
+    socket.on('chat:message', function (msg) {
       dchatMessages.push(msg);
       renderDriverChat();
       if (msg.sender_role === 'admin') {
         if (window.ghostAlert) window.ghostAlert({ title: '💬 Mensaje de Central Ghost', body: msg.body || '' });
         notifyDriverDevice('💬 Central Ghost dice:', msg.body || 'Tienes un nuevo mensaje');
-        // Update unread badge if not on chat panel
         var chatPanel = document.getElementById('panel-chat');
         if (chatPanel && chatPanel.classList.contains('hidden')) {
           var badge = document.getElementById('chat-badge');
@@ -798,9 +1059,9 @@
       }
     });
 
-    socket.on('notification', (data) => {
-      let title = '👻 Servicios Ghost';
-      let body = '';
+    socket.on('notification', function (data) {
+      var title = '👻 Servicios Ghost';
+      var body = '';
       switch (data.type) {
         case 'order_assigned':
           title = '👻 ¡Nuevo domicilio asignado!';
@@ -818,28 +1079,318 @@
       notifyDriverDevice(title, body);
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', function () {
       console.log('Socket desconectado');
     });
   }
 
+
   // ─── Auto Refresh (cada 5 segundos, silencioso) ─────────────────────────────
 
-  let syncDot = null;
-  setInterval(async () => {
+  var syncDot = null;
+  setInterval(async function () {
     if (currentUser) {
       syncDot = syncDot || document.getElementById('sync-dot');
       try {
         await loadOrders();
         await loadEarnings();
-        // Flash green = connected
         if (syncDot) { syncDot.style.background = '#22c55e'; }
-      } catch {
-        // Red = disconnected
+      } catch (e) {
         if (syncDot) { syncDot.style.background = '#ef4444'; }
       }
     }
   }, 5000);
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 6: PERSISTENT ACTIVE ORDER BAR
+  // A fixed bar below the header showing current active order code + status + dest
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function initActiveOrderBar() {
+    if (document.getElementById('active-order-bar')) return;
+    var bar = document.createElement('div');
+    bar.id = 'active-order-bar';
+    bar.style.cssText = 'display:none;padding:0.4rem 0.8rem;background:var(--panel);border-bottom:1px solid var(--border);font-size:0.78rem;font-weight:600;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;';
+    // Insert after the header
+    var header = document.querySelector('.drv-header');
+    if (header && header.nextSibling) {
+      header.parentNode.insertBefore(bar, header.nextSibling);
+    }
+  }
+
+  function updateActiveOrderBar() {
+    var bar = document.getElementById('active-order-bar');
+    if (!bar) return;
+    var active = orders.find(function (o) { return ['assigned', 'picked_up', 'on_the_way'].includes(o.status); });
+    if (!active) {
+      bar.style.display = 'none';
+      return;
+    }
+    var dest = active.status === 'assigned' ? (active.pickup_address || 'Recogida') : (active.dropoff_address || 'Entrega');
+    bar.textContent = '📦 ' + (active.code || '') + ' · ' + statusLabelText(active.status) + ' → ' + dest;
+    bar.style.display = 'block';
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 7: SOS BUTTON (init)
+  // Red circular button fixed at bottom-right of map, sends driver:sos event
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function initSOSButton() {
+    if (document.getElementById('sos-btn')) return;
+    var mapSection = document.querySelector('.drv-map-section');
+    if (!mapSection) return;
+    var btn = document.createElement('button');
+    btn.id = 'sos-btn';
+    btn.textContent = 'SOS';
+    btn.style.cssText = 'position:absolute;bottom:80px;right:12px;z-index:900;width:50px;height:50px;border-radius:50%;background:#ef4444;color:#fff;font-weight:900;font-size:0.8rem;border:3px solid #fff;cursor:pointer;box-shadow:0 4px 12px rgba(239,68,68,0.5);';
+    btn.addEventListener('click', triggerSOS);
+    mapSection.appendChild(btn);
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 8: BATTERY LOW INDICATOR
+  // Use navigator.getBattery() to show warning when <20%
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function initBatteryMonitor() {
+    if (!navigator.getBattery) return;
+    var warningEl = null;
+
+    function ensureWarningEl() {
+      if (warningEl) return warningEl;
+      warningEl = document.createElement('div');
+      warningEl.id = 'battery-warning';
+      warningEl.style.cssText = 'display:none;padding:0.3rem 0.8rem;background:#fbbf24;color:#000;font-size:0.72rem;font-weight:600;text-align:center;flex-shrink:0;';
+      var stats = document.querySelector('.drv-stats');
+      if (stats && stats.nextSibling) {
+        stats.parentNode.insertBefore(warningEl, stats.nextSibling);
+      } else if (stats) {
+        stats.parentNode.appendChild(warningEl);
+      }
+      return warningEl;
+    }
+
+    function checkBattery(battery) {
+      var el = ensureWarningEl();
+      var level = Math.round(battery.level * 100);
+      if (level < 20 && !battery.charging) {
+        el.textContent = '⚡ Bateria baja: ' + level + '%';
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+
+    navigator.getBattery().then(function (battery) {
+      checkBattery(battery);
+      battery.addEventListener('levelchange', function () { checkBattery(battery); });
+      battery.addEventListener('chargingchange', function () { checkBattery(battery); });
+      // Also check every 60s
+      setInterval(function () { checkBattery(battery); }, 60000);
+    }).catch(function () {});
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 4: WEEKLY HISTORY TAB ("📊 Mi Semana")
+  // Third tab showing total earnings, deliveries, avg delivery time for the week
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function initWeeklyTab() {
+    // Add a third tab button
+    var tabsContainer = document.querySelector('.drv-tabs');
+    if (!tabsContainer || document.getElementById('tab-weekly')) return;
+
+    var weekTab = document.createElement('button');
+    weekTab.className = 'drv-tab';
+    weekTab.id = 'tab-weekly';
+    weekTab.setAttribute('data-panel', 'panel-weekly');
+    weekTab.textContent = '📊 Mi Semana';
+    tabsContainer.appendChild(weekTab);
+
+    // Create the panel
+    var bottom = document.querySelector('.drv-bottom');
+    if (!bottom) return;
+    var panel = document.createElement('div');
+    panel.id = 'panel-weekly';
+    panel.className = 'drv-panel hidden';
+    panel.innerHTML = '<div id="weekly-stats" style="padding:0.5rem;"><p style="color:var(--text-muted);text-align:center;">Cargando datos de la semana...</p></div>';
+    bottom.appendChild(panel);
+
+    // Bind tab click (same logic as other tabs in driver.html)
+    weekTab.addEventListener('click', function () {
+      document.querySelectorAll('.drv-tab').forEach(function (t) { t.classList.remove('active'); });
+      weekTab.classList.add('active');
+      document.querySelectorAll('.drv-panel').forEach(function (p) { p.classList.add('hidden'); });
+      panel.classList.remove('hidden');
+      loadWeeklyStats();
+    });
+  }
+
+  async function loadWeeklyStats() {
+    var container = document.getElementById('weekly-stats');
+    if (!container || !currentUser) return;
+
+    // Calculate Monday of this week
+    var now = new Date();
+    var day = now.getDay(); // 0=Sun
+    var diffToMon = (day === 0 ? 6 : day - 1);
+    var monday = new Date(now);
+    monday.setDate(now.getDate() - diffToMon);
+    var fromStr = monday.toISOString().slice(0, 10);
+    var toStr = now.toISOString().slice(0, 10);
+
+    try {
+      var res = await fetch('/api/reports/my-earnings?from=' + fromStr + '&to=' + toStr, { headers: apiHeaders() });
+      if (!res.ok) { container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">Error cargando datos</p>'; return; }
+      var data = await res.json();
+
+      var earning = Number(data.earning || 0).toLocaleString();
+      var deliveries = data.deliveries || 0;
+      var avgTime = data.avg_delivery_minutes ? Math.round(data.avg_delivery_minutes) + ' min' : 'N/A';
+
+      container.innerHTML =
+        '<div style="display:flex;gap:0.8rem;flex-wrap:wrap;justify-content:center;padding:1rem 0;">' +
+          '<div style="text-align:center;flex:1;min-width:100px;padding:1rem;background:var(--bg-alt);border-radius:12px;border:1px solid var(--border);">' +
+            '<div style="font-size:1.4rem;font-weight:700;color:var(--gold);">$' + earning + '</div>' +
+            '<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">GANANCIA SEMANAL</div>' +
+          '</div>' +
+          '<div style="text-align:center;flex:1;min-width:100px;padding:1rem;background:var(--bg-alt);border-radius:12px;border:1px solid var(--border);">' +
+            '<div style="font-size:1.4rem;font-weight:700;color:var(--success);">' + deliveries + '</div>' +
+            '<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">ENTREGAS</div>' +
+          '</div>' +
+          '<div style="text-align:center;flex:1;min-width:100px;padding:1rem;background:var(--bg-alt);border-radius:12px;border:1px solid var(--border);">' +
+            '<div style="font-size:1.4rem;font-weight:700;color:var(--primary);">' + avgTime + '</div>' +
+            '<div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">PROMEDIO ENTREGA</div>' +
+          '</div>' +
+        '</div>';
+    } catch (e) {
+      container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">Error de conexion</p>';
+    }
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 13: END-OF-DAY SUMMARY
+  // At 9PM (21:00) show a modal with today's stats if not already shown today
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function scheduleEndOfDaySummary() {
+    // Check every 60 seconds if it's 21:xx and hasn't shown yet today
+    setInterval(function () {
+      var now = new Date();
+      if (now.getHours() !== 21) return;
+      var dateKey = 'eod_shown_' + now.toISOString().slice(0, 10);
+      if (localStorage.getItem(dateKey)) return;
+
+      // Show the end-of-day modal
+      localStorage.setItem(dateKey, 'true');
+      showEndOfDaySummary();
+    }, 60000);
+  }
+
+  async function showEndOfDaySummary() {
+    var today = new Date().toISOString().slice(0, 10);
+    var earning = '0';
+    var deliveries = 0;
+    var hoursOnline = 'N/A';
+
+    try {
+      var res = await fetch('/api/reports/my-earnings?from=' + today + '&to=' + today, { headers: apiHeaders() });
+      if (res.ok) {
+        var data = await res.json();
+        earning = Number(data.earning || 0).toLocaleString();
+        deliveries = data.deliveries || 0;
+        hoursOnline = data.hours_online ? data.hours_online.toFixed(1) + 'h' : 'N/A';
+      }
+    } catch (e) {}
+
+    // Create modal overlay
+    var overlay = document.createElement('div');
+    overlay.id = 'eod-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);';
+    overlay.innerHTML =
+      '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:1.5rem;max-width:320px;width:90%;text-align:center;">' +
+        '<h3 style="margin:0 0 0.8rem;color:var(--gold);">🌙 Resumen del Dia</h3>' +
+        '<div style="display:flex;gap:0.6rem;margin-bottom:1rem;">' +
+          '<div style="flex:1;padding:0.8rem;background:var(--bg-alt);border-radius:10px;"><div style="font-size:1.2rem;font-weight:700;color:var(--gold);">$' + earning + '</div><div style="font-size:0.65rem;color:var(--text-muted);">Ganancias</div></div>' +
+          '<div style="flex:1;padding:0.8rem;background:var(--bg-alt);border-radius:10px;"><div style="font-size:1.2rem;font-weight:700;color:var(--success);">' + deliveries + '</div><div style="font-size:0.65rem;color:var(--text-muted);">Entregas</div></div>' +
+          '<div style="flex:1;padding:0.8rem;background:var(--bg-alt);border-radius:10px;"><div style="font-size:1.2rem;font-weight:700;color:var(--primary);">' + hoursOnline + '</div><div style="font-size:0.65rem;color:var(--text-muted);">En linea</div></div>' +
+        '</div>' +
+        '<button id="eod-close" style="padding:0.6rem 1.5rem;border:none;border-radius:10px;background:var(--gold);color:#000;font-weight:700;font-size:0.9rem;cursor:pointer;">Cerrar</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    document.getElementById('eod-close').addEventListener('click', function () { overlay.remove(); });
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 14: FIRST-USE TUTORIAL
+  // On first login show an overlay with 3 slides
+  // ═══════════════════════════════════════════════════════════════════════════════
+  function showTutorialIfNeeded() {
+    if (localStorage.getItem('tutorial_done') === 'true') return;
+
+    var slides = [
+      { emoji: '📍', text: 'Activa tu GPS para que la central sepa donde estas en todo momento.' },
+      { emoji: '👆', text: 'Desliza a la derecha sobre un pedido para cambiar su estado rapidamente.' },
+      { emoji: '💬', text: 'Usa el Chat para comunicarte directamente con la central de despacho.' }
+    ];
+    var currentSlide = 0;
+
+    var overlay = document.createElement('div');
+    overlay.id = 'tutorial-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);';
+
+    function renderSlide() {
+      var s = slides[currentSlide];
+      var isLast = currentSlide === slides.length - 1;
+      overlay.innerHTML =
+        '<div style="background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:2rem 1.5rem;max-width:300px;width:85%;text-align:center;">' +
+          '<div style="font-size:3rem;margin-bottom:0.8rem;">' + s.emoji + '</div>' +
+          '<p style="color:var(--text);font-size:0.9rem;margin:0 0 1.5rem;line-height:1.4;">' + s.text + '</p>' +
+          '<div style="display:flex;gap:0.6rem;justify-content:center;">' +
+            '<button id="tut-skip" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text-muted);font-size:0.8rem;cursor:pointer;">Saltar</button>' +
+            '<button id="tut-next" style="padding:0.5rem 1.2rem;border:none;border-radius:10px;background:var(--gold);color:#000;font-weight:700;font-size:0.8rem;cursor:pointer;">' + (isLast ? 'Empezar' : 'Siguiente →') + '</button>' +
+          '</div>' +
+          '<div style="margin-top:1rem;display:flex;gap:0.3rem;justify-content:center;">' +
+            slides.map(function (_, i) {
+              return '<span style="width:8px;height:8px;border-radius:50%;background:' + (i === currentSlide ? 'var(--gold)' : 'var(--border)') + ';"></span>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+
+      document.getElementById('tut-skip').addEventListener('click', closeTutorial);
+      document.getElementById('tut-next').addEventListener('click', function () {
+        if (currentSlide < slides.length - 1) {
+          currentSlide++;
+          renderSlide();
+        } else {
+          closeTutorial();
+        }
+      });
+    }
+
+    function closeTutorial() {
+      localStorage.setItem('tutorial_done', 'true');
+      overlay.remove();
+    }
+
+    renderSlide();
+    document.body.appendChild(overlay);
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 11: URGENT ORDER PULSING RED (CSS injection)
+  // Inject CSS keyframes for order-urgent class
+  // ═══════════════════════════════════════════════════════════════════════════════
+  (function injectUrgentCSS() {
+    var style = document.createElement('style');
+    style.textContent =
+      '@keyframes urgent-pulse { 0%,100% { background: transparent; } 50% { background: rgba(239,68,68,0.15); } }' +
+      '.order-urgent { animation: urgent-pulse 1.5s infinite !important; border-left-color: #ef4444 !important; }';
+    document.head.appendChild(style);
+  })();
 
   // ─── Init ──────────────────────────────────────────────────────────────────
 
