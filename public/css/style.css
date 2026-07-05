@@ -622,14 +622,14 @@ input, select, textarea {
 
 .btn-popout-map {
   position: absolute;
-  top: 12px;
-  right: 56px;
-  z-index: 800;
+  top: 60px;
+  right: 10px;
+  z-index: 1001;
   width: 34px;
   height: 34px;
   border: none;
   border-radius: 6px;
-  background: rgba(17,17,17,0.85);
+  background: rgba(17,17,17,0.92);
   color: #fff;
   font-size: 1.1rem;
   cursor: pointer;
@@ -637,7 +637,7 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
   transition: background 0.2s;
 }
 .btn-popout-map:hover { background: rgba(59,130,246,0.7); }
