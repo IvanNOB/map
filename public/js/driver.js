@@ -293,6 +293,10 @@
     const active = orders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled');
     const delivered = orders.filter((o) => o.status === 'delivered');
 
+    // Update active orders count in stats
+    const activeEl = document.getElementById('stat-active-orders');
+    if (activeEl) activeEl.textContent = active.length;
+
     if (active.length === 0 && delivered.length === 0) {
       driverOrders.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem;">No tienes pedidos asignados</p>';
       return;
@@ -305,7 +309,7 @@
       divider.textContent = 'Completados';
       divider.style.cssText = 'color:var(--text-muted);font-size:0.85rem;margin:1rem 0 0.5rem;';
       driverOrders.appendChild(divider);
-      delivered.slice(0, 5).forEach((order) => renderOrderCard(order));
+      delivered.slice(0, 3).forEach((order) => renderOrderCard(order));
     }
 
     renderOrderMarkers();
@@ -329,45 +333,47 @@
     const navLng = toPickup ? order.pickup_lng : order.dropoff_lng;
     if (navLat && navLng) {
       const navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + navLat + ',' + navLng + '&travelmode=driving';
-      navBtn = '<a class="btn btn-nav btn-sm" href="' + navUrl + '" target="_blank" rel="noopener">🧭 Navegar ' + (toPickup ? 'a recogida' : 'a entrega') + '</a>';
+      navBtn = '<a class="btn btn-nav btn-sm" href="' + navUrl + '" target="_blank" rel="noopener">🧭 Navegar</a>';
     }
 
-    // Contact the customer via WhatsApp / call (from the driver's phone)
+    // Contact the customer via WhatsApp / call
     let contactBtns = '';
     if (order.customer_phone) {
       const digits = String(order.customer_phone).replace(/[^0-9]/g, '');
       if (digits) {
         const waMsg = encodeURIComponent('Hola! Soy tu repartidor de Servicio Ghost con tu pedido ' + order.code + '.');
         contactBtns =
-          '<a class="btn btn-whatsapp btn-sm" href="https://wa.me/' + digits + '?text=' + waMsg + '" target="_blank" rel="noopener">💬 WhatsApp cliente</a>' +
-          '<a class="btn btn-outline btn-sm" href="tel:' + digits + '">📞 Llamar</a>';
+          '<a class="btn btn-whatsapp btn-sm" href="https://wa.me/' + digits + '?text=' + waMsg + '" target="_blank" rel="noopener">💬 WA</a>' +
+          '<a class="btn btn-outline btn-sm" href="tel:' + digits + '">📞</a>';
       }
     }
 
+    // Main action button (big)
+    let mainActionHtml = '';
+    if (action) {
+      const actionClass = action.next === 'picked_up' ? 'action-pickup' : action.next === 'on_the_way' ? 'action-enroute' : 'action-deliver';
+      const actionEmoji = action.next === 'picked_up' ? '📦 ' : action.next === 'on_the_way' ? '🛵 ' : '✅ ';
+      mainActionHtml = '<button class="order-main-action ' + actionClass + '" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + actionEmoji + escapeHtml(action.label) + '</button>';
+    }
+
     card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
         <div style="display:flex;align-items:center;gap:0.4rem;">
-          <span style="background:${color};color:#fff;font-weight:bold;font-size:0.75rem;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${typeof idx === 'number' ? idx + 1 : ''}</span>
+          <span style="background:${color};color:#fff;font-weight:bold;font-size:0.7rem;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${typeof idx === 'number' ? idx + 1 : ''}</span>
           <span class="order-code">${escapeHtml(order.code)}</span>
         </div>
         <span class="badge badge-${escapeHtml(order.status)}">${escapeHtml(statusLabelText(order.status))}</span>
       </div>
-      <div class="order-detail"><strong>Cliente:</strong> ${escapeHtml(order.customer_name)}</div>
-      <div class="order-detail"><strong>🟢 Recogida:</strong> ${escapeHtml(order.pickup_address || '-')}</div>
-      <div class="order-detail"><strong>🔴 Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}</div>
-      ${order.items ? '<div class="order-detail"><strong>Articulos:</strong> ' + escapeHtml(order.items) + '</div>' : ''}
-      ${order.amount ? '<div class="order-detail"><strong>Monto:</strong> $' + escapeHtml(String(order.amount)) + '</div>' : ''}
-      <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-        ${action ? '<button class="btn btn-success btn-sm" data-order-id="' + order.id + '" data-next-status="' + action.next + '">' + escapeHtml(action.label) + '</button>' : ''}
-        ${navBtn}
-        ${contactBtns}
-        ${['on_the_way', 'delivered'].includes(order.status) ? '<button class="btn btn-nav btn-sm" data-proof="' + order.id + '">📸 Subir prueba</button>' : ''}
-        ${order.status === 'delivered' ? '<span class="badge badge-delivered">Completado</span>' : ''}
-      </div>
+      <div class="order-detail"><strong>${escapeHtml(order.customer_name)}</strong></div>
+      <div class="order-detail">🟢 ${escapeHtml(order.pickup_address || '-')}</div>
+      <div class="order-detail">🔴 ${escapeHtml(order.dropoff_address || '-')}</div>
+      ${order.amount ? '<div class="order-detail" style="color:var(--gold);font-weight:600;">💰 $' + escapeHtml(String(order.amount)) + '</div>' : ''}
+      ${mainActionHtml}
+      ${order.status !== 'delivered' ? '<div class="order-secondary-actions">' + navBtn + contactBtns + (['on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-proof="' + order.id + '">📸 Prueba</button>' : '') + '</div>' : '<span class="badge badge-delivered" style="margin-top:0.5rem;">✅ Completado</span>'}
     `;
     driverOrders.appendChild(card);
 
-    // Bind action button
+    // Bind main action button
     const btn = card.querySelector('[data-order-id]');
     if (btn) {
       btn.addEventListener('click', () => updateOrderStatus(btn.dataset.orderId, btn.dataset.nextStatus));
@@ -452,6 +458,8 @@
   consentLocation.addEventListener('change', () => {
     btnShareLocation.disabled = !consentLocation.checked;
   });
+  // Auto-enable GPS button (consent is auto-accepted)
+  btnShareLocation.disabled = false;
 
   btnShareLocation.addEventListener('click', startSharing);
   btnStopLocation.addEventListener('click', stopSharing);
@@ -547,8 +555,11 @@
   }
 
   function sendLocation(latitude, longitude, speed, heading, accuracy) {
-    const now = new Date().toLocaleTimeString('es-CO');
-    gpsReadout.textContent = `Lat: ${latitude.toFixed(5)} | Lng: ${longitude.toFixed(5)} | Velocidad: ${(speed || 0).toFixed(1)} m/s | Precision: ${(accuracy || 0).toFixed(0)} m | Ultima actualizacion: ${now}`;
+    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    const speedKmh = ((speed || 0) * 3.6).toFixed(0);
+    const speedEl = document.getElementById('gps-speed');
+    if (speedEl) speedEl.textContent = speedKmh + ' km/h';
+    gpsReadout.textContent = 'Precision: ' + (accuracy || 0).toFixed(0) + 'm · ' + now;
     if (map) {
       const latlng = [latitude, longitude];
       if (positionMarker) positionMarker.setLatLng(latlng);
@@ -646,6 +657,24 @@
     );
     darkMatter.addTo(map);
     L.control.layers({ '🌑 Dark Ghost': darkMatter, '🛰️ Satelital': satellite }, null, { position: 'topright' }).addTo(map);
+
+    // Center on me button
+    var CenterControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function () {
+        var btn = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        btn.innerHTML = '<a href="#" title="Centrar en mi ubicacion" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;font-size:1.2rem;text-decoration:none;background:var(--panel,#1a1e2b);color:#fff;border-radius:4px;">📍</a>';
+        L.DomEvent.disableClickPropagation(btn);
+        btn.querySelector('a').addEventListener('click', function (e) {
+          e.preventDefault();
+          if (lastPos && map) map.setView([lastPos.lat, lastPos.lng], 16);
+          else showToast('Activa el GPS primero', 'warning');
+        });
+        return btn;
+      }
+    });
+    map.addControl(new CenterControl());
+
     renderOrderMarkers();
   }
 
@@ -756,6 +785,16 @@
       if (msg.sender_role === 'admin') {
         if (window.ghostAlert) window.ghostAlert({ title: '💬 Mensaje de Central Ghost', body: msg.body || '' });
         notifyDriverDevice('💬 Central Ghost dice:', msg.body || 'Tienes un nuevo mensaje');
+        // Update unread badge if not on chat panel
+        var chatPanel = document.getElementById('panel-chat');
+        if (chatPanel && chatPanel.classList.contains('hidden')) {
+          var badge = document.getElementById('chat-badge');
+          if (badge) {
+            var count = parseInt(badge.textContent || '0') + 1;
+            badge.textContent = count;
+            badge.classList.add('show');
+          }
+        }
       }
     });
 
