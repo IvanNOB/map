@@ -771,17 +771,7 @@
   }
 
   function updateBgStatus() {
-    var el = document.getElementById('bg-status');
-    if (!el) return;
-    if (bgPlugin()) {
-      el.className = 'bg-status ok';
-      el.innerHTML = '✅ App instalada: tu ubicación se sigue enviando aunque cierres la app o bloquees la pantalla. ' +
-        '<b>Importante:</b> en los permisos de ubicación elige <b>"Permitir todo el tiempo"</b>.';
-    } else {
-      el.className = 'bg-status warn';
-      el.innerHTML = '⚠️ Estás usando la versión de <b>navegador</b>. Si sales de la app o bloqueas la pantalla, ' +
-        'la ubicación <b>deja de enviarse</b>. Para que siga en segundo plano, instala la <b>APK</b> en el celular.';
-    }
+    // Removed - drivers already accept permissions and don't need this message
   }
   setTimeout(updateBgStatus, 1200);
 
