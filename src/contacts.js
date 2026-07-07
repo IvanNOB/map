@@ -4,30 +4,6 @@ import { requireAuth, requireRole } from "./auth.js";
 
 const router = Router();
 
-// Initialize tables
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS contact_labels (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      color TEXT NOT NULL DEFAULT '#d4af37',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS contacts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      label_id INTEGER,
-      notes TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (label_id) REFERENCES contact_labels(id) ON DELETE SET NULL
-    );
-  `);
-} catch (err) {
-  console.error("contacts: error initializing tables", err.message);
-}
-
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
 // GET /api/contacts/labels — list all labels

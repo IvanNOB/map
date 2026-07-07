@@ -457,6 +457,8 @@ export async function init() {
     try { await impl.exec("ALTER TABLE orders ADD COLUMN on_the_way_at TEXT"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN dropoff_confirmed INTEGER DEFAULT 0"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN archived INTEGER NOT NULL DEFAULT 0"); } catch (_) {}
+    try { await impl.exec("CREATE TABLE IF NOT EXISTS contact_labels (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color TEXT NOT NULL DEFAULT '#d4af37', created_at TEXT NOT NULL DEFAULT (datetime('now')))"); } catch (_) {}
+    try { await impl.exec("CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT NOT NULL, label_id INTEGER, notes TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (label_id) REFERENCES contact_labels(id) ON DELETE SET NULL)"); } catch (_) {}
     impl._save();
   }
 }
