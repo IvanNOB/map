@@ -64,12 +64,12 @@ export default function createOrdersRouter(io) {
       const { status } = req.query;
       if (status) {
         const orders = await db.all(
-          "SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC",
+          "SELECT * FROM orders WHERE status = ? AND archived = 0 ORDER BY created_at DESC",
           [status]
         );
         return res.json(orders);
       }
-      const orders = await db.all("SELECT * FROM orders ORDER BY created_at DESC");
+      const orders = await db.all("SELECT * FROM orders WHERE archived = 0 ORDER BY created_at DESC");
       return res.json(orders);
     }
 
@@ -549,26 +549,19 @@ export default function createOrdersRouter(io) {
     res.json(updated);
   });
 
-  // ─── POST /api/orders/auto-clean ── auto-delete old delivered/cancelled orders ──
-  // Keeps only today's orders, removes delivered/cancelled from previous days
+  // ─── POST /api/orders/auto-clean ── archive old delivered/cancelled orders ──
+  // Marks delivered/cancelled orders from previous days as archived (not deleted)
   router.post("/auto-clean", requireAuth, requireRole("admin"), async (req, res) => {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const rows = await db.all(
-      `SELECT id FROM orders WHERE status IN ('delivered', 'cancelled') AND date(created_at) < date(?)`,
+    const result = await db.run(
+      `UPDATE orders SET archived = 1 WHERE status IN ('delivered', 'cancelled') AND date(created_at) < date(?) AND archived = 0`,
       [today]
     );
-    for (const r of rows) {
-      await db.run("DELETE FROM location_history WHERE order_id = ?", [r.id]);
-      await db.run("DELETE FROM order_proofs WHERE order_id = ?", [r.id]);
+    const archived = result.changes || 0;
+    if (archived > 0) {
+      logActivity(req.user, "auto_archive", `Archivados automaticamente: ${archived} pedidos de dias anteriores`);
     }
-    await db.run(
-      `DELETE FROM orders WHERE status IN ('delivered', 'cancelled') AND date(created_at) < date(?)`,
-      [today]
-    );
-    if (rows.length > 0) {
-      logActivity(req.user, "auto_clean", `Limpieza automatica: ${rows.length} pedidos de dias anteriores eliminados`);
-    }
-    res.json({ ok: true, deleted: rows.length });
+    res.json({ ok: true, archived: archived });
   });
 
   // ─── POST /api/orders/clear ── delete orders permanently (admin) ───────────

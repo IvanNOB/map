@@ -271,7 +271,7 @@
   }
 
   // ─── Auto-limpieza diaria de pedidos viejos ─────────────────────────────────
-  // Al iniciar sesión, limpia pedidos entregados/cancelados de días anteriores
+  // Al iniciar sesión, archiva pedidos entregados/cancelados de días anteriores
   async function autoCleanOldOrders() {
     const todayStr = new Date().toISOString().slice(0, 10);
     const cleanKey = 'auto_clean_' + todayStr;
@@ -282,8 +282,8 @@
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem(cleanKey, 'true');
-        if (data.deleted > 0) {
-          showToast('🧹 Se limpiaron ' + data.deleted + ' pedidos de dias anteriores', 'info');
+        if (data.archived > 0) {
+          showToast('📦 Se archivaron ' + data.archived + ' pedidos de dias anteriores', 'info');
         }
       }
     } catch (e) { /* silently fail */ }

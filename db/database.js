@@ -350,6 +350,7 @@ export async function init() {
         status                TEXT NOT NULL DEFAULT 'pending'
                               CHECK (status IN ('pending','assigned','picked_up','on_the_way','delivered','cancelled')),
         driver_id             INTEGER,
+        archived              INTEGER NOT NULL DEFAULT 0,
         created_at            TEXT NOT NULL DEFAULT (datetime('now')),
         assigned_at           TEXT,
         delivered_at          TEXT,
@@ -455,6 +456,7 @@ export async function init() {
     try { await impl.exec("ALTER TABLE orders ADD COLUMN picked_up_at TEXT"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN on_the_way_at TEXT"); } catch (_) {}
     try { await impl.exec("ALTER TABLE orders ADD COLUMN dropoff_confirmed INTEGER DEFAULT 0"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE orders ADD COLUMN archived INTEGER NOT NULL DEFAULT 0"); } catch (_) {}
     impl._save();
   }
 }
