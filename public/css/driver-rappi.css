@@ -1,9 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   DRIVER APP — Layout tipo Rappi con colores Servicio Ghost
-   Mapa fullscreen + bottom sheet + cards organizadas
+   DRIVER APP — Interfaz optimizada para repartidores
+   Prioridad: velocidad, legibilidad, uso con una mano
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── App Container ──────────────────────────────────────────────────────── */
+/* ─── Layout principal sin scroll ────────────────────────────────────────── */
 #app.app-container {
   display: flex;
   flex-direction: column;
@@ -12,319 +12,335 @@
   overflow: hidden;
 }
 
-/* ─── Header Ghost premium ───────────────────────────────────────────────── */
+/* ─── Header ultra compacto ──────────────────────────────────────────────── */
 .drv-header {
   display: flex;
   align-items: center;
-  padding: 0.6rem 1rem;
-  background: linear-gradient(180deg, #16151b, #0a0a0c) !important;
-  border-bottom: 1px solid rgba(212,175,55,0.2) !important;
-  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  background: #0d0d10 !important;
+  border-bottom: 1px solid rgba(212,175,55,0.15) !important;
+  gap: 0.5rem;
   flex-shrink: 0;
-  z-index: 10;
+  height: 42px;
 }
 .drv-header .drv-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--gold, #d4af37) !important;
-  gap: 0.4rem;
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: #f0c75e !important;
+  gap: 0.3rem;
+  flex: 1;
 }
-
-/* Online toggle */
 .online-toggle {
-  background: rgba(212,175,55,0.1) !important;
-  border: 1px solid rgba(212,175,55,0.3) !important;
-  border-radius: 24px;
-  padding: 0.35rem 0.7rem;
+  background: rgba(212,175,55,0.08) !important;
+  border: 1px solid rgba(212,175,55,0.25) !important;
+  border-radius: 20px;
+  padding: 0.25rem 0.55rem;
 }
 .online-toggle.active {
-  background: rgba(34,197,94,0.15) !important;
-  border-color: var(--success, #22c55e) !important;
+  background: rgba(34,197,94,0.12) !important;
+  border-color: #22c55e !important;
 }
-.online-toggle .ot-text { font-size: 0.72rem; font-weight: 700; }
-.online-toggle.active .ot-text { color: var(--success, #22c55e) !important; }
-.online-toggle .ot-dot { background: rgba(212,175,55,0.5); }
-.online-toggle.active .ot-dot { background: var(--success, #22c55e) !important; }
-
-/* Settings */
+.online-toggle .ot-text { font-size: 0.68rem; font-weight: 700; }
+.online-toggle.active .ot-text { color: #22c55e !important; }
+.online-toggle .ot-dot { width: 8px; height: 8px; }
+.online-toggle.active .ot-dot { background: #22c55e !important; }
 .drv-header .icon-btn {
-  background: rgba(212,175,55,0.1) !important;
-  border: 1px solid rgba(212,175,55,0.25) !important;
+  width: 28px; height: 28px; font-size: 0.8rem;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
   border-radius: 50%;
 }
 .drv-settings-menu {
-  background: var(--panel, #16151b) !important;
+  background: #16151b !important;
   border: 1px solid rgba(212,175,55,0.2) !important;
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.6) !important;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.7) !important;
 }
 
-/* ─── Mapa fullscreen ────────────────────────────────────────────────────── */
+/* ─── MAPA — ocupa el máximo espacio ─────────────────────────────────────── */
 .drv-map-section {
-  flex: 1 1 50%;
-  min-height: 200px;
+  flex: 1 1 60%;
+  min-height: 180px;
   position: relative;
 }
 .drv-map-section #driver-map {
-  width: 100%;
-  height: 100%;
-  border: none;
-  margin: 0;
-  border-radius: 0;
+  width: 100%; height: 100%;
+  border: none; margin: 0; border-radius: 0;
 }
 
-/* GPS overlay — estilo flotante premium */
+/* GPS overlay — compacto y funcional */
 .gps-overlay {
   position: absolute;
-  bottom: 14px;
-  left: 12px;
-  right: 12px;
+  bottom: 10px; left: 8px; right: 8px;
   z-index: 800;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  background: rgba(10,10,12,0.94) !important;
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(212,175,55,0.2) !important;
-  border-radius: 16px;
-  padding: 0.7rem 1rem;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  gap: 0.5rem;
+  background: rgba(8,8,10,0.92) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212,175,55,0.15) !important;
+  border-radius: 12px;
+  padding: 0.5rem 0.8rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
+.gps-overlay .gps-info { flex: 1; min-width: 0; }
 .gps-overlay .gps-speed {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--gold, #d4af37) !important;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #f0c75e !important;
+  line-height: 1;
 }
 .gps-overlay .gps-detail {
-  font-size: 0.7rem;
-  color: var(--text-muted, #9ca3af) !important;
+  font-size: 0.65rem;
+  color: #888 !important;
+  margin-top: 1px;
 }
 .gps-overlay .gps-btn {
-  padding: 0.75rem 1.4rem;
-  border-radius: 12px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   border: none;
   cursor: pointer;
+  touch-action: manipulation;
 }
 .gps-btn-start {
-  background: linear-gradient(180deg, #f4d97a, #d4af37) !important;
-  color: #1a1405 !important;
-  box-shadow: 0 4px 16px rgba(212,175,55,0.4);
+  background: #d4af37 !important;
+  color: #111 !important;
+  box-shadow: 0 3px 12px rgba(212,175,55,0.4);
 }
 .gps-btn-stop {
-  background: var(--danger, #ef4444) !important;
+  background: #ef4444 !important;
   color: #fff !important;
-  box-shadow: 0 4px 14px rgba(239,68,68,0.4);
   animation: none !important;
 }
 
-/* ─── Stats bar ──────────────────────────────────────────────────────────── */
+/* ─── Stats — una línea ultra densa ──────────────────────────────────────── */
 .drv-stats {
   display: flex;
   align-items: center;
-  padding: 0.6rem 0.8rem;
-  background: var(--panel, #16151b) !important;
-  border-bottom: 1px solid rgba(212,175,55,0.12) !important;
+  padding: 0.35rem 0.6rem;
+  background: #111014 !important;
+  border-bottom: 1px solid rgba(212,175,55,0.08) !important;
   gap: 0;
+  flex-shrink: 0;
+  height: 44px;
 }
 .drv-stat {
   flex: 1;
   text-align: center;
-  padding: 0.3rem 0;
-  border-right: 1px solid rgba(212,175,55,0.1);
+  padding: 0;
 }
-.drv-stat:last-child { border-right: none; }
 .drv-stat .val {
-  font-size: 1.1rem;
-  font-weight: 800;
-  background: linear-gradient(180deg, #fbeeb6, #d4af37);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #f0c75e !important;
+  -webkit-text-fill-color: #f0c75e;
+  background: none;
+  line-height: 1.2;
 }
 .drv-stat .lbl {
-  font-size: 0.6rem;
-  color: var(--text-muted, #9ca3af) !important;
+  font-size: 0.55rem;
+  color: #777 !important;
   text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 .drv-stats .stats-label {
-  font-size: 0.5rem;
-  color: var(--text-muted, #9ca3af) !important;
+  font-size: 0.48rem;
+  color: #555 !important;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
 }
 
-/* ─── Bottom sheet ───────────────────────────────────────────────────────── */
+/* ─── Bottom section — compacta ──────────────────────────────────────────── */
 .drv-bottom {
-  flex: 1 1 50%;
+  flex: 1 1 40%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: var(--bg, #0a0a0c);
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  margin-top: -10px;
-  position: relative;
-  z-index: 5;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.3);
+  background: #0a0a0c;
+  border-top: 1px solid rgba(212,175,55,0.1);
+  display: flex;
+  flex-direction: column;
 }
-/* Handle del bottom sheet */
-.drv-bottom::before {
-  content: '';
-  display: block;
-  width: 40px;
-  height: 4px;
-  background: rgba(212,175,55,0.3);
-  border-radius: 4px;
-  margin: 10px auto 6px;
-}
+.drv-bottom::before { display: none; }
 
-/* Tabs */
+/* Tabs — simples y directas */
 .drv-tabs {
   display: flex;
-  background: transparent !important;
-  border-bottom: 1px solid rgba(212,175,55,0.12) !important;
-  padding: 0 1rem;
+  background: #0d0d10 !important;
+  border-bottom: 1px solid rgba(212,175,55,0.08) !important;
+  padding: 0;
+  flex-shrink: 0;
 }
 .drv-tab {
   flex: 1;
-  padding: 0.7rem 0.5rem;
-  font-size: 0.82rem;
+  padding: 0.55rem 0;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: var(--text-muted, #9ca3af) !important;
+  color: #666 !important;
   border: none;
   background: transparent;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
 }
 .drv-tab.active {
-  color: var(--gold, #d4af37) !important;
-  border-bottom-color: var(--gold, #d4af37) !important;
+  color: #f0c75e !important;
+  border-bottom-color: #d4af37 !important;
 }
-.drv-tab .tab-badge {
-  background: var(--danger, #ef4444) !important;
-}
+.drv-tab .tab-badge { background: #ef4444 !important; }
 
-/* Panel */
+/* Panel scroll */
 .drv-panel {
-  padding: 0.8rem 1rem;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.6rem;
 }
 
-/* ─── Order cards premium ────────────────────────────────────────────────── */
+/* ─── Order cards — densas y legibles ────────────────────────────────────── */
 .drv-panel .driver-order-card {
-  background: var(--panel, #16151b) !important;
-  border: 1px solid rgba(212,175,55,0.12) !important;
-  border-radius: 14px !important;
-  padding: 1rem 1.1rem;
-  margin-bottom: 0.7rem;
-  border-left: 4px solid var(--gold, #d4af37) !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  transition: transform 0.12s, box-shadow 0.12s;
-}
-.drv-panel .driver-order-card:active {
-  transform: scale(0.98);
+  background: #14131a !important;
+  border: 1px solid rgba(212,175,55,0.08) !important;
+  border-radius: 10px !important;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #d4af37 !important;
+  box-shadow: none;
 }
 .order-code {
-  color: var(--gold, #d4af37) !important;
+  color: #f0c75e !important;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+}
+.order-detail {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  margin-bottom: 0.15rem;
 }
 
-/* Main action button */
+/* Botón de acción principal — GRANDE y claro */
 .order-main-action {
-  border-radius: 12px;
-  font-size: 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 800;
-  padding: 0.85rem;
+  padding: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: transform 0.1s, box-shadow 0.2s;
+  letter-spacing: 0.3px;
+  margin-top: 0.5rem;
 }
-.order-main-action:active { transform: scale(0.96); }
+.order-main-action:active { transform: scale(0.97); }
 .order-main-action.action-pickup {
-  background: linear-gradient(180deg, #34d399, #10b981) !important;
+  background: #10b981 !important;
   color: #fff;
-  box-shadow: 0 4px 16px rgba(16,185,129,0.35);
 }
 .order-main-action.action-enroute {
-  background: linear-gradient(180deg, #f4d97a, #d4af37) !important;
-  color: #1a1405;
-  box-shadow: 0 4px 16px rgba(212,175,55,0.35);
+  background: #d4af37 !important;
+  color: #111;
 }
 .order-main-action.action-deliver {
-  background: linear-gradient(180deg, #60a5fa, #3b82f6) !important;
+  background: #3b82f6 !important;
   color: #fff;
-  box-shadow: 0 4px 16px rgba(59,130,246,0.35);
 }
 
-/* Secondary actions */
+/* Botones secundarios — compactos */
 .order-secondary-actions {
-  margin-top: 0.6rem;
-  gap: 0.4rem;
+  margin-top: 0.4rem;
+  gap: 0.3rem;
 }
 .order-secondary-actions .btn {
-  border-radius: 10px;
-  font-size: 0.72rem;
-  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  padding: 0.3rem 0.55rem;
   font-weight: 600;
 }
 
-/* ─── Chat ───────────────────────────────────────────────────────────────── */
+/* ─── Chat — limpio ──────────────────────────────────────────────────────── */
 .drv-chat-wrap .chat-messages {
-  background: var(--bg-alt, #121116);
-  padding: 1rem;
+  background: #0c0b10;
+  padding: 0.8rem;
+}
+.chat-msg {
+  font-size: 0.82rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 12px;
+  max-width: 80%;
 }
 .chat-msg.mine {
-  background: linear-gradient(135deg, var(--gold, #d4af37), #b8860b) !important;
-  color: #1a1405 !important;
-  border-bottom-right-radius: 4px !important;
+  background: #d4af37 !important;
+  color: #111 !important;
+  border-bottom-right-radius: 3px !important;
 }
 .chat-msg.theirs {
-  background: var(--panel, #16151b) !important;
-  border: 1px solid rgba(212,175,55,0.1) !important;
-  border-bottom-left-radius: 4px !important;
+  background: #1a1920 !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-bottom-left-radius: 3px !important;
 }
 .chat-quick-replies {
-  border-top: 1px solid rgba(212,175,55,0.1) !important;
-  padding: 0.5rem 0.8rem;
+  border-top: 1px solid rgba(255,255,255,0.05) !important;
+  padding: 0.4rem 0.6rem;
+  gap: 0.25rem;
 }
 .chat-quick-btn {
-  background: rgba(212,175,55,0.1) !important;
-  border: 1px solid rgba(212,175,55,0.2) !important;
-  color: var(--gold, #d4af37) !important;
+  background: rgba(212,175,55,0.08) !important;
+  border: 1px solid rgba(212,175,55,0.15) !important;
+  color: #d4af37 !important;
   font-weight: 600;
-  border-radius: 20px;
+  border-radius: 16px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
 }
 .chat-quick-btn:active {
-  background: var(--gold, #d4af37) !important;
-  color: #1a1405 !important;
+  background: #d4af37 !important;
+  color: #111 !important;
 }
 .chat-input-row {
-  border-top: 1px solid rgba(212,175,55,0.1) !important;
+  border-top: 1px solid rgba(255,255,255,0.05) !important;
+  padding: 0.5rem 0.6rem;
+}
+.chat-input-row input {
+  padding: 0.6rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  background: #1a1920 !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: #eee !important;
+}
+.chat-input-row input:focus {
+  border-color: #d4af37 !important;
 }
 .chat-input-row .btn {
-  background: linear-gradient(180deg, #f4d97a, #d4af37) !important;
-  color: #1a1405 !important;
+  background: #d4af37 !important;
+  color: #111 !important;
   border: none !important;
-  border-radius: 24px;
+  border-radius: 20px;
   font-weight: 700;
+  padding: 0.6rem 1rem;
 }
 
 /* ─── BG status ──────────────────────────────────────────────────────────── */
-.bg-status { margin: 0; padding: 0.5rem 1rem; border-radius: 0; }
+.bg-status { margin: 0; padding: 0.4rem 0.8rem; border-radius: 0; font-size: 0.72rem; }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
-@media (min-height: 700px) {
-  .drv-map-section { flex: 1 1 55%; }
-  .drv-bottom { flex: 1 1 45%; }
+@media (min-height: 750px) {
+  .drv-map-section { flex: 1 1 60%; }
+  .drv-bottom { flex: 1 1 40%; }
 }
-@media (max-height: 550px) {
-  .drv-map-section { flex: 1 1 35%; min-height: 150px; }
-  .drv-bottom { flex: 1 1 65%; }
+@media (max-height: 600px) {
+  .drv-map-section { flex: 1 1 40%; min-height: 150px; }
+  .drv-bottom { flex: 1 1 60%; }
+  .drv-header { height: 36px; padding: 0.3rem 0.6rem; }
+  .drv-stats { height: 38px; }
 }
 
-/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-.drv-bottom::-webkit-scrollbar { width: 4px; }
-.drv-bottom::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.25); border-radius: 4px; }
-.drv-panel::-webkit-scrollbar { width: 4px; }
-.drv-panel::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.25); border-radius: 4px; }
+/* ─── Scrollbar mínima ───────────────────────────────────────────────────── */
+.drv-bottom::-webkit-scrollbar,
+.drv-panel::-webkit-scrollbar { width: 3px; }
+.drv-bottom::-webkit-scrollbar-thumb,
+.drv-panel::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.2); border-radius: 3px; }
+
+/* ─── Optimizaciones de rendimiento ──────────────────────────────────────── */
+.drv-map-section, .gps-overlay, .drv-panel .driver-order-card {
+  will-change: auto;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+* { -webkit-tap-highlight-color: transparent; }
