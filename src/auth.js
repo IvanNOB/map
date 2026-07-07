@@ -1,20 +1,29 @@
 import { Router } from "express";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../db/database.js";
+import config from "./config.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
-const TOKEN_TTL = "12h";
+const JWT_SECRET = config.jwt.secret;
+const ACCESS_TOKEN_TTL = config.jwt.accessTokenTTL;
+const REFRESH_TOKEN_TTL = config.jwt.refreshTokenTTL;
 
-if (!process.env.JWT_SECRET) {
-  console.warn("[WARN] JWT_SECRET env var is not set. Using insecure default secret. Set JWT_SECRET in production.");
-}
+// ─── Token Functions ─────────────────────────────────────────────────────────
 
 export function signToken(user) {
   return jwt.sign(
     { id: user.id, name: user.name, email: user.email, role: user.role },
     JWT_SECRET,
-    { expiresIn: TOKEN_TTL }
+    { expiresIn: ACCESS_TOKEN_TTL }
+  );
+}
+
+export function signRefreshToken(user) {
+  return jwt.sign(
+    { id: user.id, type: "refresh" },
+    JWT_SECRET,
+    { expiresIn: REFRESH_TOKEN_TTL }
   );
 }
 
@@ -39,6 +48,8 @@ export function requireAuth(req, res, next) {
   const token = extractToken(req);
   const payload = token && verifyToken(token);
   if (!payload) return res.status(401).json({ error: "No autenticado" });
+  // Reject refresh tokens used as access tokens
+  if (payload.type === "refresh") return res.status(401).json({ error: "Token invalido" });
   req.user = payload;
   next();
 }
@@ -57,9 +68,9 @@ const router = Router();
 
 // ─── Login Attempt Limiter ───────────────────────────────────────────────────
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
-const loginAttempts = new Map(); // key: email or IP -> { count, lockedUntil }
+const MAX_LOGIN_ATTEMPTS = config.login.maxAttempts;
+const LOCKOUT_MINUTES = config.login.lockoutMinutes;
+const loginAttempts = new Map(); // key: email|IP -> { count, lockedUntil }
 
 function getLoginKey(req) {
   const email = (req.body.email || "").toLowerCase().trim();
@@ -107,7 +118,7 @@ function getLockoutRemaining(key) {
   return Math.max(0, Math.ceil((entry.lockedUntil - Date.now()) / 60000));
 }
 
-// Cleanup expired entries every 5 minutes
+// Cleanup expired entries periodically
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of loginAttempts) {
@@ -115,13 +126,53 @@ setInterval(() => {
       loginAttempts.delete(key);
     }
   }
-}, 5 * 60 * 1000);
+}, config.login.cleanupIntervalMs);
 
-// POST /api/auth/login
+// ─── Refresh Token Store ─────────────────────────────────────────────────────
+// In production you'd store these in the database or Redis.
+// This in-memory store works for single-instance deployments.
+
+const refreshTokens = new Map(); // token -> { userId, expiresAt, family }
+
+function storeRefreshToken(token, userId) {
+  const decoded = jwt.decode(token);
+  const family = crypto.randomUUID();
+  refreshTokens.set(token, {
+    userId,
+    expiresAt: decoded.exp * 1000,
+    family,
+  });
+  return family;
+}
+
+function revokeRefreshToken(token) {
+  refreshTokens.delete(token);
+}
+
+function revokeAllUserTokens(userId) {
+  for (const [token, data] of refreshTokens) {
+    if (data.userId === userId) {
+      refreshTokens.delete(token);
+    }
+  }
+}
+
+// Cleanup expired refresh tokens every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of refreshTokens) {
+    if (now >= data.expiresAt) {
+      refreshTokens.delete(token);
+    }
+  }
+}, 60 * 60 * 1000);
+
+// ─── POST /api/auth/login ────────────────────────────────────────────────────
+
 router.post("/login", (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
-    return res.status(400).json({ error: "Email y contraseña son obligatorios" });
+    return res.status(400).json({ error: "Email y contrasena son obligatorios" });
   }
 
   const key = getLoginKey(req);
@@ -130,7 +181,7 @@ router.post("/login", (req, res) => {
   if (isLockedOut(key)) {
     const minRemaining = getLockoutRemaining(key);
     return res.status(429).json({
-      error: `Cuenta bloqueada por demasiados intentos fallidos. Intenta de nuevo en ${minRemaining} minuto${minRemaining !== 1 ? 's' : ''}.`,
+      error: `Cuenta bloqueada por demasiados intentos fallidos. Intenta de nuevo en ${minRemaining} minuto${minRemaining !== 1 ? "s" : ""}.`,
       locked: true,
       retry_after_minutes: minRemaining,
     });
@@ -150,7 +201,7 @@ router.post("/login", (req, res) => {
     }
 
     return res.status(401).json({
-      error: `Credenciales invalidas. Te quedan ${remaining} intento${remaining !== 1 ? 's' : ''}.`,
+      error: `Credenciales invalidas. Te quedan ${remaining} intento${remaining !== 1 ? "s" : ""}.`,
       attempts_remaining: remaining,
     });
   }
@@ -158,26 +209,114 @@ router.post("/login", (req, res) => {
   // Successful login: clear attempts
   clearAttempts(key);
 
-  const token = signToken(user);
-  res.cookie("token", token, {
+  const accessToken = signToken(user);
+  const refreshToken = signRefreshToken(user);
+  storeRefreshToken(refreshToken, user.id);
+
+  // Set access token as httpOnly cookie
+  res.cookie("token", accessToken, {
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 12 * 60 * 60 * 1000,
+    secure: config.jwt.cookieSecure,
+    maxAge: config.jwt.accessTokenMaxAge,
+  });
+
+  // Set refresh token as httpOnly cookie (longer lived, stricter path)
+  res.cookie("refresh_token", refreshToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: config.jwt.cookieSecure,
+    path: "/api/auth",
+    maxAge: config.jwt.refreshTokenMaxAge,
   });
 
   res.json({
-    token,
+    token: accessToken,
+    refresh_token: refreshToken,
+    expires_in: config.jwt.accessTokenMaxAge / 1000,
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
   });
 });
 
-// POST /api/auth/logout
+// ─── POST /api/auth/refresh ──────────────────────────────────────────────────
+
+router.post("/refresh", (req, res) => {
+  // Extract refresh token from cookie or body
+  const refreshToken =
+    req.cookies?.refresh_token ||
+    req.body?.refresh_token;
+
+  if (!refreshToken) {
+    return res.status(401).json({ error: "Refresh token no proporcionado" });
+  }
+
+  // Verify the refresh token signature
+  const payload = verifyToken(refreshToken);
+  if (!payload || payload.type !== "refresh") {
+    return res.status(401).json({ error: "Refresh token invalido o expirado" });
+  }
+
+  // Check if the token is in our store (not revoked)
+  const storedData = refreshTokens.get(refreshToken);
+  if (!storedData) {
+    // Possible token reuse attack — revoke all tokens for this user
+    revokeAllUserTokens(payload.id);
+    return res.status(401).json({ error: "Refresh token revocado. Inicia sesion nuevamente." });
+  }
+
+  // Get current user from database (they might have been deleted or role changed)
+  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(payload.id);
+  if (!user) {
+    revokeRefreshToken(refreshToken);
+    return res.status(401).json({ error: "Usuario no encontrado" });
+  }
+
+  // Rotate: revoke old refresh token, issue new pair
+  revokeRefreshToken(refreshToken);
+
+  const newAccessToken = signToken(user);
+  const newRefreshToken = signRefreshToken(user);
+  storeRefreshToken(newRefreshToken, user.id);
+
+  res.cookie("token", newAccessToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: config.jwt.cookieSecure,
+    maxAge: config.jwt.accessTokenMaxAge,
+  });
+
+  res.cookie("refresh_token", newRefreshToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: config.jwt.cookieSecure,
+    path: "/api/auth",
+    maxAge: config.jwt.refreshTokenMaxAge,
+  });
+
+  res.json({
+    token: newAccessToken,
+    refresh_token: newRefreshToken,
+    expires_in: config.jwt.accessTokenMaxAge / 1000,
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+  });
+});
+
+// ─── POST /api/auth/logout ───────────────────────────────────────────────────
+
 router.post("/logout", (req, res) => {
+  // Revoke refresh token if present
+  const refreshToken = req.cookies?.refresh_token || req.body?.refresh_token;
+  if (refreshToken) {
+    revokeRefreshToken(refreshToken);
+  }
+
   res.clearCookie("token");
+  res.clearCookie("refresh_token", { path: "/api/auth" });
   res.json({ ok: true });
 });
 
-// GET /api/auth/me
+// ─── GET /api/auth/me ────────────────────────────────────────────────────────
+
 router.get("/me", requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
