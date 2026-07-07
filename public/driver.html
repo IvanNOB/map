@@ -11,357 +11,11 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/driver-rappi.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    /* ─── Driver App Layout ─────────────────────────────────────────── */
-    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-    @keyframes gps-pulse {
-      0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.6); }
-      70% { box-shadow: 0 0 0 10px rgba(34,197,94,0); }
-      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-    }
-
-    #app.app-container {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-    }
-
-    /* ─── Header ─────────────────────────────────────────────────────── */
-    .drv-header {
-      display: flex;
-      align-items: center;
-      padding: 0.5rem 0.8rem;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      gap: 0.5rem;
-      flex-shrink: 0;
-    }
-    .drv-header .drv-name {
-      font-weight: 700;
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      flex: 1;
-    }
-    .drv-header .drv-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    /* Toggle Online grande */
-    .online-toggle {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 0.3rem 0.6rem 0.3rem 0.4rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .online-toggle.active {
-      background: var(--success-soft);
-      border-color: var(--success);
-    }
-    .online-toggle .ot-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      transition: background 0.2s;
-    }
-    .online-toggle.active .ot-dot {
-      background: var(--success);
-      animation: gps-pulse 1.5s infinite;
-    }
-    .online-toggle .ot-text {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-    .online-toggle.active .ot-text {
-      color: var(--success);
-    }
-
-    /* ─── Mapa ───────────────────────────────────────────────────────── */
-    .drv-map-section {
-      position: relative;
-      flex: 1 1 50%;
-      min-height: 200px;
-    }
-    .drv-map-section #driver-map {
-      width: 100%;
-      height: 100%;
-      border-radius: 0;
-      border: none;
-      margin: 0;
-    }
-
-    /* GPS overlay grande */
-    .gps-overlay {
-      position: absolute;
-      bottom: 12px;
-      left: 10px;
-      right: 10px;
-      z-index: 800;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      background: rgba(10,10,12,0.92);
-      backdrop-filter: blur(8px);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 0.6rem 0.8rem;
-    }
-    .gps-overlay .gps-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.1rem;
-      min-width: 0;
-    }
-    .gps-overlay .gps-speed {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .gps-overlay .gps-detail {
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .gps-overlay .gps-btn {
-      flex-shrink: 0;
-      padding: 0.7rem 1.4rem;
-      border: none;
-      border-radius: 12px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-    .gps-overlay .gps-btn:active { transform: scale(0.93); }
-    .gps-btn-start { background: var(--success); color: #fff; }
-    .gps-btn-stop { background: var(--danger); color: #fff; animation: gps-pulse 1.5s infinite; }
-
-    /* ─── Stats ──────────────────────────────────────────────────────── */
-    .drv-stats {
-      display: flex;
-      align-items: center;
-      padding: 0.5rem 0.8rem;
-      background: var(--bg-alt);
-      border-bottom: 1px solid var(--border);
-      gap: 0.6rem;
-      flex-shrink: 0;
-    }
-    .drv-stat { text-align: center; flex: 1; }
-    .drv-stat .val { font-size: 1.05rem; font-weight: 700; color: var(--gold); }
-    .drv-stat .lbl { font-size: 0.58rem; color: var(--text-muted); text-transform: uppercase; }
-    .drv-stats .stats-label {
-      font-size: 0.55rem;
-      color: var(--text-muted);
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-      transform: rotate(180deg);
-      letter-spacing: 0.5px;
-    }
-
-    /* ─── Bottom ─────────────────────────────────────────────────────── */
-    .drv-bottom {
-      flex: 1 1 50%;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Tabs */
-    .drv-tabs {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
-    }
-    .drv-tab {
-      flex: 1;
-      padding: 0.6rem;
-      text-align: center;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      position: relative;
-    }
-    .drv-tab.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
-    }
-    /* Badge de mensajes sin leer */
-    .drv-tab .tab-badge {
-      position: absolute;
-      top: 4px;
-      right: calc(50% - 30px);
-      background: var(--danger);
-      color: #fff;
-      font-size: 0.6rem;
-      font-weight: 700;
-      min-width: 16px;
-      height: 16px;
-      border-radius: 99px;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 0 4px;
-      animation: pulse 1.2s infinite;
-    }
-    .drv-tab .tab-badge.show { display: flex; }
-
-    /* Panel */
-    .drv-panel { flex: 1; overflow-y: auto; padding: 0.6rem 0.8rem; }
-    .drv-panel.hidden { display: none; }
-
-    /* ─── Order cards mejorados ───────────────────────────────────────── */
-    .drv-panel .driver-order-card {
-      margin-bottom: 0.6rem;
-      padding: 0.9rem;
-    }
-    .order-main-action {
-      display: block;
-      width: 100%;
-      padding: 0.7rem;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 0.7rem;
-      transition: transform 0.1s;
-    }
-    .order-main-action:active { transform: scale(0.97); }
-    .order-main-action.action-pickup { background: var(--success); color: #fff; }
-    .order-main-action.action-enroute { background: var(--purple); color: #fff; }
-    .order-main-action.action-deliver { background: var(--primary); color: #fff; }
-    .order-secondary-actions {
-      display: flex;
-      gap: 0.4rem;
-      margin-top: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .order-secondary-actions .btn {
-      font-size: 0.7rem;
-      padding: 0.3rem 0.6rem;
-    }
-
-    /* ─── Chat mejorado ──────────────────────────────────────────────── */
-    .drv-chat-wrap {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-    .drv-chat-wrap .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      max-height: none;
-      padding: 0.8rem;
-    }
-    .chat-quick-replies {
-      display: flex;
-      gap: 0.3rem;
-      padding: 0.4rem 0.8rem;
-      border-top: 1px solid var(--border);
-      overflow-x: auto;
-      flex-shrink: 0;
-    }
-    .chat-quick-btn {
-      flex-shrink: 0;
-      padding: 0.35rem 0.7rem;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: var(--bg-alt);
-      color: var(--text);
-      font-size: 0.72rem;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.15s;
-    }
-    .chat-quick-btn:active { transform: scale(0.95); background: var(--primary-soft); }
-    .chat-input-row {
-      display: flex;
-      gap: 0.5rem;
-      padding: 0.6rem 0.8rem;
-      border-top: 1px solid var(--border);
-    }
-    .chat-input-row input {
-      flex: 1;
-      padding: 0.7rem 1rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-    }
-    .chat-input-row .btn { padding: 0.7rem 1.2rem; border-radius: 20px; font-size: 0.85rem; }
-
-    /* BG status */
-    .bg-status { margin: 0.4rem 0.8rem; font-size: 0.78rem; }
-    .bg-status.hidden { display: none; }
-
-    /* Responsive */
-    @media (min-height: 700px) {
-      .drv-map-section { flex: 1 1 55%; }
-      .drv-bottom { flex: 1 1 45%; }
-    }
-    @media (max-height: 550px) {
-      .drv-map-section { flex: 1 1 35%; min-height: 150px; }
-      .drv-bottom { flex: 1 1 65%; }
-    }
-
-    /* Settings dropdown */
-    .drv-settings {
-      position: relative;
-    }
-    .drv-settings-menu {
-      display: none;
-      position: absolute;
-      top: 100%;
-      right: 0;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.4rem;
-      min-width: 120px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-      z-index: 999;
-    }
-    .drv-settings-menu.show { display: block; }
-    .drv-settings-menu button {
-      display: block;
-      width: 100%;
-      padding: 0.5rem 0.7rem;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      font-size: 0.78rem;
-      text-align: left;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .drv-settings-menu button:hover { background: var(--panel-hover); }
-  </style>
 </head>
 <body>
-  <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- Login Screen -->
+  <!-- Login -->
   <div id="login-screen" class="login-screen">
     <div class="login-card">
       <div class="login-logo-wrap"><span class="brand-logo">👻</span></div>
@@ -369,67 +23,62 @@
       <p>App del Repartidor</p>
       <form id="login-form">
         <div class="form-group">
-          <label for="login-email">Correo electronico</label>
-          <input type="email" id="login-email" placeholder="repartidor@agencia.com" required>
+          <label for="login-email">Correo</label>
+          <input type="email" id="login-email" placeholder="correo@ejemplo.com" required>
         </div>
         <div class="form-group">
           <label for="login-password">Contrasena</label>
           <input type="password" id="login-password" placeholder="••••••••" required>
         </div>
-        <button type="submit" class="btn btn-primary btn-block">Iniciar Sesion</button>
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
         <div id="login-error" class="login-error"></div>
       </form>
     </div>
   </div>
 
-  <!-- Main App -->
+  <!-- App -->
   <div id="app" class="app-container hidden">
 
-    <!-- Header limpio -->
+    <!-- 1. Header -->
     <header class="drv-header">
       <div class="drv-name">
         <span>👻</span>
-        <span id="driver-name">Repartidor</span>
-        <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>
+        <span id="driver-name">Ghost</span>
+        <span id="sync-dot" class="sync-dot"></span>
       </div>
       <div class="drv-actions">
-        <!-- Toggle Online/Offline grande y claro -->
         <div class="online-toggle" id="online-toggle">
           <span class="ot-dot"></span>
           <span class="ot-text" id="status-label">OFFLINE</span>
-          <input type="checkbox" id="toggle-online" style="display:none;">
+          <input type="checkbox" id="toggle-online" hidden>
         </div>
-        <!-- Menu de ajustes -->
         <div class="drv-settings">
-          <button class="icon-btn" id="btn-settings" style="width:30px;height:30px;font-size:0.85rem;" title="Ajustes">⚙️</button>
+          <button class="icon-btn" id="btn-settings" title="Ajustes">⚙️</button>
           <div class="drv-settings-menu" id="settings-menu">
-            <button id="btn-theme">🌙 Cambiar tema</button>
+            <button id="btn-theme">🌙 Tema</button>
             <button id="btn-refresh-driver">🔄 Refrescar</button>
-            <button id="btn-logout">🚪 Cerrar sesion</button>
+            <button id="btn-logout">🚪 Salir</button>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Mapa principal (prioridad) -->
+    <!-- 2. Mapa (prioridad maxima) -->
     <section class="drv-map-section">
       <div id="driver-map"></div>
-      <!-- GPS overlay -->
       <div class="gps-overlay">
         <div class="gps-info">
           <div class="gps-speed" id="gps-speed">0 km/h</div>
-          <div class="gps-detail" id="gps-readout">Activa el GPS para comenzar</div>
+          <div class="gps-detail" id="gps-readout">Toca para activar GPS</div>
         </div>
-        <button id="btn-share-location" class="gps-btn gps-btn-start">▶ INICIAR GPS</button>
-        <button id="btn-stop-location" class="gps-btn gps-btn-stop hidden">⏹ DETENER</button>
+        <button id="btn-share-location" class="gps-btn gps-btn-start">▶ GPS</button>
+        <button id="btn-stop-location" class="gps-btn gps-btn-stop hidden">⏹ STOP</button>
       </div>
-      <!-- Consent hidden - auto-managed -->
-      <input type="checkbox" id="consent-location" checked style="display:none;">
+      <input type="checkbox" id="consent-location" checked hidden>
     </section>
 
-    <!-- Stats -->
+    <!-- 3. Stats -->
     <div class="drv-stats">
-      <span class="stats-label">HOY</span>
       <div class="drv-stat">
         <div class="val" id="earn-today">$0</div>
         <div class="lbl">Ganancia</div>
@@ -448,17 +97,15 @@
       </div>
     </div>
 
-    <!-- Bottom: Tabs -->
+    <!-- 4. Tabs + Contenido -->
     <div class="drv-bottom">
       <div class="drv-tabs">
         <button class="drv-tab active" data-panel="panel-pedidos">📦 Pedidos</button>
         <button class="drv-tab" data-panel="panel-chat">💬 Chat <span class="tab-badge" id="chat-badge">0</span></button>
       </div>
-      <!-- Panel Pedidos -->
       <div id="panel-pedidos" class="drv-panel">
         <div id="driver-orders"></div>
       </div>
-      <!-- Panel Chat -->
       <div id="panel-chat" class="drv-panel hidden">
         <div class="drv-chat-wrap">
           <div class="chat-messages" id="dchat-messages">
@@ -472,13 +119,12 @@
             <button class="chat-quick-btn" data-msg="Estoy en camino">🛵 En camino</button>
           </div>
           <div class="chat-input-row">
-            <input type="text" id="dchat-input" placeholder="Escribe un mensaje...">
+            <input type="text" id="dchat-input" placeholder="Mensaje...">
             <button class="btn btn-primary" id="dchat-send">Enviar</button>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -486,67 +132,33 @@
   <script src="/js/driver.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
-    // ─── Tab switching ─────────────────────────────────────────────────
-    document.querySelectorAll('.drv-tab').forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.drv-tab').forEach(function(t) { t.classList.remove('active'); });
-        tab.classList.add('active');
-        var target = tab.getAttribute('data-panel');
-        document.querySelectorAll('.drv-panel').forEach(function(p) { p.classList.add('hidden'); });
-        document.getElementById(target).classList.remove('hidden');
-        // Clear badge when opening chat
-        if (target === 'panel-chat') {
-          var badge = document.getElementById('chat-badge');
-          if (badge) { badge.classList.remove('show'); badge.textContent = '0'; }
-        }
+    // Tabs
+    document.querySelectorAll('.drv-tab').forEach(function(t){
+      t.addEventListener('click',function(){
+        document.querySelectorAll('.drv-tab').forEach(function(b){b.classList.remove('active');});
+        t.classList.add('active');
+        var p=t.getAttribute('data-panel');
+        document.querySelectorAll('.drv-panel').forEach(function(x){x.classList.add('hidden');});
+        document.getElementById(p).classList.remove('hidden');
+        if(p==='panel-chat'){var b=document.getElementById('chat-badge');if(b){b.classList.remove('show');b.textContent='0';}}
       });
     });
-
-    // ─── Online toggle (big click area) ────────────────────────────────
-    var onlineToggle = document.getElementById('online-toggle');
-    var hiddenCheckbox = document.getElementById('toggle-online');
-    if (onlineToggle) {
-      onlineToggle.addEventListener('click', function() {
-        hiddenCheckbox.checked = !hiddenCheckbox.checked;
-        hiddenCheckbox.dispatchEvent(new Event('change'));
-        if (hiddenCheckbox.checked) {
-          onlineToggle.classList.add('active');
-          document.getElementById('status-label').textContent = 'EN LINEA';
-        } else {
-          onlineToggle.classList.remove('active');
-          document.getElementById('status-label').textContent = 'OFFLINE';
-        }
-      });
-    }
-
-    // ─── Settings menu ─────────────────────────────────────────────────
-    var btnSettings = document.getElementById('btn-settings');
-    var settingsMenu = document.getElementById('settings-menu');
-    if (btnSettings) {
-      btnSettings.addEventListener('click', function(e) {
-        e.stopPropagation();
-        settingsMenu.classList.toggle('show');
-      });
-      document.addEventListener('click', function() { settingsMenu.classList.remove('show'); });
-    }
-
-    // ─── Quick replies ─────────────────────────────────────────────────
-    document.querySelectorAll('.chat-quick-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var input = document.getElementById('dchat-input');
-        input.value = btn.getAttribute('data-msg');
-        document.getElementById('dchat-send').click();
-      });
+    // Online toggle
+    var ot=document.getElementById('online-toggle'),cb=document.getElementById('toggle-online');
+    if(ot)ot.addEventListener('click',function(){
+      cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'));
+      if(cb.checked){ot.classList.add('active');document.getElementById('status-label').textContent='EN LINEA';}
+      else{ot.classList.remove('active');document.getElementById('status-label').textContent='OFFLINE';}
     });
-
-    // ─── GPS consent auto-accepted ─────────────────────────────────────
-    // Stored in localStorage so user never has to check a box
-    localStorage.setItem('gps_consent', 'true');
-    var consentEl = document.getElementById('consent-location');
-    if (consentEl) consentEl.checked = true;
-    // Enable GPS button immediately
-    var gpsBtn = document.getElementById('btn-share-location');
-    if (gpsBtn) gpsBtn.disabled = false;
+    // Settings
+    var bs=document.getElementById('btn-settings'),sm=document.getElementById('settings-menu');
+    if(bs){bs.addEventListener('click',function(e){e.stopPropagation();sm.classList.toggle('show');});document.addEventListener('click',function(){sm.classList.remove('show');});}
+    // Quick replies
+    document.querySelectorAll('.chat-quick-btn').forEach(function(b){b.addEventListener('click',function(){var i=document.getElementById('dchat-input');i.value=b.getAttribute('data-msg');document.getElementById('dchat-send').click();});});
+    // GPS auto
+    localStorage.setItem('gps_consent','true');
+    var c=document.getElementById('consent-location');if(c)c.checked=true;
+    var g=document.getElementById('btn-share-location');if(g)g.disabled=false;
   </script>
 </body>
 </html>
