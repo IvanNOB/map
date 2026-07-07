@@ -364,6 +364,8 @@
       if (viewConfig) viewConfig.classList.toggle('hidden', tab !== 'config');
       const viewActividad = document.getElementById('view-actividad');
       if (viewActividad) viewActividad.classList.toggle('hidden', tab !== 'actividad');
+      const viewContactos = document.getElementById('view-contactos');
+      if (viewContactos) viewContactos.classList.toggle('hidden', tab !== 'contactos');
       if (tab === 'pedidos') {
         initMap();
         loadDrivers().then(() => { refreshDriverMarkers(); renderChatContacts(); });

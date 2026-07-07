@@ -13,6 +13,7 @@ import createLocationRouter from "./src/location.js";
 import trackingRouter from "./src/tracking.js";
 import reportsRouter from "./src/reports.js";
 import chatRouter from "./src/chat.js";
+import contactsRouter from "./src/contacts.js";
 import customersRouter from "./src/customers.js";
 import settingsRouter from "./src/settings.js";
 import activityRouter from "./src/activity.js";
@@ -69,6 +70,9 @@ app.use("/api/reports", reportsRouter);
 
 // Chat history
 app.use("/api/chat", chatRouter);
+
+// Contacts directory
+app.use("/api/contacts", contactsRouter);
 
 // Customers (autocomplete)
 app.use("/api/customers", customersRouter);

@@ -47,6 +47,7 @@
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
         <button class="tab-btn" data-tab="reportes">Reportes</button>
         <button class="tab-btn" data-tab="actividad">Actividad</button>
+        <button class="tab-btn" data-tab="contactos">Contactos</button>
         <button class="tab-btn" data-tab="config">Config</button>
       </div>
       <div class="navbar-right">
@@ -235,6 +236,31 @@
           <button class="btn btn-outline btn-sm" id="btn-refresh-activity">Actualizar</button>
         </div>
         <div id="activity-list" class="activity-list"></div>
+      </section>
+
+      <!-- Contactos View -->
+      <section id="view-contactos" class="hidden">
+        <div class="view-header"><h2>📱 Directorio WhatsApp</h2><p>Contactos organizados por etiquetas. Escribe directo desde aqui.</p></div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+          <!-- Agregar etiqueta -->
+          <div style="display:flex;gap:0.4rem;align-items:center;">
+            <input type="text" id="new-label-name" placeholder="Nueva etiqueta..." style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);font-size:0.8rem;width:140px;">
+            <input type="color" id="new-label-color" value="#d4af37" style="width:30px;height:30px;border:none;border-radius:6px;cursor:pointer;">
+            <button class="btn btn-primary btn-sm" id="btn-add-label">+ Etiqueta</button>
+          </div>
+          <!-- Agregar contacto -->
+          <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="new-contact-name" placeholder="Nombre" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);font-size:0.8rem;width:120px;">
+            <input type="tel" id="new-contact-phone" placeholder="3XX XXX XXXX" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);font-size:0.8rem;width:130px;">
+            <select id="new-contact-label" style="padding:0.4rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);font-size:0.8rem;">
+              <option value="">Sin etiqueta</option>
+            </select>
+            <input type="text" id="new-contact-notes" placeholder="Notas (opcional)" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-alt);color:var(--text);font-size:0.8rem;width:140px;">
+            <button class="btn btn-primary btn-sm" id="btn-add-contact">+ Contacto</button>
+          </div>
+        </div>
+        <!-- Contactos organizados por etiqueta -->
+        <div id="contacts-container"></div>
       </section>
 
       <!-- Config View -->
@@ -587,6 +613,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/dispatcher.js"></script>
   <script src="/js/dispatcher-enhancements.js"></script>
+  <script src="/js/contacts-ui.js"></script>
   <script src="/js/pwa.js"></script>
 </body>
 </html>
