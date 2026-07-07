@@ -384,12 +384,19 @@
 
   // ─── Orders ─────────────────────────────────────────────────────────────────
 
+  var lastOrdersJSON = '';
+
   async function loadOrders() {
     try {
       var res = await apiFetch('/api/orders');
       if (res.ok) {
-        orders = await res.json();
-        lastRouteTs = 0; // force route recompute when orders/targets change
+        var newOrders = await res.json();
+        var newJSON = JSON.stringify(newOrders);
+        // Solo re-renderizar si los datos cambiaron
+        if (newJSON === lastOrdersJSON) return;
+        lastOrdersJSON = newJSON;
+        orders = newOrders;
+        lastRouteTs = 0;
         renderOrders();
         updateActiveOrderBar();
         if (lastPos) updateDriverRoute(lastPos.lat, lastPos.lng);
@@ -1075,7 +1082,7 @@
   }
 
 
-  // ─── Auto Refresh (cada 5 segundos, silencioso) ─────────────────────────────
+  // ─── Auto Refresh (silencioso — solo actualiza si hay cambios) ───────────────
 
   var syncDot = null;
   setInterval(async function () {
@@ -1084,12 +1091,12 @@
       try {
         await loadOrders();
         await loadEarnings();
-        if (syncDot) { syncDot.style.background = '#22c55e'; }
+        if (syncDot) syncDot.style.background = '#22c55e';
       } catch (e) {
-        if (syncDot) { syncDot.style.background = '#ef4444'; }
+        if (syncDot) syncDot.style.background = '#ef4444';
       }
     }
-  }, 5000);
+  }, 10000);
 
 
   // ═══════════════════════════════════════════════════════════════════════════════
