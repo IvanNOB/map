@@ -1,0 +1,462 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PANEL REFRESH — Mejora visual del panel de administracion
+   Mismas funcionalidades, mejor presentacion
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Navbar refinada ────────────────────────────────────────────────────── */
+.navbar {
+  height: 54px;
+  padding: 0 1.2rem;
+  background: linear-gradient(180deg, rgba(22,21,27,0.98), rgba(10,10,12,0.98));
+  border-bottom: 1px solid rgba(212,175,55,0.18);
+  backdrop-filter: blur(12px);
+  gap: 1rem;
+}
+
+.navbar-brand {
+  font-size: 1rem;
+  gap: 0.4rem;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fbeeb6, #d4af37, #a9742f) !important;
+  box-shadow: 0 2px 10px rgba(212,175,55,0.4);
+}
+
+.navbar-tabs .tab-btn {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.navbar-tabs .tab-btn.active {
+  background: linear-gradient(180deg, rgba(212,175,55,0.2), rgba(212,175,55,0.08));
+  color: var(--gold);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
+.navbar-tabs .tab-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.04);
+  color: var(--gold-light, #f4d97a);
+}
+
+.navbar-right {
+  gap: 0.6rem;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: all 0.15s;
+}
+.icon-btn:hover {
+  background: rgba(212,175,55,0.12);
+  border-color: rgba(212,175,55,0.3);
+  transform: translateY(-1px);
+}
+
+/* ─── Dispatch Layout refinado ───────────────────────────────────────────── */
+.dispatch {
+  gap: 0.8rem;
+  height: calc(100vh - 54px - 1.5rem);
+}
+
+.dispatch-side {
+  width: 360px;
+  gap: 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+
+.dispatch-side-head {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(212,175,55,0.1);
+}
+.dispatch-side-head h2 {
+  font-size: 1.05rem;
+  letter-spacing: 0;
+}
+
+/* ─── Mini stats mejorados ───────────────────────────────────────────────── */
+.dispatch-stats {
+  gap: 0.4rem;
+}
+
+.mini-stat {
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.mini-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.mini-val {
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.mini-lbl {
+  font-size: 0.62rem;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* ─── Search box refinada ────────────────────────────────────────────────── */
+.search-box input {
+  padding: 0.5rem 0.9rem 0.5rem 2.2rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: all 0.2s;
+}
+.search-box input:focus {
+  background: rgba(255,255,255,0.06);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212,175,55,0.1);
+}
+
+/* ─── Filtros refinados ──────────────────────────────────────────────────── */
+.dispatch-filters {
+  gap: 0.3rem;
+}
+.filter-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.72rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.filter-btn:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(212,175,55,0.3);
+}
+.filter-btn.active {
+  background: linear-gradient(180deg, rgba(212,175,55,0.25), rgba(212,175,55,0.1));
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.2);
+}
+
+/* ─── Order cards refinadas ──────────────────────────────────────────────── */
+.orders-list {
+  gap: 0.5rem;
+}
+.order-card {
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.015);
+  transition: all 0.15s ease;
+  border-left-width: 3px;
+}
+.order-card:hover {
+  background: rgba(255,255,255,0.04);
+  transform: translateX(2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.order-code {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+/* ─── Badges refinados ───────────────────────────────────────────────────── */
+.badge {
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Mapa refinado ──────────────────────────────────────────────────────── */
+.dispatch-main .map-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.dispatch-main .map-container {
+  border-radius: 12px;
+}
+
+/* ─── Live people panel refinado ─────────────────────────────────────────── */
+.live-people {
+  border-radius: 10px;
+  top: 10px;
+  left: 10px;
+  border: 1px solid rgba(212,175,55,0.25);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.live-people-head {
+  padding: 0.5rem 0.65rem;
+  font-size: 0.82rem;
+}
+.live-count {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+}
+
+/* ─── Chat refinado ──────────────────────────────────────────────────────── */
+.dispatch-chat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem;
+}
+.dispatch-chat-title {
+  font-size: 0.9rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(212,175,55,0.1);
+  margin-bottom: 0.5rem;
+}
+.dispatch-chat .chat-contact {
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  transition: all 0.12s;
+}
+.dispatch-chat .chat-contact:hover {
+  background: rgba(212,175,55,0.1);
+  border-color: rgba(212,175,55,0.3);
+}
+.dispatch-chat .chat-contact.active {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+  font-weight: 700;
+}
+
+.chat-panel {
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.chat-header {
+  font-size: 0.85rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(255,255,255,0.02);
+}
+.chat-msg {
+  border-radius: 12px;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.75rem;
+}
+.chat-msg.mine {
+  background: linear-gradient(135deg, var(--gold), #b8860b);
+  color: #000;
+  border-bottom-right-radius: 4px;
+}
+.chat-msg.theirs {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-input-row input {
+  border-radius: 10px;
+  font-size: 0.82rem;
+  padding: 0.55rem 0.9rem;
+}
+
+/* ─── Buttons refinados ──────────────────────────────────────────────────── */
+.btn {
+  border-radius: 8px;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0) scale(0.97);
+}
+.btn-sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 7px;
+}
+.btn-primary {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.3);
+}
+.btn-primary:hover {
+  box-shadow: 0 4px 14px rgba(212,175,55,0.45);
+}
+
+/* ─── Modal refinado ─────────────────────────────────────────────────────── */
+.modal-overlay {
+  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.65);
+}
+.modal {
+  border-radius: 16px;
+  border: 1px solid rgba(212,175,55,0.15);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  padding: 1.8rem;
+}
+.modal h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1.2rem;
+  color: var(--gold);
+}
+
+/* ─── Config cards refinadas ─────────────────────────────────────────────── */
+.config-card {
+  border-radius: 14px;
+  padding: 1.3rem;
+}
+.config-card h2 {
+  font-size: 0.95rem;
+  color: var(--gold);
+}
+
+/* ─── Drivers grid refinado ──────────────────────────────────────────────── */
+.driver-card {
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.15s;
+}
+.driver-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  border-color: rgba(212,175,55,0.2);
+}
+
+/* ─── Reports refinado ───────────────────────────────────────────────────── */
+.reports-container {
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.summary-card {
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.15s;
+}
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.chart-card {
+  border-radius: 14px;
+  padding: 1.2rem;
+}
+
+/* ─── Scrollbar refinada ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212,175,55,0.2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212,175,55,0.4);
+}
+
+/* ─── Toast refinado ─────────────────────────────────────────────────────── */
+.toast {
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  font-size: 0.82rem;
+  backdrop-filter: blur(8px);
+  background: rgba(22,21,27,0.95);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.toast.success { border-left: 3px solid var(--success); }
+.toast.error { border-left: 3px solid var(--danger); }
+.toast.info { border-left: 3px solid var(--gold); }
+.toast.warning { border-left: 3px solid #f59e0b; }
+
+/* ─── Login refinado ─────────────────────────────────────────────────────── */
+.login-card {
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  border: 1px solid rgba(212,175,55,0.15);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.05);
+}
+.login-card h1 {
+  font-size: 1.4rem;
+  margin-bottom: 0.4rem;
+}
+.form-group input, .form-group select, .form-group textarea {
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  transition: all 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212,175,55,0.12);
+}
+
+/* ─── Smooth entrance animations ────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dispatch-side, .dispatch-main, .dispatch-chat {
+  animation: fadeSlideUp 0.4s ease both;
+}
+.dispatch-main { animation-delay: 0.1s; }
+.dispatch-chat { animation-delay: 0.2s; }
+
+/* ─── Conn indicator refinado ────────────────────────────────────────────── */
+.conn-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+.conn-indicator.online {
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold), 0 0 2px var(--gold);
+}
+
+/* ─── WhatsApp button ────────────────────────────────────────────────────── */
+.btn-whatsapp {
+  background: linear-gradient(180deg, #2bd471, #1da851);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(37,211,102,0.3);
+}
+.btn-whatsapp:hover {
+  background: linear-gradient(180deg, #34e87e, #25d366);
+  box-shadow: 0 4px 12px rgba(37,211,102,0.4);
+}
+
+/* ─── Activity items ─────────────────────────────────────────────────────── */
+.activity-item {
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: all 0.12s;
+}
+.activity-item:hover {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(212,175,55,0.1);
+}
