@@ -1,0 +1,516 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DRIVER APP — Estilo Rappi (naranja, blanco, mapa fullscreen, bottom sheet)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --rappi-orange: #FF6B00;
+  --rappi-orange-light: #FF8C33;
+  --rappi-orange-dark: #E55A00;
+  --rappi-bg: #F5F5F5;
+  --rappi-card: #FFFFFF;
+  --rappi-text: #1A1A1A;
+  --rappi-text-sec: #666666;
+  --rappi-border: #E8E8E8;
+  --rappi-success: #00C853;
+  --rappi-danger: #FF3B30;
+  --rappi-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --rappi-radius: 16px;
+}
+
+/* Override dark theme for driver app */
+body {
+  background: var(--rappi-bg) !important;
+  color: var(--rappi-text) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* ─── App Container ──────────────────────────────────────────────────────── */
+#app.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--rappi-bg);
+}
+
+/* ─── Header estilo Rappi ────────────────────────────────────────────────── */
+.drv-header {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  background: var(--rappi-orange) !important;
+  border: none !important;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(255,107,0,0.3);
+  z-index: 10;
+}
+
+
+.drv-header .drv-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff !important;
+  gap: 0.4rem;
+}
+.drv-header .drv-actions { gap: 0.5rem; }
+
+/* Online toggle estilo Rappi */
+.online-toggle {
+  background: rgba(255,255,255,0.2) !important;
+  border: 1px solid rgba(255,255,255,0.4) !important;
+  border-radius: 24px;
+  padding: 0.35rem 0.7rem;
+}
+.online-toggle.active {
+  background: #fff !important;
+  border-color: #fff !important;
+}
+.online-toggle .ot-text {
+  color: rgba(255,255,255,0.9) !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.online-toggle.active .ot-text {
+  color: var(--rappi-orange) !important;
+}
+.online-toggle .ot-dot { background: rgba(255,255,255,0.6); }
+.online-toggle.active .ot-dot {
+  background: var(--rappi-success) !important;
+}
+
+/* Settings button on header */
+.drv-header .icon-btn {
+  background: rgba(255,255,255,0.15) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  color: #fff !important;
+  border-radius: 50%;
+}
+.drv-header .icon-btn:hover {
+  background: rgba(255,255,255,0.25) !important;
+}
+
+/* Settings menu */
+.drv-settings-menu {
+  background: var(--rappi-card) !important;
+  border: 1px solid var(--rappi-border) !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
+}
+.drv-settings-menu button {
+  color: var(--rappi-text) !important;
+  border-radius: 8px;
+}
+.drv-settings-menu button:hover {
+  background: #f0f0f0 !important;
+}
+
+/* ─── Mapa fullscreen ────────────────────────────────────────────────────── */
+.drv-map-section {
+  flex: 1 1 50%;
+  min-height: 200px;
+  position: relative;
+}
+.drv-map-section #driver-map {
+  width: 100%;
+  height: 100%;
+  border: none;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* GPS overlay estilo Rappi */
+.gps-overlay {
+  position: absolute;
+  bottom: 14px;
+  left: 12px;
+  right: 12px;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: var(--rappi-card) !important;
+  border: none !important;
+  border-radius: 14px;
+  padding: 0.7rem 1rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+.gps-overlay .gps-speed {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--rappi-text) !important;
+}
+.gps-overlay .gps-detail {
+  font-size: 0.7rem;
+  color: var(--rappi-text-sec) !important;
+}
+.gps-overlay .gps-btn {
+  padding: 0.7rem 1.3rem;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.gps-btn-start {
+  background: var(--rappi-orange) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(255,107,0,0.4);
+}
+.gps-btn-start:active { transform: scale(0.95); }
+.gps-btn-stop {
+  background: var(--rappi-danger) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(255,59,48,0.4);
+  animation: none !important;
+}
+
+
+/* ─── Stats bar estilo Rappi ─────────────────────────────────────────────── */
+.drv-stats {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  background: var(--rappi-card) !important;
+  border-bottom: 1px solid var(--rappi-border) !important;
+  gap: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.drv-stat {
+  flex: 1;
+  text-align: center;
+  padding: 0.2rem 0;
+  border-right: 1px solid var(--rappi-border);
+}
+.drv-stat:last-child { border-right: none; }
+.drv-stat .val {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--rappi-orange) !important;
+}
+.drv-stat .lbl {
+  font-size: 0.6rem;
+  color: var(--rappi-text-sec) !important;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.drv-stats .stats-label {
+  font-size: 0.5rem;
+  color: var(--rappi-text-sec) !important;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* ─── Bottom section ─────────────────────────────────────────────────────── */
+.drv-bottom {
+  flex: 1 1 50%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--rappi-bg);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  margin-top: -10px;
+  position: relative;
+  z-index: 5;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+}
+
+/* Handle visual (like bottom sheet) */
+.drv-bottom::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 4px;
+  background: #ccc;
+  border-radius: 4px;
+  margin: 8px auto 4px;
+}
+
+/* Tabs estilo Rappi */
+.drv-tabs {
+  display: flex;
+  background: var(--rappi-card) !important;
+  border-bottom: 1px solid var(--rappi-border) !important;
+  border-radius: 0;
+  padding: 0 0.5rem;
+}
+.drv-tab {
+  flex: 1;
+  padding: 0.7rem 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--rappi-text-sec) !important;
+  border: none;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+.drv-tab.active {
+  color: var(--rappi-orange) !important;
+  border-bottom-color: var(--rappi-orange) !important;
+}
+.drv-tab .tab-badge {
+  background: var(--rappi-danger) !important;
+  top: 6px;
+}
+
+/* Panel content */
+.drv-panel {
+  padding: 0.8rem;
+  background: var(--rappi-bg);
+}
+
+/* ─── Order cards estilo Rappi ───────────────────────────────────────────── */
+.drv-panel .driver-order-card {
+  background: var(--rappi-card) !important;
+  border: none !important;
+  border-radius: 14px !important;
+  padding: 1rem;
+  margin-bottom: 0.7rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border-left: 4px solid var(--rappi-orange) !important;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.drv-panel .driver-order-card:active {
+  transform: scale(0.98);
+}
+.order-code {
+  color: var(--rappi-orange) !important;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.order-detail {
+  color: var(--rappi-text) !important;
+  font-size: 0.82rem;
+  margin-bottom: 0.2rem;
+}
+.order-detail strong { color: var(--rappi-text) !important; }
+
+/* Main action button Rappi style */
+.order-main-action {
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 0.8rem;
+  transition: transform 0.1s, box-shadow 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.order-main-action:active { transform: scale(0.96); }
+.order-main-action.action-pickup {
+  background: var(--rappi-success) !important;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0,200,83,0.3);
+}
+.order-main-action.action-enroute {
+  background: var(--rappi-orange) !important;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(255,107,0,0.3);
+}
+.order-main-action.action-deliver {
+  background: #007AFF !important;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0,122,255,0.3);
+}
+
+/* Secondary actions */
+.order-secondary-actions .btn {
+  border-radius: 10px;
+  font-size: 0.72rem;
+  padding: 0.35rem 0.65rem;
+  font-weight: 600;
+  border: 1px solid var(--rappi-border);
+  color: var(--rappi-text);
+  background: var(--rappi-card);
+}
+.order-secondary-actions .btn-whatsapp {
+  background: #25D366 !important;
+  color: #fff !important;
+  border: none;
+}
+.order-secondary-actions .btn-nav {
+  background: var(--rappi-orange) !important;
+  color: #fff !important;
+  border: none;
+}
+
+/* Badges */
+.badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+
+/* ─── Chat estilo Rappi ──────────────────────────────────────────────────── */
+.drv-chat-wrap .chat-messages {
+  background: #FAFAFA;
+  padding: 1rem;
+}
+.chat-msg {
+  border-radius: 16px !important;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  max-width: 80%;
+  line-height: 1.4;
+}
+.chat-msg.mine {
+  background: var(--rappi-orange) !important;
+  color: #fff !important;
+  border-bottom-right-radius: 4px !important;
+  align-self: flex-end;
+}
+.chat-msg.theirs {
+  background: var(--rappi-card) !important;
+  color: var(--rappi-text) !important;
+  border: 1px solid var(--rappi-border) !important;
+  border-bottom-left-radius: 4px !important;
+  align-self: flex-start;
+}
+.chat-msg .cm-time {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}
+
+.chat-quick-replies {
+  background: var(--rappi-card);
+  border-top: 1px solid var(--rappi-border) !important;
+  padding: 0.5rem 0.8rem;
+}
+.chat-quick-btn {
+  background: #FFF3E8 !important;
+  border: 1px solid #FFD6B0 !important;
+  color: var(--rappi-orange) !important;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.73rem;
+}
+.chat-quick-btn:active {
+  background: var(--rappi-orange) !important;
+  color: #fff !important;
+}
+
+.chat-input-row {
+  background: var(--rappi-card);
+  border-top: 1px solid var(--rappi-border) !important;
+  padding: 0.7rem 0.8rem;
+}
+.chat-input-row input {
+  background: #F5F5F5 !important;
+  border: 1px solid var(--rappi-border) !important;
+  color: var(--rappi-text) !important;
+  border-radius: 24px;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+}
+.chat-input-row input:focus {
+  border-color: var(--rappi-orange) !important;
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.1);
+}
+.chat-input-row .btn {
+  background: var(--rappi-orange) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 24px;
+  font-weight: 700;
+  padding: 0.7rem 1.2rem;
+}
+.chat-empty { color: var(--rappi-text-sec) !important; }
+
+/* ─── BG status ──────────────────────────────────────────────────────────── */
+.bg-status {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.78rem;
+  border-radius: 0;
+}
+.bg-status.ok {
+  background: #E8F5E9 !important;
+  border: none !important;
+  color: #2E7D32 !important;
+}
+.bg-status.warn {
+  background: #FFF8E1 !important;
+  border: none !important;
+  color: #F57F17 !important;
+}
+
+/* ─── Login estilo Rappi ─────────────────────────────────────────────────── */
+.login-screen {
+  background: linear-gradient(160deg, var(--rappi-orange) 0%, var(--rappi-orange-dark) 100%) !important;
+}
+.login-card {
+  background: var(--rappi-card) !important;
+  border: none !important;
+  border-radius: 24px !important;
+  padding: 2rem 1.5rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2) !important;
+}
+.login-card h1 {
+  background: none !important;
+  -webkit-text-fill-color: var(--rappi-orange) !important;
+  color: var(--rappi-orange) !important;
+  font-size: 1.5rem;
+}
+.login-card p { color: var(--rappi-text-sec) !important; }
+.login-card .form-group label { color: var(--rappi-text-sec) !important; }
+.login-card .form-group input {
+  background: #F5F5F5 !important;
+  border: 1px solid var(--rappi-border) !important;
+  color: var(--rappi-text) !important;
+  border-radius: 12px;
+}
+.login-card .form-group input:focus {
+  border-color: var(--rappi-orange) !important;
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.1);
+}
+.login-card .btn-primary {
+  background: var(--rappi-orange) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 14px;
+  padding: 0.85rem;
+  font-size: 1rem;
+  font-weight: 800;
+  box-shadow: 0 4px 16px rgba(255,107,0,0.35) !important;
+}
+.login-card .brand-logo {
+  background: var(--rappi-orange) !important;
+  box-shadow: 0 4px 16px rgba(255,107,0,0.4) !important;
+  border: none !important;
+}
+.login-error { color: var(--rappi-danger) !important; }
+
+/* ─── Toast override ─────────────────────────────────────────────────────── */
+.toast {
+  background: var(--rappi-card) !important;
+  color: var(--rappi-text) !important;
+  border: none !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+.toast.success { border-left: 4px solid var(--rappi-success) !important; }
+.toast.error { border-left: 4px solid var(--rappi-danger) !important; }
+.toast.info { border-left: 4px solid var(--rappi-orange) !important; }
+.toast.warning { border-left: 4px solid #FFC107 !important; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+.drv-bottom::-webkit-scrollbar { width: 4px; }
+.drv-bottom::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+.drv-panel::-webkit-scrollbar { width: 4px; }
+.drv-panel::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (min-height: 700px) {
+  .drv-map-section { flex: 1 1 55%; }
+  .drv-bottom { flex: 1 1 45%; }
+}
+@media (max-height: 550px) {
+  .drv-map-section { flex: 1 1 35%; min-height: 150px; }
+  .drv-bottom { flex: 1 1 65%; }
+}
