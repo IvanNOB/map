@@ -549,6 +549,28 @@ export default function createOrdersRouter(io) {
     res.json(updated);
   });
 
+  // ─── POST /api/orders/auto-clean ── auto-delete old delivered/cancelled orders ──
+  // Keeps only today's orders, removes delivered/cancelled from previous days
+  router.post("/auto-clean", requireAuth, requireRole("admin"), async (req, res) => {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const rows = await db.all(
+      `SELECT id FROM orders WHERE status IN ('delivered', 'cancelled') AND date(created_at) < date(?)`,
+      [today]
+    );
+    for (const r of rows) {
+      await db.run("DELETE FROM location_history WHERE order_id = ?", [r.id]);
+      await db.run("DELETE FROM order_proofs WHERE order_id = ?", [r.id]);
+    }
+    await db.run(
+      `DELETE FROM orders WHERE status IN ('delivered', 'cancelled') AND date(created_at) < date(?)`,
+      [today]
+    );
+    if (rows.length > 0) {
+      logActivity(req.user, "auto_clean", `Limpieza automatica: ${rows.length} pedidos de dias anteriores eliminados`);
+    }
+    res.json({ ok: true, deleted: rows.length });
+  });
+
   // ─── POST /api/orders/clear ── delete orders permanently (admin) ───────────
   // body: { which: 'delivered' | 'cancelled' | 'all' }
   router.post("/clear", requireAuth, requireRole("admin"), async (req, res) => {

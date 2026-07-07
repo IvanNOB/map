@@ -262,11 +262,31 @@
     userName.textContent = currentUser.name;
     loadData();
     initSocket();
+    autoCleanOldOrders();
     // Request notification permission + subscribe to push
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
     if (window.enablePush) window.enablePush(token);
+  }
+
+  // ─── Auto-limpieza diaria de pedidos viejos ─────────────────────────────────
+  // Al iniciar sesión, limpia pedidos entregados/cancelados de días anteriores
+  async function autoCleanOldOrders() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const cleanKey = 'auto_clean_' + todayStr;
+    // Solo limpiar una vez por día
+    if (localStorage.getItem(cleanKey)) return;
+    try {
+      const res = await apiFetch('/api/orders/auto-clean', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem(cleanKey, 'true');
+        if (data.deleted > 0) {
+          showToast('🧹 Se limpiaron ' + data.deleted + ' pedidos de dias anteriores', 'info');
+        }
+      }
+    } catch (e) { /* silently fail */ }
   }
 
   loginForm.addEventListener('submit', async (e) => {
@@ -1821,7 +1841,8 @@
     const driverId = order.driver_id;
     const todayStr = new Date().toISOString().slice(0, 10);
     const domiCount = orders.filter(o => o.driver_id === driverId && o.status !== 'cancelled' && o.created_at && o.created_at.slice(0, 10) === todayStr).length;
-    const msg = `⚡ SERVICIO GHOST ⚡\n${today}\n🛵 DOMI #${domiCount} del día\n👤 Repartidor: ${driverName || 'Por asignar'}\n🏢 Negocio: ${negocio}\n📍 Dirección: ${dropoff}\n📱 Celular: ${phone}`;
+    const driverMention = driverName ? '@' + driverName : 'Por asignar';
+    const msg = `⚡ SERVICIO GHOST ⚡\n${today}\n🛵 DOMI #${domiCount} del día\n👤 Repartidor: ${driverMention}\n🏢 Negocio: ${negocio}\n📍 Dirección: ${dropoff}\n📱 Celular: ${phone}`;
     // Copiar mensaje al portapapeles y abrir el grupo
     if (navigator.clipboard) {
       navigator.clipboard.writeText(msg).then(() => {
