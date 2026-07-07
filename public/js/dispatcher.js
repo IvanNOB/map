@@ -711,9 +711,16 @@
 
   function populatePlaceSelect() {
     const sel = document.getElementById('order-place');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Ninguno —</option>' +
-      places.map((p) => '<option value="' + p.id + '">' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + '</option>').join('');
+    if (sel) {
+      sel.innerHTML = '<option value="">— Ninguno —</option>' +
+        places.map((p) => '<option value="' + p.id + '">' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + '</option>').join('');
+    }
+    // Also populate the dropoff place selector
+    const selDrop = document.getElementById('order-dropoff-place');
+    if (selDrop) {
+      selDrop.innerHTML = '<option value="">— Ninguno —</option>' +
+        places.map((p) => '<option value="' + p.id + '">' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + '</option>').join('');
+    }
   }
 
   function drawPlacesConfig() {
@@ -808,6 +815,24 @@
         pickerStep = 'dropoff';
       }
       showToast('Recogida fijada en ' + p.name, 'info');
+    });
+  }
+
+  // When a saved place is chosen as DROPOFF destination, fill dropoff fields
+  const orderDropoffPlaceSel = document.getElementById('order-dropoff-place');
+  if (orderDropoffPlaceSel) {
+    orderDropoffPlaceSel.addEventListener('change', () => {
+      const p = places.find((x) => String(x.id) === orderDropoffPlaceSel.value);
+      if (!p) return;
+      const dropAddr = document.getElementById('dropoff_address');
+      if (dropAddr) dropAddr.value = p.name || p.address || '';
+      document.getElementById('dropoff_lat').value = p.lat;
+      document.getElementById('dropoff_lng').value = p.lng;
+      if (typeof placePickerMarker === 'function' && pickerMap) {
+        placePickerMarker('dropoff', p.lat, p.lng);
+        pickerMap.setView([p.lat, p.lng], 14);
+      }
+      showToast('Entrega fijada en ' + p.name, 'info');
     });
   }
   const btnAddBranch = document.getElementById('btn-add-branch');
@@ -2128,12 +2153,31 @@
 
   function addDriverMarker(d) {
     if (!d.lat || !d.lng) return;
+    const popupContent = `<strong>${escapeHtml(d.name)}</strong><br>🛵 ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${Math.round(d.speed || 0)} km/h<br><button class="btn btn-primary btn-sm" style="margin-top:6px;font-size:0.7rem;" onclick="window._saveDriverLocationAsPOI(${d.lat}, ${d.lng}, '${escapeHtml(d.name)}')">📍 Guardar como lugar</button>`;
     const marker = L.marker([d.lat, d.lng], { icon: ICON_DRIVER() })
-      .bindPopup(`<strong>${escapeHtml(d.name)}</strong><br>🛵 ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${Math.round(d.speed || 0)} km/h`)
+      .bindPopup(popupContent)
       .bindTooltip(escapeHtml(d.name), { permanent: true, direction: 'top', offset: [0, -16], className: 'driver-label' });
     marker.addTo(map);
     driverMarkers[d.id] = marker;
   }
+
+  // Save driver's current location as a Point of Interest
+  window._saveDriverLocationAsPOI = async function(lat, lng, driverName) {
+    const name = prompt('Nombre del lugar:', 'Ubicacion de ' + driverName);
+    if (!name || !name.trim()) return;
+    try {
+      const res = await apiFetch('/api/places', {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim(), category: 'otro', address: '', lat: lat, lng: lng }),
+      });
+      if (res.ok) {
+        showToast('📍 Lugar guardado: ' + name.trim(), 'success');
+        loadPlaces();
+      } else {
+        showToast('Error al guardar lugar', 'error');
+      }
+    } catch (e) { showToast('Error de conexion', 'error'); }
+  };
 
   function updateDriverMarker(data) {
     if (!map) return;
