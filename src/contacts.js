@@ -4,6 +4,48 @@ import { requireAuth, requireRole } from "./auth.js";
 
 const router = Router();
 
+// GET /api/contacts/seed-demo — insert demo contacts (admin only, one-time)
+router.get("/seed-demo", requireAuth, requireRole("admin"), async (req, res) => {
+  try {
+    const existing = await db.get("SELECT COUNT(*) AS c FROM contacts");
+    if (existing && Number(existing.c) > 0) {
+      return res.json({ ok: true, message: "Ya hay contactos, no se insertan demos" });
+    }
+    // Labels
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Clientes VIP", "#d4af37"]);
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Restaurantes", "#22c55e"]);
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Proveedores", "#3b82f6"]);
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Repartidores", "#f97316"]);
+    // Get label IDs
+    const labels = await db.all("SELECT id, name FROM contact_labels ORDER BY id");
+    const labelMap = {};
+    for (const l of labels) labelMap[l.name] = l.id;
+
+    const vip = labelMap["Clientes VIP"];
+    const rest = labelMap["Restaurantes"];
+    const prov = labelMap["Proveedores"];
+    const rep = labelMap["Repartidores"];
+
+    // Contacts
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Diego Menco", "3214286626", vip, "Cliente frecuente", 4.6285, -74.0646]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Valentina Ruiz", "3001234567", vip, "Paga con transferencia", 4.6350, -74.0700]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Carlos Andres", "3109876543", vip, "Zona norte", 4.6500, -74.0550]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Pizzeria Roma", "3205551234", rest, "Pedidos grandes los fines", 4.6200, -74.0800]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["El Sabor Criollo", "3107778899", rest, "Abre a las 11am", 4.6150, -74.0750]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Sushi Express", "3023456789", rest, "Solo domingos", 4.6400, -74.0620]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Distribuidor Bebidas", "3156667788", prov, "Mayorista", 4.6100, -74.0900]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Papeleria Central", "3189990011", prov, "Entrega facturas lunes", 4.6250, -74.0680]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Ivan Repartidor", "3214286626", rep, "Moto Honda CB190", 4.6300, -74.0650]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Jean Carlos", "3001112233", rep, "Bicicleta", 4.6320, -74.0680]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)", ["Kaleth", "3009998877", rep, "Moto AKT", 4.6280, -74.0720]);
+
+    res.json({ ok: true, message: "12 contactos de prueba creados en 4 etiquetas" });
+  } catch (err) {
+    console.error("seed-demo error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
 // GET /api/contacts/labels — list all labels

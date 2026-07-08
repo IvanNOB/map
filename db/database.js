@@ -309,6 +309,8 @@ export async function init() {
     try { await impl.exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS archived INTEGER NOT NULL DEFAULT 0"); } catch (_) {}
     try { await impl.exec("CREATE TABLE IF NOT EXISTS contact_labels (id SERIAL PRIMARY KEY, name TEXT NOT NULL, color TEXT NOT NULL DEFAULT '#d4af37', created_at TIMESTAMP NOT NULL DEFAULT NOW())"); } catch (_) {}
     try { await impl.exec("CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY, name TEXT NOT NULL, phone TEXT NOT NULL, label_id INTEGER REFERENCES contact_labels(id) ON DELETE SET NULL, notes TEXT, lat DOUBLE PRECISION, lng DOUBLE PRECISION, created_at TIMESTAMP NOT NULL DEFAULT NOW())"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION"); } catch (_) {}
   } else {
     await impl.exec(`
       CREATE TABLE IF NOT EXISTS users (
