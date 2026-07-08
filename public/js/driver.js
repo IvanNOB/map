@@ -925,6 +925,11 @@
     map.addControl(new CenterControl());
 
     renderOrderMarkers();
+
+    // Forzar que Leaflet recalcule el tamaño del contenedor
+    setTimeout(function() { if (map) map.invalidateSize(); }, 100);
+    setTimeout(function() { if (map) map.invalidateSize(); }, 500);
+    setTimeout(function() { if (map) map.invalidateSize(); }, 1500);
   }
 
   // Show pickup (green) and dropoff (red) markers for active orders
