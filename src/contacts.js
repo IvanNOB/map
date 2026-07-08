@@ -63,7 +63,7 @@ router.get("/", requireAuth, requireRole("admin"), async (req, res) => {
   try {
     const { label } = req.query;
     let query = `
-      SELECT c.id, c.name, c.phone, c.label_id, c.notes, c.created_at,
+      SELECT c.id, c.name, c.phone, c.label_id, c.notes, c.lat, c.lng, c.created_at,
              cl.name AS label_name, cl.color AS label_color
       FROM contacts c
       LEFT JOIN contact_labels cl ON cl.id = c.label_id
@@ -88,7 +88,7 @@ router.get("/", requireAuth, requireRole("admin"), async (req, res) => {
 // POST /api/contacts — create a contact
 router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
   try {
-    const { name, phone, label_id, notes } = req.body || {};
+    const { name, phone, label_id, notes, lat, lng } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: "El nombre es obligatorio" });
     }
@@ -100,10 +100,12 @@ router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
     const trimmedPhone = String(phone).trim();
     const contactNotes = notes ? String(notes).trim() : null;
     const contactLabelId = label_id || null;
+    const contactLat = lat != null && !isNaN(lat) ? parseFloat(lat) : null;
+    const contactLng = lng != null && !isNaN(lng) ? parseFloat(lng) : null;
 
     const info = await db.run(
-      "INSERT INTO contacts (name, phone, label_id, notes) VALUES (?, ?, ?, ?)",
-      [trimmedName, trimmedPhone, contactLabelId, contactNotes]
+      "INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)",
+      [trimmedName, trimmedPhone, contactLabelId, contactNotes, contactLat, contactLng]
     );
     res.status(201).json({
       id: info.lastInsertRowid,
@@ -111,6 +113,8 @@ router.post("/", requireAuth, requireRole("admin"), async (req, res) => {
       phone: trimmedPhone,
       label_id: contactLabelId,
       notes: contactNotes,
+      lat: contactLat,
+      lng: contactLng,
     });
   } catch (err) {
     console.error("contacts: error creating contact", err.message);
