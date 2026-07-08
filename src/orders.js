@@ -564,6 +564,24 @@ export default function createOrdersRouter(io) {
     res.json({ ok: true, archived: archived });
   });
 
+  // ─── POST /api/orders/clear-selected ── delete specific orders by IDs ───────
+  router.post("/clear-selected", requireAuth, requireRole("admin"), async (req, res) => {
+    const { ids } = req.body || {};
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Selecciona al menos un pedido" });
+    }
+    let deleted = 0;
+    for (const id of ids) {
+      await db.run("DELETE FROM location_history WHERE order_id = ?", [id]);
+      await db.run("DELETE FROM order_proofs WHERE order_id = ?", [id]);
+      const r = await db.run("DELETE FROM orders WHERE id = ?", [id]);
+      if (r.changes) deleted++;
+    }
+    logActivity(req.user, "orders_deleted", `Eliminados manualmente: ${deleted} pedidos seleccionados`);
+    io.to("admins").emit("orders:cleared", { which: "selected", deleted });
+    res.json({ ok: true, deleted });
+  });
+
   // ─── POST /api/orders/clear ── delete orders permanently (admin) ───────────
   // body: { which: 'delivered' | 'cancelled' | 'all' }
   router.post("/clear", requireAuth, requireRole("admin"), async (req, res) => {
@@ -571,6 +589,10 @@ export default function createOrdersRouter(io) {
     let cond = "";
     if (which === "delivered") cond = "WHERE status = 'delivered'";
     else if (which === "cancelled") cond = "WHERE status = 'cancelled'";
+    else if (which === "old") {
+      const today = new Date().toISOString().slice(0, 10);
+      cond = "WHERE date(created_at) < date('" + today + "')";
+    }
     // 'all' -> no condition
 
     const rows = await db.all(`SELECT id FROM orders ${cond}`);

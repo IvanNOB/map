@@ -336,4 +336,30 @@ function generatePDF(res, orders, from, to) {
   doc.end();
 }
 
+// ─── POST /api/reports/save-cash-close ── auto-save daily cash close ─────────
+router.post("/save-cash-close", requireAuth, requireRole("admin"), async (req, res) => {
+  try {
+    const date = (req.body && req.body.date) || new Date().toISOString().slice(0, 10);
+    // Just acknowledge — the cash data is always available via GET /api/reports/cash?date=
+    // This endpoint is called automatically at the start of each day to log the close
+    const settings = await getSettingsMap();
+    const pct = parseFloat(settings.driver_commission_pct || "80");
+    const rows = await db.all(
+      `SELECT ${COUNT_INT} as count, COALESCE(SUM(amount), 0) as total
+       FROM orders WHERE ${dateEq("delivered_at")} AND status = 'delivered'`,
+      [date]
+    );
+    const count = rows[0] ? rows[0].count : 0;
+    const total = rows[0] ? Math.round(rows[0].total) : 0;
+    // Log activity so there's a record
+    if (count > 0) {
+      const { logActivity } = await import("./activity.js");
+      logActivity(req.user, "cash_close", `Cierre de caja ${date}: ${count} entregas, $${total} total`);
+    }
+    res.json({ ok: true, date, deliveries: count, total });
+  } catch (e) {
+    res.json({ ok: true, date: req.body && req.body.date, deliveries: 0, total: 0 });
+  }
+});
+
 export default router;

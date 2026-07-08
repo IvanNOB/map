@@ -539,19 +539,26 @@
 
   <!-- Clear Orders Modal -->
   <div id="modal-clear" class="modal-overlay hidden">
-    <div class="modal">
+    <div class="modal" style="max-width:500px;">
       <h2>🧹 Limpiar pedidos</h2>
-      <p style="color:var(--text-muted);font-size:0.88rem;">
-        Elimina pedidos de forma <strong>permanente</strong> (no se puede deshacer).
-        Útil para borrar los pedidos de prueba.
+      <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+        Selecciona que pedidos quieres eliminar. Esta accion es permanente.
       </p>
-      <div style="display:flex;flex-direction:column;gap:0.5rem;margin:1rem 0;">
-        <button class="btn btn-outline" data-clear="delivered">Eliminar pedidos entregados</button>
-        <button class="btn btn-outline" data-clear="cancelled">Eliminar pedidos cancelados</button>
-        <button class="btn btn-danger" data-clear="all">Eliminar TODOS los pedidos</button>
+      <!-- Opciones rápidas -->
+      <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem;">
+        <button class="btn btn-outline" data-clear="delivered">🗑️ Eliminar todos los entregados</button>
+        <button class="btn btn-outline" data-clear="cancelled">🗑️ Eliminar todos los cancelados</button>
+        <button class="btn btn-outline" data-clear="old">🗑️ Eliminar pedidos de dias anteriores</button>
+        <button class="btn btn-danger" data-clear="all">⚠️ Eliminar TODOS los pedidos</button>
+      </div>
+      <!-- Selección individual -->
+      <div style="border-top:1px solid var(--border);padding-top:0.8rem;">
+        <p style="font-size:0.82rem;font-weight:600;margin-bottom:0.5rem;">O selecciona pedidos individuales:</p>
+        <div id="clear-orders-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem;"></div>
+        <button class="btn btn-danger btn-sm" id="btn-delete-selected" style="margin-top:0.7rem;width:100%;display:none;">🗑️ Eliminar seleccionados</button>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn btn-outline" id="btn-cancel-clear">Cancelar</button>
+        <button type="button" class="btn btn-outline" id="btn-cancel-clear">Cerrar</button>
       </div>
     </div>
   </div>

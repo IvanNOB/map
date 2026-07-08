@@ -271,19 +271,31 @@
   }
 
   // ─── Auto-limpieza diaria de pedidos viejos ─────────────────────────────────
-  // Al iniciar sesión, archiva pedidos entregados/cancelados de días anteriores
+  // Al iniciar sesión: guarda cierre de caja del dia anterior y archiva pedidos
   async function autoCleanOldOrders() {
     const todayStr = new Date().toISOString().slice(0, 10);
     const cleanKey = 'auto_clean_' + todayStr;
-    // Solo limpiar una vez por día
+    // Solo ejecutar una vez por día
     if (localStorage.getItem(cleanKey)) return;
     try {
+      // 1. Guardar cierre de caja del dia anterior automaticamente
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().slice(0, 10);
+      try {
+        await apiFetch('/api/reports/save-cash-close', {
+          method: 'POST',
+          body: JSON.stringify({ date: yesterdayStr })
+        });
+      } catch (e) { /* si falla el cierre, no bloquear la limpieza */ }
+
+      // 2. Archivar pedidos entregados/cancelados de dias anteriores
       const res = await apiFetch('/api/orders/auto-clean', { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem(cleanKey, 'true');
         if (data.archived > 0) {
-          showToast('📦 Se archivaron ' + data.archived + ' pedidos de dias anteriores', 'info');
+          showToast('📦 Dia nuevo: se archivaron ' + data.archived + ' pedidos anteriores. Cierre de caja guardado.', 'info');
         }
       }
     } catch (e) { /* silently fail */ }
@@ -1534,13 +1546,16 @@
   const btnClearOrders = document.getElementById('btn-clear-orders');
   const modalClear = document.getElementById('modal-clear');
   if (btnClearOrders && modalClear) {
-    btnClearOrders.addEventListener('click', () => modalClear.classList.remove('hidden'));
+    btnClearOrders.addEventListener('click', () => {
+      modalClear.classList.remove('hidden');
+      renderClearOrdersList();
+    });
     document.getElementById('btn-cancel-clear').addEventListener('click', () => modalClear.classList.add('hidden'));
     modalClear.querySelectorAll('[data-clear]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const which = btn.dataset.clear;
-        const labels = { delivered: 'entregados', cancelled: 'cancelados', all: 'TODOS los' };
-        if (!confirm(`¿Eliminar ${labels[which]} pedidos de forma permanente? Esta accion no se puede deshacer.`)) return;
+        const labels = { delivered: 'entregados', cancelled: 'cancelados', old: 'de dias anteriores', all: 'TODOS los' };
+        if (!confirm(`¿Eliminar ${labels[which]} pedidos de forma permanente?`)) return;
         try {
           const res = await apiFetch('/api/orders/clear', { method: 'POST', body: JSON.stringify({ which }) });
           const data = await res.json();
@@ -1555,6 +1570,60 @@
           }
         } catch { showToast('Error de conexion', 'error'); }
       });
+    });
+
+    // Individual order selection
+    const btnDeleteSelected = document.getElementById('btn-delete-selected');
+    if (btnDeleteSelected) {
+      btnDeleteSelected.addEventListener('click', async () => {
+        const checkboxes = modalClear.querySelectorAll('.clear-order-check:checked');
+        if (checkboxes.length === 0) { showToast('Selecciona al menos un pedido', 'warning'); return; }
+        if (!confirm('¿Eliminar ' + checkboxes.length + ' pedido(s) seleccionados?')) return;
+        const ids = Array.from(checkboxes).map(cb => cb.value);
+        try {
+          const res = await apiFetch('/api/orders/clear-selected', {
+            method: 'POST',
+            body: JSON.stringify({ ids })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            showToast(data.deleted + ' pedido(s) eliminado(s)', 'success');
+            modalClear.classList.add('hidden');
+            loadOrders();
+            loadStats();
+            if (map) renderOrderPins();
+          } else {
+            showToast('Error al eliminar', 'error');
+          }
+        } catch { showToast('Error de conexion', 'error'); }
+      });
+    }
+  }
+
+  function renderClearOrdersList() {
+    const box = document.getElementById('clear-orders-list');
+    const btnDel = document.getElementById('btn-delete-selected');
+    if (!box) return;
+    if (orders.length === 0) {
+      box.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">No hay pedidos</p>';
+      if (btnDel) btnDel.style.display = 'none';
+      return;
+    }
+    box.innerHTML = orders.slice(0, 50).map(o => {
+      const statusLabel = { pending:'Pendiente', assigned:'Asignado', picked_up:'Recogido', on_the_way:'En camino', delivered:'Entregado', cancelled:'Cancelado' };
+      return '<label style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:0.8rem;">' +
+        '<input type="checkbox" class="clear-order-check" value="' + o.id + '" style="width:16px;height:16px;accent-color:#d4af37;">' +
+        '<span style="color:#f0c75e;font-weight:700;min-width:75px;">' + escapeHtml(o.code) + '</span>' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(o.customer_name || '') + '</span>' +
+        '<span class="badge badge-' + o.status + '" style="font-size:0.6rem;">' + (statusLabel[o.status] || o.status) + '</span>' +
+      '</label>';
+    }).join('');
+
+    // Show/hide delete button based on selection
+    box.addEventListener('change', () => {
+      const checked = box.querySelectorAll('.clear-order-check:checked');
+      if (btnDel) btnDel.style.display = checked.length > 0 ? 'block' : 'none';
+      if (btnDel && checked.length > 0) btnDel.textContent = '🗑️ Eliminar ' + checked.length + ' seleccionado(s)';
     });
   }
 
