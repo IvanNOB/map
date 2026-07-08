@@ -100,6 +100,31 @@ async function seed() {
     }
   }
 
+  // ─── Contactos de prueba (siempre, idempotente) ────────────────────────────
+  const existingLabels = await db.get("SELECT COUNT(*) AS c FROM contact_labels");
+  if (Number(existingLabels.c) === 0) {
+    console.log("  Creando contactos de prueba...");
+    // Etiquetas
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Clientes VIP", "#d4af37"]);
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Restaurantes", "#22c55e"]);
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Proveedores", "#3b82f6"]);
+    await db.run("INSERT INTO contact_labels (name, color) VALUES (?, ?)", ["Repartidores", "#f97316"]);
+
+    // Contactos
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 1, ?, ?, ?)", ["Diego Menco", "3214286626", "Cliente frecuente", 4.6285, -74.0646]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 1, ?, ?, ?)", ["Valentina Ruiz", "3001234567", "Paga con transferencia", 4.6350, -74.0700]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 1, ?, ?, ?)", ["Carlos Andres", "3109876543", "Zona norte", 4.6500, -74.0550]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 2, ?, ?, ?)", ["Pizzeria Roma", "3205551234", "Pedidos grandes los fines", 4.6200, -74.0800]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 2, ?, ?, ?)", ["El Sabor Criollo", "3107778899", "Abre a las 11am", 4.6150, -74.0750]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 2, ?, ?, ?)", ["Sushi Express", "3023456789", "Solo domingos", 4.6400, -74.0620]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 3, ?, ?, ?)", ["Distribuidor Bebidas", "3156667788", "Mayorista", 4.6100, -74.0900]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 3, ?, ?, ?)", ["Papeleria Central", "3189990011", "Entrega facturas lunes", 4.6250, -74.0680]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 4, ?, ?, ?)", ["Ivan Repartidor", "3214286626", "Moto Honda CB190", 4.6300, -74.0650]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 4, ?, ?, ?)", ["Jean Carlos", "3001112233", "Bicicleta", 4.6320, -74.0680]);
+    await db.run("INSERT INTO contacts (name, phone, label_id, notes, lat, lng) VALUES (?, ?, 4, ?, ?, ?)", ["Kaleth", "3009998877", "Moto AKT", 4.6280, -74.0720]);
+    console.log("  12 contactos de prueba creados en 4 etiquetas.");
+  }
+
   console.log("Seed completado.");
   console.log("  Admin: admin@agencia.com / admin123");
   if (process.env.SEED_DEMO === "true") {
