@@ -1683,13 +1683,21 @@
   // ─── Importar datos desde mensaje de WhatsApp (admin) ────────────────────────
 
   function parseOrderMessage(text) {
-    const res = { name: '', phone: '', address: '', items: '', payment: '', amount: '' };
+    const res = { name: '', phone: '', address: '', items: '', payment: '', amount: '', notes: '' };
     if (!text) return res;
     const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
     
     // Detectar teléfono en cualquier parte del texto
     const phoneMatch = text.match(/(\+?\d[\d\s().-]{6,}\d)/);
     if (phoneMatch) res.phone = phoneMatch[1].replace(/[^\d+]/g, '');
+
+    // Detectar si ya está pago
+    if (/(ya\s*(est[aá])?\s*pago|pago\s*(anticipado|hecho|realizado)|transferencia\s*(hecha|realizada)|ya\s*pag[oó]|ya\s*cancel[oó])/i.test(text)) {
+      res.payment = 'card';
+    }
+
+    // Detectar notas como "avisó apenas esté listo", "llamar antes", etc.
+    const notePatterns = /(avis[oó]\s*apenas|llamar\s*antes|tocar\s*el\s*timbre|dejar\s*en\s*porter[ií]a|no\s*tiene\s*cambio|sin\s*cebolla|extra\s*salsa|urgente|r[aá]pido|por\s*favor)/i;
 
     // Etiquetas comunes en mensajes de clientes colombianos
     const labels = {
@@ -1702,15 +1710,25 @@
     };
 
     const remaining = [];
+    const noteLines = [];
     lines.forEach(line => {
       if (/^(reenviado|importante|anexar|siguientes datos)/i.test(line)) return;
+      // Ignorar líneas que solo dicen "Domicilio" o similar
+      if (/^domicilio\.?$/i.test(line)) return;
+      // Detectar "ya está pago" como payment
+      if (/(ya\s*(est[aá])?\s*pago|pago\s*anticipado)/i.test(line)) { res.payment = 'card'; return; }
+      // Detectar notas
+      if (notePatterns.test(line)) { noteLines.push(line); return; }
+
       let matched = false;
       for (const key in labels) {
         const m = line.match(labels[key]);
         if (m) {
           const val = m[m.length - 1].trim();
           if (key === 'phone') res.phone = val.replace(/[^\d+]/g, '');
-          else if (key === 'payment') res.payment = val;
+          else if (key === 'payment') {
+            res.payment = /(bancolombia|nequi|daviplata|transferencia|pse|banco|consignaci|pago|card)/i.test(val) ? 'card' : 'cash';
+          }
           else if (key === 'amount') res.amount = val.replace(/[^\d.,]/g, '');
           else if (!res[key]) res[key] = val;
           matched = true; break;
@@ -1719,18 +1737,22 @@
       if (!matched) remaining.push(line);
     });
 
+    // Notas
+    if (noteLines.length) res.notes = noteLines.join('. ');
+
     const addrKw = /(calle|cra|carrera|av\b|avenida|diagonal|transversal|\bkr\b|\bcl\b|#|barrio|conjunto|edificio|manzana|casa|apto|vereda|sector)/i;
     const isPhoneLine = l => l.replace(/[^\d]/g, '').length >= 7 && /^[\d\s+().-]+$/.test(l);
     if (!res.address) {
       const a = remaining.find(l => addrKw.test(l) && !isPhoneLine(l));
       if (a) res.address = a;
     }
+    // Detectar nombre: línea con solo letras, 1-4 palabras, no es teléfono ni dirección
     if (!res.name) {
-      const c = remaining.find(l => l !== res.address && /[a-záéíóúñ]/i.test(l) && !/\d{4,}/.test(l) && !isPhoneLine(l) && l.split(' ').length <= 5);
-      if (c) res.name = c;
+      const c = remaining.find(l => l !== res.address && /^[a-záéíóúñA-ZÁÉÍÓÚÑ\s.]+$/i.test(l) && !/\d{4,}/.test(l) && !isPhoneLine(l) && l.split(/\s+/).length <= 5 && l.length > 2);
+      if (c) res.name = c.replace(/\.$/, '');
     }
     if (!res.items) {
-      const left = remaining.filter(l => l !== res.address && l !== res.name && !isPhoneLine(l));
+      const left = remaining.filter(l => l !== res.address && l !== res.name && !isPhoneLine(l) && l.length > 3);
       if (left.length) res.items = left.join(', ');
     }
     return res;
@@ -1743,17 +1765,17 @@
     if (p.address) document.getElementById('dropoff_address').value = p.address;
     const itemsField = formNewOrder.querySelector('[name="items"]');
     if (p.items && itemsField) itemsField.value = p.items;
+    const notesField = formNewOrder.querySelector('[name="notes"]');
+    if (p.notes && notesField) notesField.value = p.notes;
     if (p.payment) {
       const paySelect = formNewOrder.querySelector('[name="payment_method"]');
-      if (paySelect) {
-        paySelect.value = /(bancolombia|nequi|daviplata|transferencia|pse|banco|consignaci)/i.test(p.payment) ? 'card' : 'cash';
-      }
+      if (paySelect) paySelect.value = p.payment === 'card' ? 'card' : 'cash';
     }
     if (p.amount) {
       const amountField = formNewOrder.querySelector('[name="amount"]');
       if (amountField) amountField.value = parseFloat(p.amount.replace(/,/g, '')) || 0;
     }
-    const got = [p.name, p.phone, p.address, p.items, p.payment, p.amount].filter(Boolean).length;
+    const got = [p.name, p.phone, p.address, p.items, p.payment, p.amount, p.notes].filter(Boolean).length;
     showToast(got ? '✅ ' + got + ' datos importados. Revisa y crea el pedido.' : 'No se reconocieron datos, llénalos manual.', got ? 'success' : 'warning');
   }
 
