@@ -665,21 +665,10 @@
 
 
   // ═══════════════════════════════════════════════════════════════════════════════
-  // FEATURE 12: MANDATORY PHOTO BEFORE DELIVERED
-  // If next status is 'delivered', require a photo first via uploadProof
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FEATURE 12: PHOTO OPTIONAL BEFORE DELIVERED
   // ═══════════════════════════════════════════════════════════════════════════════
   async function updateOrderStatus(orderId, status) {
-    // If delivering, require photo proof first
-    if (status === 'delivered') {
-      showToast('Toma foto de la entrega primero', 'info');
-      try {
-        await uploadProof(orderId);
-      } catch (e) {
-        showToast('Foto requerida para marcar como entregado', 'warning');
-        return;
-      }
-    }
-
     try {
       var res = await apiFetch('/api/orders/' + orderId + '/status', {
         method: 'POST',
