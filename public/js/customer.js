@@ -604,9 +604,13 @@
     socket.on('driver:location', function (data) {
       // Ignore live position once the order is no longer active.
       if (currentOrder && !isActiveStatus(currentOrder.status)) return;
+      // Only show driver for THIS order (socket room already filters, but double-check)
       if (data.lat != null && data.lng != null) {
         setDriverMarker(data.lat, data.lng, data.name);
-        appendRoutePoint(data.lat, data.lng);
+        // Only add to route polyline if order is active (not previous deliveries)
+        if (currentOrder && isActiveStatus(currentOrder.status)) {
+          appendRoutePoint(data.lat, data.lng);
+        }
 
         // Straight-line ETA
         var eta = calculateEta(data.lat, data.lng);
@@ -665,7 +669,37 @@
     if (code) {
       orderCodeInput.value = code;
       fetchTracking(code);
+      // Auto-enviar ubicación del cliente sin que toque nada
+      autoSendCustomerLocation(code);
     }
+  }
+
+  // ─── Auto-enviar ubicación del cliente al abrir el link ─────────────────────
+  function autoSendCustomerLocation(code) {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        // Enviar al servidor para que el repartidor sepa dónde entregar
+        fetch('/api/track/' + encodeURIComponent(code) + '/address', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: 'Ubicacion del cliente (GPS automatico)',
+            lat: lat,
+            lng: lng
+          })
+        }).then(function(res) {
+          if (res.ok) {
+            confirmLat = lat;
+            confirmLng = lng;
+          }
+        }).catch(function() {});
+      },
+      function() { /* Si no permite ubicación, no hacer nada */ },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   }
 
   init();
