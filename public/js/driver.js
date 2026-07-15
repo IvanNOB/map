@@ -495,7 +495,7 @@
       (order.amount ? '<div class="order-detail" style="color:var(--gold);font-weight:600;">💰 $' + escapeHtml(String(order.amount)) + '</div>' : '') +
       etaSpan +
       mainActionHtml +
-      (order.status !== 'delivered' ? '<div class="order-secondary-actions">' + navBtn + contactBtns + (['on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-proof="' + order.id + '">📸 Prueba</button>' : '') + '</div>' : '<span class="badge badge-delivered" style="margin-top:0.5rem;">✅ Completado</span>');
+      (order.status !== 'delivered' ? '<div class="order-secondary-actions">' + navBtn + contactBtns + '</div>' : '<span class="badge badge-delivered" style="margin-top:0.5rem;">✅ Completado</span>');
 
     driverOrders.appendChild(card);
 
@@ -503,10 +503,6 @@
     var btn = card.querySelector('[data-order-id][data-next-status]');
     if (btn) {
       btn.addEventListener('click', function () { updateOrderStatus(btn.dataset.orderId, btn.dataset.nextStatus); });
-    }
-    var proofBtn = card.querySelector('[data-proof]');
-    if (proofBtn) {
-      proofBtn.addEventListener('click', function () { uploadProof(proofBtn.dataset.proof); });
     }
 
     // FEATURE 9: Swipe to change status
