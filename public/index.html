@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Servicio Ghost - Panel de Control</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/panel-refresh.css">
+  <link rel="stylesheet" href="/css/panel-terminal.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -619,11 +619,34 @@
     </div>
   </div>
 
+  <!-- Bottom Navigation (Terminal style) -->
+  <nav class="terminal-bottom-nav">
+    <button class="tbn-btn active" data-tab="pedidos">📦 Despacho</button>
+    <button class="tbn-btn" data-tab="repartidores">🛵 Equipo</button>
+    <button class="tbn-btn" data-tab="reportes">📊 Reportes</button>
+    <button class="tbn-btn" data-tab="actividad">📝 Actividad</button>
+    <button class="tbn-btn" data-tab="contactos">📱 Contactos</button>
+    <button class="tbn-btn" data-tab="config">⚙️ Config</button>
+  </nav>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/dispatcher.js"></script>
   <script src="/js/dispatcher-enhancements.js"></script>
   <script src="/js/contacts-ui.js"></script>
   <script src="/js/pwa.js"></script>
+  <script>
+    // Terminal bottom nav — trigger the same tab switching as navbar tabs
+    document.querySelectorAll('.tbn-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.tbn-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        // Find the matching navbar tab and click it
+        var tab = btn.getAttribute('data-tab');
+        var navTab = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+        if (navTab) navTab.click();
+      });
+    });
+  </script>
 </body>
 </html>
