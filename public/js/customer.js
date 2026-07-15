@@ -677,43 +677,83 @@
   // ─── Auto-enviar ubicación del cliente al abrir el link ─────────────────────
   function autoSendCustomerLocation(code) {
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      function(pos) {
-        var lat = pos.coords.latitude;
-        var lng = pos.coords.longitude;
-        fetch('/api/track/' + encodeURIComponent(code) + '/address', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            address: 'Ubicacion del cliente (GPS automatico)',
-            lat: lat,
-            lng: lng
-          })
-        }).then(function(res) {
-          if (res.ok) {
-            confirmLat = lat;
-            confirmLng = lng;
-            // Mostrar confirmación al cliente
-            var hint = document.getElementById('map-hint');
-            if (hint) {
-              hint.textContent = '📍 Tu ubicacion fue enviada al repartidor automaticamente.';
-              hint.className = 'map-hint success';
-            }
-            // Actualizar marcador de entrega en el mapa
-            if (map) {
-              if (dropoffMarker) map.removeLayer(dropoffMarker);
-              dropoffMarker = L.marker([lat, lng], { icon: pinIcon('dropoff', '🔴') })
-                .bindPopup('🔴 Tu ubicacion').addTo(map);
-              map.setView([lat, lng], 15);
-            }
-            dropoffLat = lat;
-            dropoffLng = lng;
-          }
-        }).catch(function() {});
-      },
-      function() { /* Si no permite ubicación, no hacer nada */ },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+
+    // Mostrar popup amigable ANTES de pedir permiso del navegador
+    var overlay = document.createElement('div');
+    overlay.id = 'location-request-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);padding:1rem;';
+    overlay.innerHTML =
+      '<div style="background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:2rem 1.5rem;max-width:320px;width:100%;text-align:center;">' +
+        '<div style="font-size:3rem;margin-bottom:0.8rem;">📍</div>' +
+        '<h3 style="margin:0 0 0.6rem;font-size:1.1rem;color:var(--gold,#d4af37);">Comparte tu ubicacion</h3>' +
+        '<p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 1.2rem;line-height:1.4;">Para que tu repartidor llegue <b>directo a donde estas</b>, comparte tu ubicacion. Es segura y privada.</p>' +
+        '<button id="btn-share-my-loc" style="display:block;width:100%;padding:0.9rem;border:none;border-radius:12px;background:linear-gradient(180deg,#f4d97a,#d4af37);color:#111;font-size:1rem;font-weight:800;cursor:pointer;margin-bottom:0.6rem;box-shadow:0 4px 14px rgba(212,175,55,0.4);">📍 Compartir mi ubicacion</button>' +
+        '<button id="btn-skip-loc" style="display:block;width:100%;padding:0.6rem;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text-muted);font-size:0.8rem;cursor:pointer;">No, escribo mi direccion</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    document.getElementById('btn-share-my-loc').addEventListener('click', function() {
+      overlay.remove();
+      // Ahora sí pedir permiso del navegador
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          var lat = pos.coords.latitude;
+          var lng = pos.coords.longitude;
+          sendLocationToServer(code, lat, lng);
+        },
+        function() {
+          showToast('No pudimos obtener tu ubicacion. Escribe tu direccion abajo.', 'warning');
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    });
+
+    document.getElementById('btn-skip-loc').addEventListener('click', function() {
+      overlay.remove();
+      // Enfocar el campo de dirección manual
+      var input = document.getElementById('confirm-address-input');
+      if (input) input.focus();
+      showToast('Escribe tu direccion en el campo de abajo', 'info');
+    });
+  }
+
+  function sendLocationToServer(code, lat, lng) {
+    fetch('/api/track/' + encodeURIComponent(code) + '/address', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address: 'Ubicacion del cliente (GPS)',
+        lat: lat,
+        lng: lng
+      })
+    }).then(function(res) {
+      if (res.ok) {
+        confirmLat = lat;
+        confirmLng = lng;
+        showToast('📍 Ubicacion enviada al repartidor', 'success');
+        // Mostrar confirmación visual
+        var hint = document.getElementById('map-hint');
+        if (hint) {
+          hint.textContent = '✅ Tu ubicacion fue enviada. El repartidor sabe donde estas.';
+          hint.className = 'map-hint success';
+          hint.classList.remove('hidden');
+        }
+        // Actualizar marcador en el mapa
+        if (map) {
+          if (dropoffMarker) map.removeLayer(dropoffMarker);
+          dropoffMarker = L.marker([lat, lng], { icon: pinIcon('dropoff', '🔴') })
+            .bindPopup('🔴 Tu ubicacion').addTo(map);
+          map.setView([lat, lng], 15);
+        }
+        dropoffLat = lat;
+        dropoffLng = lng;
+        // Ocultar el box de confirmar direccion
+        var box = document.getElementById('confirm-address-box');
+        if (box) box.classList.add('hidden');
+      }
+    }).catch(function() {
+      showToast('Error al enviar ubicacion', 'error');
+    });
   }
 
   init();
