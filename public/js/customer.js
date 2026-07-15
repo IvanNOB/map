@@ -681,7 +681,6 @@
       function(pos) {
         var lat = pos.coords.latitude;
         var lng = pos.coords.longitude;
-        // Enviar al servidor para que el repartidor sepa dónde entregar
         fetch('/api/track/' + encodeURIComponent(code) + '/address', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -694,6 +693,21 @@
           if (res.ok) {
             confirmLat = lat;
             confirmLng = lng;
+            // Mostrar confirmación al cliente
+            var hint = document.getElementById('map-hint');
+            if (hint) {
+              hint.textContent = '📍 Tu ubicacion fue enviada al repartidor automaticamente.';
+              hint.className = 'map-hint success';
+            }
+            // Actualizar marcador de entrega en el mapa
+            if (map) {
+              if (dropoffMarker) map.removeLayer(dropoffMarker);
+              dropoffMarker = L.marker([lat, lng], { icon: pinIcon('dropoff', '🔴') })
+                .bindPopup('🔴 Tu ubicacion').addTo(map);
+              map.setView([lat, lng], 15);
+            }
+            dropoffLat = lat;
+            dropoffLng = lng;
           }
         }).catch(function() {});
       },

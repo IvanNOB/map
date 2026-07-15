@@ -1032,6 +1032,15 @@
       loadOrders();
     });
 
+    // Cliente confirmo/envio su ubicacion
+    socket.on('order:address', function (data) {
+      showToast('📍 Cliente envio su ubicacion: ' + (data.dropoff_address || 'GPS'), 'success');
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      // Recargar pedidos para ver la nueva direccion y recalcular ruta
+      lastOrdersJSON = '';
+      loadOrders();
+    });
+
     socket.on('chat:message', function (msg) {
       dchatMessages.push(msg);
       renderDriverChat();

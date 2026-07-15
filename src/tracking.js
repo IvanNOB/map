@@ -177,6 +177,16 @@ router.post("/:code/address", async (req, res) => {
       type: "address_confirmed",
       data: { code: updated.code, address: updated.dropoff_address },
     });
+    // Notificar al repartidor asignado
+    if (updated.driver_id) {
+      io.to(`driver:${updated.driver_id}`).emit("order:address", {
+        id: updated.id,
+        code: updated.code,
+        dropoff_address: updated.dropoff_address,
+        dropoff_lat: updated.dropoff_lat,
+        dropoff_lng: updated.dropoff_lng,
+      });
+    }
     io.to(`tracking:${updated.code}`).emit("order:status", updated);
   }
 
