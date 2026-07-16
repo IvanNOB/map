@@ -1055,6 +1055,13 @@
       }
     });
 
+    // Orden actualizada (push en vez de polling)
+    socket.on('order:status', function () {
+      lastOrdersJSON = '';
+      loadOrders();
+      loadEarnings();
+    });
+
     socket.on('notification', function (data) {
       var title = '👻 Servicios Ghost';
       var body = '';
@@ -1081,7 +1088,7 @@
   }
 
 
-  // ─── Auto Refresh (silencioso — solo actualiza si hay cambios) ───────────────
+  // ─── Auto Refresh (cada 30s como fallback — Socket.IO es la fuente principal) ──
 
   var syncDot = null;
   setInterval(async function () {
@@ -1095,7 +1102,7 @@
         if (syncDot) syncDot.style.background = '#ef4444';
       }
     }
-  }, 10000);
+  }, 30000);
 
 
   // ═══════════════════════════════════════════════════════════════════════════════

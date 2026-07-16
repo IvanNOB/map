@@ -28,18 +28,128 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || "https://map-rgi5.onrender.com",
+    credentials: true,
+  },
+});
 
 const PORT = process.env.PORT || 3000;
 
 // Trust the reverse proxy (Render) so req.protocol reflects https
 app.set("trust proxy", 1);
 
+// ─── Security Middleware ─────────────────────────────────────────────────────
+
+// CORS — restrict to own domain
+app.use((req, res, next) => {
+  const origin = process.env.CORS_ORIGIN || "https://map-rgi5.onrender.com";
+  res.header("Access-Control-Allow-Origin", origin);
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+// CSP + Security Headers
+app.use((req, res, next) => {
+  res.header("X-Content-Type-Options", "nosniff");
+  res.header("X-Frame-Options", "DENY");
+  res.header("X-XSS-Protection", "1; mode=block");
+  res.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.header("Permissions-Policy", "geolocation=(self), camera=(self)");
+  next();
+});
+
+// Rate limiting — global (100 req/15s per IP)
+const rateLimitMap = new Map();
+app.use("/api/", (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const windowMs = 15000; // 15 seconds
+  const maxReq = 100;
+  const entry = rateLimitMap.get(ip) || { count: 0, start: now };
+  if (now - entry.start > windowMs) {
+    entry.count = 1;
+    entry.start = now;
+  } else {
+    entry.count++;
+  }
+  rateLimitMap.set(ip, entry);
+  if (entry.count > maxReq) {
+    return res.status(429).json({ error: "Demasiadas solicitudes. Intenta en unos segundos." });
+  }
+  next();
+});
+
+// Auth rate limiting (stricter: 10 req/60s)
+const authRateMap = new Map();
+app.use("/api/auth", (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const windowMs = 60000;
+  const maxReq = 10;
+  const entry = authRateMap.get(ip) || { count: 0, start: now };
+  if (now - entry.start > windowMs) {
+    entry.count = 1;
+    entry.start = now;
+  } else {
+    entry.count++;
+  }
+  authRateMap.set(ip, entry);
+  if (entry.count > maxReq) {
+    return res.status(429).json({ error: "Cuenta bloqueada temporalmente. Espera 1 minuto." });
+  }
+  next();
+});
+
+// Clean rate limit maps every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap) {
+    if (now - entry.start > 60000) rateLimitMap.delete(ip);
+  }
+  for (const [ip, entry] of authRateMap) {
+    if (now - entry.start > 120000) authRateMap.delete(ip);
+  }
+}, 300000);
+
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
-app.use(express.json());
+// Input sanitization — strip HTML tags from string inputs
+app.use(express.json({ limit: "2mb" }));
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === "object") {
+    sanitizeObject(req.body);
+  }
+  next();
+});
+function sanitizeObject(obj) {
+  for (const key in obj) {
+    if (typeof obj[key] === "string") {
+      obj[key] = obj[key].replace(/<[^>]*>/g, "").trim();
+    } else if (typeof obj[key] === "object" && obj[key] !== null && !Array.isArray(obj[key])) {
+      sanitizeObject(obj[key]);
+    }
+  }
+}
+
 app.use(cookieParser());
 app.use(express.static(join(__dirname, "public")));
+
+// Request logger (structured)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const ms = Date.now() - start;
+    if (req.path.startsWith("/api/") && ms > 1000) {
+      console.warn(`[SLOW] ${req.method} ${req.path} ${res.statusCode} ${ms}ms`);
+    }
+  });
+  next();
+});
 
 // Make io accessible to routes
 app.set("io", io);
@@ -100,6 +210,23 @@ app.use("/api/restaurants", restaurantsRouter);
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 
+// WebSocket rate limiting
+const socketRateMap = new Map();
+function checkSocketRate(socketId) {
+  const now = Date.now();
+  const entry = socketRateMap.get(socketId) || { count: 0, start: now };
+  if (now - entry.start > 5000) { entry.count = 1; entry.start = now; }
+  else { entry.count++; }
+  socketRateMap.set(socketId, entry);
+  return entry.count <= 30; // max 30 events per 5 seconds
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, entry] of socketRateMap) {
+    if (now - entry.start > 10000) socketRateMap.delete(id);
+  }
+}, 30000);
+
 io.use((socket, next) => {
   // Allow unauthenticated connections for order tracking
   const orderCode = socket.handshake.query?.order_code;
@@ -152,6 +279,7 @@ io.on("connection", (socket) => {
 
   // Driver location update
   socket.on("driver:update", async (payload) => {
+    if (!checkSocketRate(socket.id)) return;
     if (!payload || typeof payload.lat !== "number" || typeof payload.lng !== "number") {
       return;
     }
