@@ -262,38 +262,41 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 36px;
+  height: 48px;
   background: #08080a;
-  border-top: 1px solid rgba(212,175,55,0.15);
+  border-top: 1px solid rgba(212,175,55,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
   z-index: 900;
   padding: 0 1rem;
 }
 .terminal-bottom-nav .tbn-btn {
-  padding: 0.3rem 0.8rem;
-  font-size: 0.72rem;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #888;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .terminal-bottom-nav .tbn-btn:hover {
   color: #f0c75e;
-  border-color: rgba(212,175,55,0.2);
+  border-color: rgba(212,175,55,0.3);
+  background: rgba(212,175,55,0.08);
 }
 .terminal-bottom-nav .tbn-btn.active {
-  color: #f0c75e;
-  background: rgba(212,175,55,0.1);
-  border-color: rgba(212,175,55,0.3);
+  color: #111;
+  background: linear-gradient(180deg, #f4d97a, #d4af37);
+  border-color: #f4d97a;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(212,175,55,0.35);
 }
 
 /* Adjust content height for bottom nav */
 .content {
-  height: calc(100vh - 44px - 36px) !important;
+  height: calc(100vh - 44px - 48px) !important;
 }
