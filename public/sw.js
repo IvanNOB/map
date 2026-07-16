@@ -1,5 +1,5 @@
 /* Service Worker - Servicio Ghost PWA */
-const CACHE = "domicilios-v62";
+const CACHE = "domicilios-v65";
 const ASSETS = [
   "/",
   "/index.html",
