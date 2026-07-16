@@ -63,7 +63,7 @@
 }
 #view-pedidos .dispatch {
   display: grid !important;
-  grid-template-columns: 260px 1fr 280px;
+  grid-template-columns: 240px 1fr 260px;
   height: 100% !important;
   gap: 0 !important;
 }
@@ -143,17 +143,27 @@
   border: none !important;
 }
 
-/* Live people overlay on map */
+/* Live people overlay — move to right column instead of floating on map */
 .live-people {
-  top: 8px !important;
-  left: 8px !important;
-  width: 200px !important;
-  font-size: 0.78rem;
+  position: static !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: 90px !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(212,175,55,0.1) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  background: rgba(18,18,20,0.5) !important;
+  z-index: auto !important;
+  top: auto !important;
+  left: auto !important;
 }
-.live-people-head { padding: 0.4rem 0.5rem !important; font-size: 0.78rem !important; }
-.live-person { padding: 0.3rem 0.4rem !important; }
-.live-name { font-size: 0.78rem !important; }
-.live-meta { font-size: 0.68rem !important; }
+.live-people-head { padding: 0.35rem 0.6rem !important; font-size: 0.75rem !important; }
+.live-people-list { padding: 0.2rem 0.4rem !important; }
+.live-person { padding: 0.25rem 0.35rem !important; }
+.live-name { font-size: 0.72rem !important; }
+.live-meta { font-size: 0.65rem !important; }
 
 /* ─── RIGHT COLUMN: Comunicaciones + Alertas ─────────────────────────────── */
 .dispatch-chat {
@@ -233,7 +243,7 @@
 /* ─── Responsive: pantallas menores ──────────────────────────────────────── */
 @media (max-width: 1100px) {
   #view-pedidos .dispatch {
-    grid-template-columns: 220px 1fr 240px;
+    grid-template-columns: 200px 1fr 220px;
   }
 }
 @media (max-width: 900px) {
@@ -243,6 +253,7 @@
   }
   .dispatch-side { display: none !important; }
   .dispatch-chat { display: none !important; }
+  .terminal-bottom-nav { display: flex; }
 }
 
 /* ─── Bottom nav for secondary views ─────────────────────────────────────── */
