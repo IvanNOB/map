@@ -2146,7 +2146,7 @@
       refreshDriverMarkers();
       return;
     }
-    map = L.map('map').setView([4.6097, -74.0817], 13);
+    map = L.map('map').setView([4.6097, -74.0817], 12);
 
     const darkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; CartoDB', maxZoom: 19,

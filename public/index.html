@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Servicio Ghost - Panel de Control</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/panel-terminal.css">
+  <link rel="stylesheet" href="/css/panel-refresh.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -42,7 +42,7 @@
   <div id="app" class="app-container hidden">
     <!-- Navbar -->
     <nav class="navbar">
-      <span class="navbar-brand"><span class="brand-logo">👻</span> SERVICIO GHOST</span>
+      <span class="navbar-brand"><span class="brand-logo">👻</span> Servicio Ghost</span>
       <div class="navbar-tabs">
         <button class="tab-btn active" data-tab="pedidos">Pedidos y Mapa</button>
         <button class="tab-btn" data-tab="repartidores">Repartidores</button>
@@ -53,6 +53,8 @@
       </div>
       <div class="navbar-right">
         <span class="conn-indicator" id="conn-dot" title="Estado de conexion"></span>
+        <a href="/customer.html" class="navbar-link" title="Seguimiento de Pedido">Seguimiento</a>
+        <a href="/restaurant.html" class="navbar-link" title="Portal de Restaurantes" target="_blank" rel="noopener">Restaurantes</a>
         <button id="btn-refresh" class="icon-btn" title="Refrescar datos">🔄</button>
         <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
         <span id="user-name" class="navbar-user"></span>
@@ -103,23 +105,22 @@
           <section class="dispatch-main">
             <div class="map-wrap">
               <div id="map" class="map-container"></div>
+              <div id="live-people" class="live-people">
+                <div class="live-people-head">
+                  <span class="live-dot"></span>
+                  <strong>En línea ahora</strong>
+                  <span id="live-count" class="live-count">0</span>
+                  <button id="btn-fit-people" class="btn btn-outline btn-sm" title="Ver a todos" style="margin-left:auto;">Ver a todos</button>
+                </div>
+                <div id="live-people-list" class="live-people-list"></div>
+              </div>
             </div>
           </section>
 
           <!-- DERECHA: Chat con el repartidor -->
           <aside class="dispatch-chat">
-            <!-- En línea ahora (movido del mapa) -->
-            <div id="live-people" class="live-people">
-              <div class="live-people-head">
-                <span class="live-dot"></span>
-                <strong>En línea</strong>
-                <span id="live-count" class="live-count">0</span>
-                <button id="btn-fit-people" class="btn btn-outline btn-sm" title="Ver a todos" style="margin-left:auto;font-size:0.65rem;padding:2px 5px;">Ver</button>
-              </div>
-              <div id="live-people-list" class="live-people-list"></div>
-            </div>
             <div class="dispatch-chat-title">
-              <span>💬 Chat</span>
+              <span>💬 Chat con repartidor</span>
               <button id="btn-notify" class="btn btn-outline btn-sm" title="Enviar una notificación a los repartidores">🔔 Aviso</button>
             </div>
             <div class="chat-contacts" id="chat-contacts"></div>
@@ -618,34 +619,11 @@
     </div>
   </div>
 
-  <!-- Bottom Navigation (Terminal style) -->
-  <nav class="terminal-bottom-nav">
-    <button class="tbn-btn active" data-tab="pedidos">📦 Despacho</button>
-    <button class="tbn-btn" data-tab="repartidores">🛵 Equipo</button>
-    <button class="tbn-btn" data-tab="reportes">📊 Reportes</button>
-    <button class="tbn-btn" data-tab="actividad">📝 Actividad</button>
-    <button class="tbn-btn" data-tab="contactos">📱 Contactos</button>
-    <button class="tbn-btn" data-tab="config">⚙️ Config</button>
-  </nav>
-
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/dispatcher.js"></script>
   <script src="/js/dispatcher-enhancements.js"></script>
   <script src="/js/contacts-ui.js"></script>
   <script src="/js/pwa.js"></script>
-  <script>
-    // Terminal bottom nav — trigger the same tab switching as navbar tabs
-    document.querySelectorAll('.tbn-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.tbn-btn').forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        // Find the matching navbar tab and click it
-        var tab = btn.getAttribute('data-tab');
-        var navTab = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
-        if (navTab) navTab.click();
-      });
-    });
-  </script>
 </body>
 </html>
