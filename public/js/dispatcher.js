@@ -616,7 +616,15 @@
   }
 
   // ─── Places / Points of interest ────────────────────────────────────────────
-  const PLACE_EMOJI = { local: '🏪', restaurante: '🍽️', farmacia: '💊', cliente: '🏠', otro: '📍' };
+  const PLACE_EMOJI = {
+    local: '🏪', restaurante: '🍽️', farmacia: '💊', cliente: '🏠', otro: '📍',
+    tienda: '🛒', cafe: '☕', bar: '🍺', panaderia: '🥐', heladeria: '🍦',
+    hospital: '🏥', iglesia: '⛪', parque: '🌳', gym: '🏋️', banco: '🏦',
+    gasolinera: '⛽', colegio: '🎓', oficina: '🏢', taller: '🔧', veterinaria: '🐾',
+    peluqueria: '💇', lavanderia: '👔', ferreteria: '🔨', supermercado: '🏬',
+    hotel: '🏨', estacion: '🚉', aeropuerto: '✈️', plaza: '🏛️', bodega: '📦',
+    casa: '🏡', edificio: '🏗️', punto_encuentro: '🎯', favorito: '⭐'
+  };
   let places = [];
   let editingPlaceId = null;
   let placeMap = null;
