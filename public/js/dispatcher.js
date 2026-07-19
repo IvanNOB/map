@@ -760,8 +760,26 @@
     placeMarkersMain.forEach((m) => map.removeLayer(m));
     placeMarkersMain = [];
     places.forEach((p) => {
-      const m = L.marker([p.lat, p.lng], { icon: placeIcon(p.category) })
-        .bindPopup('<strong>' + escapeHtml(p.name) + '</strong><br>' + (PLACE_EMOJI[p.category] || '') + ' ' + escapeHtml(p.category) + (p.address ? '<br>' + escapeHtml(p.address) : ''))
+      // Use custom image marker if place has an image, otherwise emoji
+      let icon;
+      if (p.image) {
+        icon = L.divIcon({
+          className: '',
+          html: '<div style="width:36px;height:36px;border-radius:50%;border:2px solid #d4af37;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.4);"><img src="' + p.image + '" style="width:100%;height:100%;object-fit:cover;"></div>',
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+          popupAnchor: [0, -18],
+        });
+      } else {
+        icon = placeIcon(p.category);
+      }
+      const tooltipText = escapeHtml(p.name) + (p.phone ? ' · ' + escapeHtml(p.phone) : '');
+      const m = L.marker([p.lat, p.lng], { icon: icon })
+        .bindTooltip(tooltipText, { direction: 'top', offset: [0, -10], className: 'place-tooltip' })
+        .bindPopup('<strong>' + escapeHtml(p.name) + '</strong>' +
+          (p.phone ? '<br>📱 ' + escapeHtml(p.phone) : '') +
+          '<br>' + (PLACE_EMOJI[p.category] || '') + ' ' + escapeHtml(p.category) +
+          (p.address ? '<br>📍 ' + escapeHtml(p.address) : ''))
         .addTo(map);
       placeMarkersMain.push(m);
     });
@@ -773,6 +791,7 @@
       const name = document.getElementById('place-name').value.trim();
       const category = document.getElementById('place-category').value;
       const address = document.getElementById('place-address').value.trim();
+      const phone = document.getElementById('place-phone') ? document.getElementById('place-phone').value.trim() : '';
       // Prefer typed coordinates; otherwise use the marker placed on the map
       const latVal = parseFloat(document.getElementById('place-lat').value);
       const lngVal = parseFloat(document.getElementById('place-lng').value);
@@ -780,11 +799,21 @@
       let lng = !isNaN(lngVal) ? lngVal : (placeNewCenter ? placeNewCenter.lng : NaN);
       if (!name) { showToast('Escribe un nombre', 'warning'); return; }
       if (isNaN(lat) || isNaN(lng)) { showToast('Indica la ubicacion: clic en el mapa, coordenadas o buscar direccion', 'warning'); return; }
+
+      // Handle image upload
+      let imageData = null;
+      const imageInput = document.getElementById('place-image');
+      if (imageInput && imageInput.files && imageInput.files[0]) {
+        imageData = await resizeImageToBase64(imageInput.files[0], 120);
+      }
+
       try {
         const editing = editingPlaceId != null;
+        const body = { name, category, address, phone, lat, lng };
+        if (imageData) body.image = imageData;
         const res = await apiFetch('/api/places' + (editing ? '/' + editingPlaceId : ''), {
           method: editing ? 'PUT' : 'POST',
-          body: JSON.stringify({ name, category, address, lat, lng }),
+          body: JSON.stringify(body),
         });
         if (res.ok) {
           showToast(editing ? 'Lugar actualizado' : 'Lugar agregado', 'success');
@@ -792,6 +821,34 @@
           loadPlaces();
         } else showToast('Error al guardar lugar', 'error');
       } catch { showToast('Error de conexion', 'error'); }
+    });
+  }
+
+  // Resize image to small square for map markers
+  function resizeImageToBase64(file, maxSize) {
+    return new Promise(function(resolve) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = maxSize;
+          canvas.height = maxSize;
+          const ctx = canvas.getContext('2d');
+          // Crop to square from center
+          const size = Math.min(img.width, img.height);
+          const sx = (img.width - size) / 2;
+          const sy = (img.height - size) / 2;
+          ctx.beginPath();
+          ctx.arc(maxSize/2, maxSize/2, maxSize/2, 0, Math.PI*2);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, maxSize, maxSize);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     });
   }
 

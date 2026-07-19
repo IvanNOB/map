@@ -311,6 +311,8 @@ export async function init() {
     try { await impl.exec("CREATE TABLE IF NOT EXISTS contacts (id SERIAL PRIMARY KEY, name TEXT NOT NULL, phone TEXT NOT NULL, label_id INTEGER REFERENCES contact_labels(id) ON DELETE SET NULL, notes TEXT, lat DOUBLE PRECISION, lng DOUBLE PRECISION, created_at TIMESTAMP NOT NULL DEFAULT NOW())"); } catch (_) {}
     try { await impl.exec("ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION"); } catch (_) {}
     try { await impl.exec("ALTER TABLE contacts ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE places ADD COLUMN IF NOT EXISTS phone TEXT"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE places ADD COLUMN IF NOT EXISTS image TEXT"); } catch (_) {}
   } else {
     await impl.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -466,6 +468,8 @@ export async function init() {
     try { await impl.exec("CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT NOT NULL, label_id INTEGER, notes TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (label_id) REFERENCES contact_labels(id) ON DELETE SET NULL)"); } catch (_) {}
     try { await impl.exec("ALTER TABLE contacts ADD COLUMN lat REAL"); } catch (_) {}
     try { await impl.exec("ALTER TABLE contacts ADD COLUMN lng REAL"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE places ADD COLUMN phone TEXT"); } catch (_) {}
+    try { await impl.exec("ALTER TABLE places ADD COLUMN image TEXT"); } catch (_) {}
     impl._save();
   }
 }
