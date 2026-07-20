@@ -10,7 +10,6 @@
   let socket = null;
   let map = null;
   let positionMarker = null;
-  let watchId = null;
   let sharing = false;
 
   // ─── DOM References ─────────────────────────────────────────────────────────
@@ -24,10 +23,20 @@
   const driverOrders = document.getElementById('driver-orders');
   const toggleOnline = document.getElementById('toggle-online');
   const statusLabel = document.getElementById('status-label');
-  const consentLocation = document.getElementById('consent-location');
   const btnShareLocation = document.getElementById('btn-share-location');
   const btnStopLocation = document.getElementById('btn-stop-location');
   const gpsReadout = document.getElementById('gps-readout');
+
+  // Background tracking UI elements
+  const trackingStatus = document.getElementById('tracking-status');
+  const trackingIndicator = document.getElementById('tracking-indicator');
+  const trackingStatusText = document.getElementById('tracking-status-text');
+  const trackingDiagnostics = document.getElementById('tracking-diagnostics');
+  const diagWakeLock = document.getElementById('diag-wakelock');
+  const diagGps = document.getElementById('diag-gps');
+  const diagSocket = document.getElementById('diag-socket');
+  const diagBackground = document.getElementById('diag-background');
+  const diagLastUpdate = document.getElementById('diag-last-update');
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -124,6 +133,7 @@
     loadStats();
     initSocket();
     initMap();
+    initBackgroundLocation();
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -305,6 +315,10 @@
     if (toggleOnline.checked) {
       statusLabel.textContent = 'En linea';
       statusLabel.style.color = 'var(--success)';
+      // Auto-start location sharing when going online
+      if (!sharing) {
+        startSharing();
+      }
     } else {
       statusLabel.textContent = 'Desconectado';
       statusLabel.style.color = 'var(--text-muted)';
@@ -312,82 +326,211 @@
     }
   });
 
-  // ─── Location Sharing ──────────────────────────────────────────────────────
+  // ─── Background Location Integration ───────────────────────────────────────
 
-  consentLocation.addEventListener('change', () => {
-    btnShareLocation.disabled = !consentLocation.checked;
-  });
+  function initBackgroundLocation() {
+    if (!window.BackgroundLocation) {
+      console.warn('BackgroundLocation module not loaded');
+      return;
+    }
+
+    window.BackgroundLocation.init({
+      token: token,
+      driverId: currentUser.id,
+      driverName: currentUser.name,
+      socket: socket,
+      onLocation: handleBackgroundLocationUpdate,
+      onStatus: handleTrackingStatusChange,
+      onError: handleTrackingError,
+    });
+
+    // If BackgroundLocation recovers a previous session, update UI
+    if (window.BackgroundLocation.isActive()) {
+      sharing = true;
+      updateTrackingUI('active');
+      updateLocationButtons(true);
+      toggleOnline.checked = true;
+      statusLabel.textContent = 'En linea';
+      statusLabel.style.color = 'var(--success)';
+    }
+
+    // Update diagnostics periodically
+    setInterval(updateDiagnostics, 3000);
+  }
+
+  function handleBackgroundLocationUpdate(locationData) {
+    const { lat, lng, speed, accuracy } = locationData;
+    const now = new Date().toLocaleTimeString('es-CO');
+
+    // Update GPS readout
+    if (gpsReadout) {
+      gpsReadout.textContent = `Lat: ${lat.toFixed(5)} | Lng: ${lng.toFixed(5)} | Velocidad: ${(speed || 0).toFixed(1)} m/s | Precision: ${(accuracy || 0).toFixed(0)} m | Ultima: ${now}`;
+    }
+
+    // Update map marker
+    if (map) {
+      const latlng = [lat, lng];
+      if (positionMarker) {
+        positionMarker.setLatLng(latlng);
+      } else {
+        positionMarker = L.circleMarker(latlng, {
+          radius: 10,
+          color: '#3b82f6',
+          fillColor: '#3b82f6',
+          fillOpacity: 0.8,
+        }).addTo(map);
+      }
+      map.setView(latlng, 15);
+    }
+
+    // Update compass from GPS heading
+    if (locationData.heading != null && !isNaN(locationData.heading)) {
+      updateCompassFromGPS(locationData.heading);
+    }
+  }
+
+  function handleTrackingStatusChange(status) {
+    updateTrackingUI(status);
+
+    switch (status) {
+      case 'active':
+        showToast('Ubicacion activa en segundo plano', 'success');
+        break;
+      case 'stopped':
+        showToast('Ubicacion detenida', 'info');
+        sharing = false;
+        updateLocationButtons(false);
+        break;
+      case 'recovering':
+        showToast('Recuperando sesion de ubicacion...', 'info');
+        break;
+    }
+  }
+
+  function handleTrackingError(message) {
+    showToast(message, 'error');
+  }
+
+  function updateTrackingUI(status) {
+    if (!trackingStatus) return;
+
+    trackingStatus.classList.remove('hidden');
+
+    switch (status) {
+      case 'active':
+        trackingIndicator.className = 'tracking-dot tracking-dot-active';
+        trackingStatusText.textContent = 'Ubicacion activa (segundo plano habilitado)';
+        trackingStatus.className = 'tracking-status tracking-status-active';
+        break;
+      case 'starting':
+      case 'recovering':
+        trackingIndicator.className = 'tracking-dot tracking-dot-starting';
+        trackingStatusText.textContent = 'Iniciando tracking...';
+        trackingStatus.className = 'tracking-status tracking-status-starting';
+        break;
+      case 'stopped':
+        trackingIndicator.className = 'tracking-dot tracking-dot-stopped';
+        trackingStatusText.textContent = 'Ubicacion detenida';
+        trackingStatus.className = 'tracking-status tracking-status-stopped';
+        setTimeout(() => {
+          if (!sharing && trackingStatus) trackingStatus.classList.add('hidden');
+        }, 3000);
+        break;
+      default:
+        trackingStatus.classList.add('hidden');
+    }
+  }
+
+  function updateLocationButtons(isSharing) {
+    if (isSharing) {
+      btnShareLocation.classList.add('hidden');
+      btnStopLocation.classList.remove('hidden');
+    } else {
+      btnShareLocation.classList.remove('hidden');
+      btnStopLocation.classList.add('hidden');
+    }
+  }
+
+  function updateDiagnostics() {
+    if (!window.BackgroundLocation || !trackingDiagnostics) return;
+    if (!sharing) {
+      trackingDiagnostics.classList.add('hidden');
+      return;
+    }
+
+    trackingDiagnostics.classList.remove('hidden');
+    const diag = window.BackgroundLocation.getDiagnostics();
+
+    if (diagWakeLock) {
+      diagWakeLock.textContent = diag.hasWakeLock ? 'Activo' : 'No disponible';
+      diagWakeLock.className = 'diag-value ' + (diag.hasWakeLock ? 'diag-ok' : 'diag-warn');
+    }
+    if (diagGps) {
+      diagGps.textContent = diag.hasGPSWatch ? 'Activo' : 'Inactivo';
+      diagGps.className = 'diag-value ' + (diag.hasGPSWatch ? 'diag-ok' : 'diag-error');
+    }
+    if (diagSocket) {
+      const connected = socket && socket.connected;
+      diagSocket.textContent = connected ? 'Conectado' : 'Desconectado';
+      diagSocket.className = 'diag-value ' + (connected ? 'diag-ok' : 'diag-warn');
+    }
+    if (diagBackground) {
+      diagBackground.textContent = diag.isVisible ? 'Primer plano' : 'Segundo plano';
+      diagBackground.className = 'diag-value ' + (diag.isVisible ? 'diag-ok' : 'diag-warn');
+    }
+    if (diagLastUpdate) {
+      if (diag.lastSentTime) {
+        const time = new Date(diag.lastSentTime).toLocaleTimeString('es-CO');
+        diagLastUpdate.textContent = time;
+        diagLastUpdate.className = 'diag-value diag-ok';
+      } else {
+        diagLastUpdate.textContent = 'Esperando...';
+        diagLastUpdate.className = 'diag-value diag-warn';
+      }
+    }
+  }
+
+  // ─── Location Sharing (integrated with BackgroundLocation) ─────────────────
 
   btnShareLocation.addEventListener('click', startSharing);
   btnStopLocation.addEventListener('click', stopSharing);
 
-  function startSharing() {
+  async function startSharing() {
     if (!navigator.geolocation) {
       showToast('Geolocalizacion no disponible', 'error');
       return;
     }
-    if (!consentLocation.checked) return;
 
     sharing = true;
-    btnShareLocation.classList.add('hidden');
-    btnStopLocation.classList.remove('hidden');
+    updateLocationButtons(true);
 
-    watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude, speed, accuracy, heading } = pos.coords;
-        const now = new Date().toLocaleTimeString('es-CO');
-        gpsReadout.textContent = `Lat: ${latitude.toFixed(5)} | Lng: ${longitude.toFixed(5)} | Velocidad: ${(speed || 0).toFixed(1)} m/s | Precision: ${(accuracy || 0).toFixed(0)} m | Ultima actualizacion: ${now}`;
+    // Use BackgroundLocation module for persistent tracking
+    if (window.BackgroundLocation) {
+      // Ensure socket reference is up to date
+      window.BackgroundLocation.updateSocket(socket);
+      window.BackgroundLocation.updateToken(token);
+      const started = await window.BackgroundLocation.start();
+      if (!started) {
+        sharing = false;
+        updateLocationButtons(false);
+        return;
+      }
+    }
 
-        // Update map marker
-        if (map) {
-          const latlng = [latitude, longitude];
-          if (positionMarker) {
-            positionMarker.setLatLng(latlng);
-          } else {
-            positionMarker = L.circleMarker(latlng, {
-              radius: 10,
-              color: '#3b82f6',
-              fillColor: '#3b82f6',
-              fillOpacity: 0.8,
-            }).addTo(map);
-          }
-          map.setView(latlng, 15);
-        }
-
-        // Update compass from GPS heading (fallback when device orientation not available)
-        if (heading != null && !isNaN(heading)) {
-          updateCompassFromGPS(heading);
-        }
-
-        // Emit via Socket.IO
-        if (socket && socket.connected) {
-          socket.emit('driver:update', {
-            lat: latitude,
-            lng: longitude,
-            speed: speed || 0,
-            heading: heading || 0,
-            accuracy: accuracy || 0,
-          });
-        }
-      },
-      (err) => {
-        showToast('Error de geolocalizacion: ' + err.message, 'error');
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-    );
+    // Auto-enable online toggle
+    if (!toggleOnline.checked) {
+      toggleOnline.checked = true;
+      statusLabel.textContent = 'En linea';
+      statusLabel.style.color = 'var(--success)';
+    }
   }
 
-  function stopSharing() {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-    }
+  async function stopSharing() {
     sharing = false;
-    btnShareLocation.classList.remove('hidden');
-    btnStopLocation.classList.add('hidden');
+    updateLocationButtons(false);
 
-    if (socket && socket.connected) {
-      socket.emit('driver:stop');
+    if (window.BackgroundLocation) {
+      await window.BackgroundLocation.stop();
     }
   }
 
@@ -420,7 +563,6 @@
     if (window.DeviceOrientationEvent) {
       // iOS 13+ requires permission request
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // Add a tap-to-enable interaction for iOS
         const compassWidget = document.getElementById('compass-widget');
         compassWidget.style.cursor = 'pointer';
         compassWidget.title = 'Toca para activar la brujula';
@@ -441,27 +583,18 @@
           }
         });
       } else {
-        // Android and other platforms - no permission needed
         startDeviceOrientation(compassRose, compassHeading);
       }
     }
-
-    // Also use GPS heading as fallback/supplement (from watchPosition)
-    // This is handled in the startSharing watchPosition callback
   }
 
   function startDeviceOrientation(compassRose, compassHeading) {
     window.addEventListener('deviceorientation', function (event) {
       let heading = null;
 
-      // Use webkitCompassHeading for iOS (degrees from magnetic north)
       if (event.webkitCompassHeading != null) {
         heading = event.webkitCompassHeading;
-      }
-      // Use absolute orientation with alpha for Android
-      else if (event.alpha != null) {
-        // alpha is 0-360, represents compass direction when device is flat
-        // On Android with event.absolute = true, alpha gives heading relative to north
+      } else if (event.alpha != null) {
         heading = event.absolute ? (360 - event.alpha) : (360 - event.alpha);
       }
 
@@ -473,18 +606,14 @@
 
   function updateCompass(heading, compassRose, compassHeading) {
     if (heading == null || isNaN(heading)) return;
-
     currentHeading = heading;
 
-    // Rotate compass rose so North always points to geographic north
     if (compassRose) {
       compassRose.style.transform = 'rotate(' + (-heading) + 'deg)';
     }
-
-    // Show heading in degrees with cardinal direction
     if (compassHeading) {
       const cardinal = getCardinalDirection(heading);
-      compassHeading.textContent = Math.round(heading) + '° ' + cardinal;
+      compassHeading.textContent = Math.round(heading) + '\u00B0 ' + cardinal;
     }
   }
 
@@ -494,10 +623,8 @@
     return directions[index];
   }
 
-  // Update compass from GPS heading (called in watchPosition callback)
   function updateCompassFromGPS(gpsHeading) {
     if (gpsHeading == null || isNaN(gpsHeading)) return;
-    // Only use GPS heading if device orientation is not available
     if (currentHeading === null) {
       const compassRose = document.getElementById('compass-rose');
       const compassHeading = document.getElementById('compass-heading');
@@ -513,6 +640,10 @@
 
     socket.on('connect', () => {
       console.log('Socket conectado (repartidor)');
+      // Update BackgroundLocation with new socket reference
+      if (window.BackgroundLocation) {
+        window.BackgroundLocation.updateSocket(socket);
+      }
     });
 
     socket.on('order:assigned', (order) => {
@@ -540,6 +671,13 @@
     socket.on('disconnect', () => {
       console.log('Socket desconectado');
     });
+
+    socket.on('reconnect', () => {
+      console.log('Socket reconectado');
+      if (window.BackgroundLocation) {
+        window.BackgroundLocation.updateSocket(socket);
+      }
+    });
   }
 
   // ─── Auto Refresh (every 2 minutes) ─────────────────────────────────────────
@@ -549,7 +687,7 @@
       loadOrders();
       loadStats();
     }
-  }, 2 * 60 * 1000); // 2 minutos
+  }, 2 * 60 * 1000);
 
   // ─── Init ──────────────────────────────────────────────────────────────────
 
