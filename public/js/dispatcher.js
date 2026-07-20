@@ -510,13 +510,13 @@
             <strong>Recogida:</strong> ${escapeHtml(order.pickup_address || '-')} &rarr; <strong>Entrega:</strong> ${escapeHtml(order.dropoff_address || '-')}
           </div>
           <div class="order-meta">
-            ${dName ? '<span>Repartidor: ' + escapeHtml(dName) + '</span>' : ''}
+            ${dName ? '<span>Repartidor: ' + escapeHtml(dName) + '</span>' : order.status === 'pending' ? '<span style="color:#f59e0b;">Esperando repartidor...</span>' : ''}
             <span>${escapeHtml(formatTime(order.created_at))}</span>
             ${order.amount ? '<span>$' + escapeHtml(String(order.amount)) + '</span>' : ''}
           </div>
         </div>
         <div class="order-actions">
-          ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar Repartidor</button>' : ''}
+          ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" data-assign="' + order.id + '">Asignar Manual</button>' : ''}
           ${['assigned', 'picked_up', 'on_the_way'].includes(order.status) ? '<button class="btn btn-outline btn-sm" data-route="' + order.id + '">Ver Ruta</button>' : ''}
           <button class="btn btn-outline btn-sm" data-copy-link="${escapeHtml(order.code)}">Copiar Link</button>
           ${['pending', 'assigned'].includes(order.status) ? '<button class="btn btn-danger btn-sm" data-cancel="' + order.id + '">Cancelar</button>' : ''}
@@ -891,7 +891,7 @@
     });
 
     socket.on('order:new', (order) => {
-      showToast('Nuevo pedido: ' + order.code, 'info');
+      showToast('Nuevo pedido: ' + order.code + ' (enviado a repartidores)', 'info');
       playNotificationSound();
       loadOrders();
       loadStats();
@@ -905,6 +905,13 @@
 
     socket.on('order:assigned', (order) => {
       loadOrders();
+    });
+
+    socket.on('order:accepted', (data) => {
+      showToast('Pedido ' + data.order.code + ' aceptado por ' + data.driver_name, 'success');
+      playNotificationSound();
+      loadOrders();
+      loadStats();
     });
 
     socket.on('driver:location', (data) => {
