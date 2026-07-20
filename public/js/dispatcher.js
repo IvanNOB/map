@@ -774,12 +774,13 @@
         icon = placeIcon(p.category);
       }
       const tooltipText = escapeHtml(p.name) + (p.phone ? ' · ' + escapeHtml(p.phone) : '');
+      const popupContent = '<strong>' + escapeHtml(p.name) + '</strong>' +
+        (p.phone ? '<br>📱 ' + escapeHtml(p.phone) : '') +
+        (!p.image ? '<br>' + (PLACE_EMOJI[p.category] || '') + ' ' + escapeHtml(p.category) : '') +
+        (p.address ? '<br>📍 ' + escapeHtml(p.address) : '');
       const m = L.marker([p.lat, p.lng], { icon: icon })
         .bindTooltip(tooltipText, { direction: 'top', offset: [0, -10], className: 'place-tooltip' })
-        .bindPopup('<strong>' + escapeHtml(p.name) + '</strong>' +
-          (p.phone ? '<br>📱 ' + escapeHtml(p.phone) : '') +
-          '<br>' + (PLACE_EMOJI[p.category] || '') + ' ' + escapeHtml(p.category) +
-          (p.address ? '<br>📍 ' + escapeHtml(p.address) : ''))
+        .bindPopup(popupContent)
         .addTo(map);
       placeMarkersMain.push(m);
     });
