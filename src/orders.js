@@ -327,9 +327,18 @@ export default function createOrdersRouter(io) {
     io.to("admins").emit("order:new", order);
     notifyAdmins(io, "order_new", order);
     logActivity(req.user, "order_created", "Pedido " + order.code + " creado");
+
+    // Emit to ALL online drivers so they can compete to accept it
+    io.to("drivers").emit("order:available", order);
+
     // Push to all admins
     db.all("SELECT id FROM users WHERE role = 'admin'").then((admins) => {
       admins.forEach((a) => sendPush(a.id, { title: "Nuevo pedido", body: order.code + " - " + order.customer_name, url: "/" }));
+    }).catch(() => {});
+
+    // Push to all online drivers
+    db.all("SELECT user_id as id FROM drivers WHERE status = 'available'").then((onlineDrivers) => {
+      onlineDrivers.forEach((d) => sendPush(d.id, { title: "Nuevo pedido disponible!", body: order.code + " - " + (order.dropoff_address || "Aceptar para ver detalles"), url: "/driver.html" }));
     }).catch(() => {});
 
     res.status(201).json(order);
@@ -425,6 +434,77 @@ export default function createOrdersRouter(io) {
     notifyRestaurant(updated, "order:assigned", "Tu pedido fue asignado", updated.code + ": un repartidor va en camino");
 
     // Auto WhatsApp to customer (only if Twilio is configured)
+    if (updated.customer_phone) {
+      const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
+      const link = `${base}/customer.html?code=${encodeURIComponent(updated.code)}`;
+      sendWhatsApp(updated.customer_phone, `🚨 ¡NUEVA ACTUALIZACIÓN EN SERVICIOS GHOST! 🚨\n\n¡En Servicios Ghost no nos detenemos y seguimos evolucionando para ti! 👻🚀 Queremos contarte que hemos activado un nuevo sistema de seguimiento de pedidos.\n\nA partir de ahora, tendrás el control total de tus entregas:\n✅ Mayor tranquilidad: Sabrás exactamente el estado de tu domicilio.\n✅ Máxima seguridad: Todo monitoreado directamente por nuestra central logística.\n✅ Rapidez garantizada: Rompemos las barreras del tiempo con tecnología premium. ⏱️⚡\n\n🔗 Sigue tu pedido *${updated.code}* en tiempo real aquí:\n${link}\n\n¿Tienes un antojo o necesitas despachar en tu negocio? ¡Pruébalo ya mismo! Tu entrega está en las mejores manos. ⭐⭐⭐⭐⭐\n\n📲 Guarda nuestro contacto y pide al instante: 321 428 6626 📞`);
+    }
+
+    res.json(updated);
+  });
+
+  // ─── POST /api/orders/:id/accept ───────────────────────────────────────────
+  // Driver accepts an available (pending) order — first come, first served.
+  // Uses an atomic "compare-and-swap" UPDATE to handle race conditions safely.
+
+  router.post("/:id/accept", requireAuth, async (req, res) => {
+    if (req.user.role !== "driver") {
+      return res.status(403).json({ error: "Solo repartidores pueden aceptar pedidos" });
+    }
+
+    const order = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    // Only pending orders can be accepted
+    if (order.status !== "pending") {
+      return res.status(409).json({
+        error: "Este pedido ya fue tomado por otro repartidor",
+        current_status: order.status,
+      });
+    }
+
+    // Atomic update: only succeeds if status is still 'pending' (race-condition safe)
+    const result = await db.run(
+      `UPDATE orders SET driver_id = ?, status = 'assigned', assigned_at = datetime('now')
+       WHERE id = ? AND status = 'pending'`,
+      [req.user.id, req.params.id]
+    );
+
+    // If no rows were changed, another driver already took it
+    if (result.changes === 0) {
+      return res.status(409).json({
+        error: "Este pedido ya fue tomado por otro repartidor",
+      });
+    }
+
+    const updated = await db.get("SELECT * FROM orders WHERE id = ?", [req.params.id]);
+
+    // Notify admins that the order was accepted
+    io.to("admins").emit("order:assigned", updated);
+    io.to("admins").emit("order:accepted", {
+      order: updated,
+      driver_name: req.user.name,
+    });
+
+    // Notify the driver who accepted
+    io.to(`driver:${req.user.id}`).emit("order:assigned", updated);
+
+    // Notify ALL drivers that this order is no longer available
+    io.to("drivers").emit("order:taken", {
+      order_id: updated.id,
+      code: updated.code,
+      driver_name: req.user.name,
+    });
+
+    // Emit to tracking room
+    io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
+
+    logActivity(req.user, "order_accepted", "Pedido " + updated.code + " aceptado por " + req.user.name);
+    sendPush(req.user.id, { title: "Pedido aceptado!", body: updated.code + " es tuyo", url: "/driver.html" });
+    notifyAdmins(io, "order_accepted", { ...updated, accepted_by: req.user.name });
+    notifyRestaurant(updated, "order:assigned", "Pedido aceptado", updated.code + " fue aceptado por " + req.user.name);
+
+    // WhatsApp to customer
     if (updated.customer_phone) {
       const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
       const link = `${base}/customer.html?code=${encodeURIComponent(updated.code)}`;

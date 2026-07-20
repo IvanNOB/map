@@ -1028,6 +1028,30 @@
       loadOrders();
     });
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FEATURE: COMPETITIVE ORDER ACCEPTANCE (order:available)
+    // All drivers get alerted, first to accept gets the order
+    // ═══════════════════════════════════════════════════════════════════════════
+    socket.on('order:available', function (order) {
+      console.log('Nuevo pedido disponible:', order && order.code);
+      // Vibrate + sound
+      vibrateNewOrder();
+      playGhostSound();
+      // Show accept modal
+      showAvailableOrderModal(order);
+      // Browser notification
+      notifyDriverDevice('🚨 ¡Pedido disponible!', order && order.code ? order.code + ' - ' + (order.dropoff_address || '¡Acepta rapido!') : '¡Hay un nuevo pedido!');
+    });
+
+    // Another driver took the order
+    socket.on('order:taken', function (data) {
+      // Remove from queue and dismiss modal if showing this order
+      dismissAvailableOrderIfShowing(data.order_id);
+      if (data.driver_name) {
+        showToast(data.driver_name + ' tomo el pedido ' + (data.code || ''), 'info');
+      }
+    });
+
     // Cliente confirmo/envio su ubicacion
     socket.on('order:address', function (data) {
       showToast('📍 Cliente envio su ubicacion: ' + (data.dropoff_address || 'GPS'), 'success');
@@ -1087,6 +1111,172 @@
     });
   }
 
+
+  // ─── Competitive Order Acceptance (modal + accept logic) ──────────────────
+
+  var availableOrdersQueue = [];
+  var currentAvailableOrder = null;
+  var acceptingOrderId = null;
+
+  function showAvailableOrderModal(order) {
+    if (!order) return;
+    availableOrdersQueue.push(order);
+    // If no modal is showing, show this one
+    if (!currentAvailableOrder) {
+      displayNextAvailableOrder();
+    }
+  }
+
+  function displayNextAvailableOrder() {
+    if (availableOrdersQueue.length === 0) {
+      currentAvailableOrder = null;
+      var modal = document.getElementById('modal-available-order');
+      if (modal) modal.classList.add('hidden');
+      return;
+    }
+    currentAvailableOrder = availableOrdersQueue.shift();
+    var modal = document.getElementById('modal-available-order');
+    if (!modal) {
+      // Create modal dynamically if not in HTML
+      createAvailableOrderModal();
+      modal = document.getElementById('modal-available-order');
+    }
+
+    document.getElementById('avail-order-code').textContent = currentAvailableOrder.code || '';
+    document.getElementById('avail-order-customer').textContent = currentAvailableOrder.customer_name || '';
+    document.getElementById('avail-order-pickup').textContent = currentAvailableOrder.pickup_address || '-';
+    document.getElementById('avail-order-dropoff').textContent = currentAvailableOrder.dropoff_address || '-';
+    document.getElementById('avail-order-items').textContent = currentAvailableOrder.items || '-';
+    document.getElementById('avail-order-amount').textContent = currentAvailableOrder.amount ? ('$' + Number(currentAvailableOrder.amount).toLocaleString()) : '-';
+
+    var btnAccept = document.getElementById('btn-accept-available');
+    if (btnAccept) {
+      btnAccept.disabled = false;
+      btnAccept.textContent = '👻 ACEPTAR PEDIDO';
+    }
+
+    modal.classList.remove('hidden');
+
+    // Auto-dismiss after 60 seconds
+    if (modal._autoTimer) clearTimeout(modal._autoTimer);
+    modal._autoTimer = setTimeout(function () {
+      dismissAvailableOrderIfShowing(currentAvailableOrder && currentAvailableOrder.id);
+      displayNextAvailableOrder();
+    }, 60000);
+  }
+
+  function dismissAvailableOrderIfShowing(orderId) {
+    // Remove from queue
+    availableOrdersQueue = availableOrdersQueue.filter(function (o) { return o.id !== orderId; });
+    // If currently showing this order, dismiss
+    if (currentAvailableOrder && currentAvailableOrder.id === orderId) {
+      currentAvailableOrder = null;
+      var modal = document.getElementById('modal-available-order');
+      if (modal) {
+        if (modal._autoTimer) clearTimeout(modal._autoTimer);
+        modal.classList.add('hidden');
+      }
+      // Show next if any
+      setTimeout(displayNextAvailableOrder, 300);
+    }
+  }
+
+  async function acceptAvailableOrder() {
+    if (!currentAvailableOrder) return;
+    var orderId = currentAvailableOrder.id;
+    if (acceptingOrderId === orderId) return;
+    acceptingOrderId = orderId;
+
+    var btnAccept = document.getElementById('btn-accept-available');
+    if (btnAccept) {
+      btnAccept.disabled = true;
+      btnAccept.textContent = 'Aceptando...';
+    }
+
+    try {
+      var res = await apiFetch('/api/orders/' + orderId + '/accept', { method: 'POST' });
+      if (res.ok) {
+        showToast('👻 ¡Pedido aceptado! Es tuyo.', 'success');
+        vibrateNewOrder();
+        dismissAvailableOrderIfShowing(orderId);
+        displayNextAvailableOrder();
+        lastOrdersJSON = '';
+        loadOrders();
+        loadEarnings();
+      } else {
+        var err = await res.json();
+        if (res.status === 409) {
+          showToast('Otro repartidor ya tomo este pedido', 'warning');
+          dismissAvailableOrderIfShowing(orderId);
+          displayNextAvailableOrder();
+        } else {
+          showToast(err.error || 'Error al aceptar', 'error');
+          if (btnAccept) { btnAccept.disabled = false; btnAccept.textContent = '👻 ACEPTAR PEDIDO'; }
+        }
+      }
+    } catch (e) {
+      showToast('Error de conexion', 'error');
+      if (btnAccept) { btnAccept.disabled = false; btnAccept.textContent = '👻 ACEPTAR PEDIDO'; }
+    } finally {
+      acceptingOrderId = null;
+    }
+  }
+
+  function createAvailableOrderModal() {
+    var overlay = document.createElement('div');
+    overlay.id = 'modal-available-order';
+    overlay.className = 'avail-modal-overlay hidden';
+    overlay.innerHTML = '<div class="avail-modal">' +
+      '<div class="avail-modal-header"><span class="avail-pulse"></span><h3>🚨 Nuevo Pedido Disponible!</h3></div>' +
+      '<div class="avail-modal-body">' +
+        '<div class="avail-code" id="avail-order-code">ORD-XXXX</div>' +
+        '<div class="avail-details">' +
+          '<div class="avail-row"><span>Cliente:</span><span id="avail-order-customer">--</span></div>' +
+          '<div class="avail-row"><span>Recoger:</span><span id="avail-order-pickup">--</span></div>' +
+          '<div class="avail-row"><span>Entregar:</span><span id="avail-order-dropoff">--</span></div>' +
+          '<div class="avail-row"><span>Articulos:</span><span id="avail-order-items">--</span></div>' +
+          '<div class="avail-row"><span>Valor:</span><span id="avail-order-amount" style="color:#10b981;font-weight:700;">--</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="avail-modal-actions">' +
+        '<button id="btn-accept-available" class="avail-btn-accept">👻 ACEPTAR PEDIDO</button>' +
+        '<button id="btn-ignore-available" class="avail-btn-ignore">Ignorar</button>' +
+      '</div>' +
+      '<div style="text-align:center;font-size:0.7rem;color:#9ca3af;padding:0.5rem;">Se oculta en 60 segundos</div>' +
+    '</div>';
+    document.body.appendChild(overlay);
+
+    // Add styles
+    var style = document.createElement('style');
+    style.textContent = '.avail-modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:99999;padding:1rem;animation:avFadeIn .2s ease}' +
+      '.avail-modal-overlay.hidden{display:none}' +
+      '@keyframes avFadeIn{from{opacity:0}to{opacity:1}}' +
+      '.avail-modal{background:#1a1d27;border-radius:16px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:avSlideUp .3s ease;border:1px solid rgba(16,185,129,0.4)}' +
+      '@keyframes avSlideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}' +
+      '.avail-modal-header{background:linear-gradient(135deg,#10b981,#059669);padding:1rem 1.2rem;display:flex;align-items:center;gap:0.7rem}' +
+      '.avail-modal-header h3{margin:0;color:#fff;font-size:1.05rem;font-weight:700}' +
+      '.avail-pulse{width:12px;height:12px;border-radius:50%;background:#fff;animation:avPulse 1.5s infinite;flex-shrink:0}' +
+      '@keyframes avPulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,0.7)}70%{box-shadow:0 0 0 10px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}' +
+      '.avail-modal-body{padding:1.2rem}' +
+      '.avail-code{font-size:1.3rem;font-weight:800;color:#3b82f6;text-align:center;margin-bottom:1rem;letter-spacing:1px}' +
+      '.avail-details{display:flex;flex-direction:column;gap:0.5rem}' +
+      '.avail-row{display:flex;justify-content:space-between;gap:0.5rem;font-size:0.85rem}' +
+      '.avail-row span:first-child{color:#9ca3af;flex-shrink:0}' +
+      '.avail-row span:last-child{text-align:right;word-break:break-word;color:#e5e7eb}' +
+      '.avail-modal-actions{padding:0 1.2rem 1rem;display:flex;flex-direction:column;gap:0.5rem}' +
+      '.avail-btn-accept{width:100%;padding:0.9rem;font-size:1.05rem;font-weight:700;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;cursor:pointer;letter-spacing:0.5px}' +
+      '.avail-btn-accept:disabled{opacity:0.5;cursor:not-allowed}' +
+      '.avail-btn-ignore{width:100%;padding:0.6rem;font-size:0.85rem;background:transparent;color:#9ca3af;border:1px solid #374151;border-radius:10px;cursor:pointer}';
+    document.head.appendChild(style);
+
+    // Bind events
+    document.getElementById('btn-accept-available').addEventListener('click', acceptAvailableOrder);
+    document.getElementById('btn-ignore-available').addEventListener('click', function () {
+      showToast('Pedido ignorado', 'info');
+      dismissAvailableOrderIfShowing(currentAvailableOrder && currentAvailableOrder.id);
+      displayNextAvailableOrder();
+    });
+  }
 
   // ─── Auto Refresh (cada 30s como fallback — Socket.IO es la fuente principal) ──
 
