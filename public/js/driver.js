@@ -632,6 +632,159 @@
     }
   }
 
+  // ─── Available Orders Queue (pending orders waiting for acceptance) ────────
+
+  let availableOrders = []; // Orders broadcasted via order:available
+  let acceptingOrderId = null; // Prevent double-tap
+
+  function showAvailableOrderModal(order) {
+    const modal = document.getElementById('modal-available-order');
+    if (!modal) return;
+
+    document.getElementById('avail-order-code').textContent = order.code || '';
+    document.getElementById('avail-order-customer').textContent = order.customer_name || '';
+    document.getElementById('avail-order-pickup').textContent = order.pickup_address || '-';
+    document.getElementById('avail-order-dropoff').textContent = order.dropoff_address || '-';
+    document.getElementById('avail-order-items').textContent = order.items || '-';
+    document.getElementById('avail-order-amount').textContent = order.amount ? ('$' + Number(order.amount).toLocaleString()) : '-';
+
+    const btnAccept = document.getElementById('btn-accept-order');
+    const btnReject = document.getElementById('btn-reject-order');
+
+    btnAccept.disabled = false;
+    btnAccept.textContent = 'Aceptar Pedido';
+    btnAccept.dataset.orderId = order.id;
+
+    modal.classList.remove('hidden');
+
+    // Play alert sound
+    playOrderAlertSound();
+
+    // Send browser notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Nuevo pedido disponible!', {
+        body: order.code + ' - ' + (order.dropoff_address || 'Ver detalles'),
+        icon: '/icons/icon-192.svg',
+        tag: 'order-available-' + order.id,
+        requireInteraction: true,
+      });
+    }
+
+    // Auto-dismiss after 60 seconds if not acted upon
+    const autoDismissTimer = setTimeout(() => {
+      dismissAvailableOrder(order.id);
+    }, 60000);
+
+    modal._autoDismissTimer = autoDismissTimer;
+  }
+
+  function dismissAvailableOrder(orderId) {
+    const modal = document.getElementById('modal-available-order');
+    if (!modal) return;
+    if (modal._autoDismissTimer) {
+      clearTimeout(modal._autoDismissTimer);
+    }
+    modal.classList.add('hidden');
+    // Remove from queue and show next if any
+    availableOrders = availableOrders.filter((o) => o.id !== orderId);
+    if (availableOrders.length > 0) {
+      setTimeout(() => showAvailableOrderModal(availableOrders[0]), 300);
+    }
+  }
+
+  async function acceptOrder(orderId) {
+    if (acceptingOrderId === orderId) return; // Prevent double-tap
+    acceptingOrderId = orderId;
+
+    const btnAccept = document.getElementById('btn-accept-order');
+    btnAccept.disabled = true;
+    btnAccept.textContent = 'Aceptando...';
+
+    try {
+      const res = await apiFetch('/api/orders/' + orderId + '/accept', {
+        method: 'POST',
+      });
+      if (res.ok) {
+        showToast('Pedido aceptado! Es tuyo.', 'success');
+        dismissAvailableOrder(orderId);
+        loadOrders();
+        loadStats();
+      } else {
+        const err = await res.json();
+        if (res.status === 409) {
+          showToast('Otro repartidor ya tomo este pedido', 'warning');
+          dismissAvailableOrder(orderId);
+        } else {
+          showToast(err.error || 'Error al aceptar', 'error');
+          btnAccept.disabled = false;
+          btnAccept.textContent = 'Aceptar Pedido';
+        }
+      }
+    } catch {
+      showToast('Error de conexion', 'error');
+      btnAccept.disabled = false;
+      btnAccept.textContent = 'Aceptar Pedido';
+    } finally {
+      acceptingOrderId = null;
+    }
+  }
+
+  function playOrderAlertSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+
+      // Urgent two-tone alert (higher pitched, repeated)
+      for (let i = 0; i < 3; i++) {
+        const offset = i * 0.4;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880; // A5
+        gain.gain.setValueAtTime(0.4, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.15);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.value = 1174.66; // D6
+        gain2.gain.setValueAtTime(0.4, now + offset + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.35);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + offset + 0.15);
+        osc2.stop(now + offset + 0.35);
+      }
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  // Bind modal buttons (after DOM ready)
+  document.addEventListener('DOMContentLoaded', () => {
+    const btnAccept = document.getElementById('btn-accept-order');
+    const btnReject = document.getElementById('btn-reject-order');
+    if (btnAccept) {
+      btnAccept.addEventListener('click', () => {
+        const orderId = parseInt(btnAccept.dataset.orderId);
+        if (orderId) acceptOrder(orderId);
+      });
+    }
+    if (btnReject) {
+      btnReject.addEventListener('click', () => {
+        const orderId = parseInt(document.getElementById('btn-accept-order').dataset.orderId);
+        dismissAvailableOrder(orderId);
+        showToast('Pedido ignorado', 'info');
+      });
+    }
+  });
+
   // ─── Socket.IO ──────────────────────────────────────────────────────────────
 
   function initSocket() {
@@ -646,9 +799,37 @@
       }
     });
 
+    // ─── New order available for acceptance ─────────────────────────────────
+    socket.on('order:available', (order) => {
+      console.log('Nuevo pedido disponible:', order.code);
+      // Add to queue
+      availableOrders.push(order);
+      // If no modal is showing, show this one
+      const modal = document.getElementById('modal-available-order');
+      if (modal && modal.classList.contains('hidden')) {
+        showAvailableOrderModal(order);
+      }
+    });
+
+    // ─── Order was taken by another driver ──────────────────────────────────
+    socket.on('order:taken', (data) => {
+      // Remove from our available queue
+      availableOrders = availableOrders.filter((o) => o.id !== data.order_id);
+      // If we're currently showing this order in the modal, dismiss it
+      const btnAccept = document.getElementById('btn-accept-order');
+      if (btnAccept && parseInt(btnAccept.dataset.orderId) === data.order_id) {
+        const modal = document.getElementById('modal-available-order');
+        if (modal && !modal.classList.contains('hidden')) {
+          showToast(data.driver_name + ' tomo el pedido ' + data.code, 'warning');
+          dismissAvailableOrder(data.order_id);
+        }
+      }
+    });
+
     socket.on('order:assigned', (order) => {
-      showToast('Nuevo pedido asignado!', 'info');
+      showToast('Pedido asignado: ' + order.code, 'info');
       loadOrders();
+      loadStats();
     });
 
     socket.on('notification', (data) => {

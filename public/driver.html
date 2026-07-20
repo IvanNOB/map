@@ -125,6 +125,148 @@
       flex-wrap: wrap;
       margin: 0.8rem 0;
     }
+
+    /* ─── Available Order Modal Styles ────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-overlay.hidden { display: none; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-available-order {
+      background: var(--bg-card, #1a1d27);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s ease;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .avail-order-header {
+      background: linear-gradient(135deg, #10b981, #059669);
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .avail-order-header h3 {
+      margin: 0;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .avail-order-pulse {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulse-ring 1.5s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+
+    .avail-order-body {
+      padding: 1.2rem;
+    }
+
+    .avail-order-code {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #3b82f6;
+      text-align: center;
+      margin-bottom: 1rem;
+      letter-spacing: 1px;
+    }
+
+    .avail-order-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .avail-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .avail-detail-label {
+      color: var(--text-muted, #9ca3af);
+      font-size: 0.82rem;
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+
+    .avail-detail-value {
+      color: var(--text, #e5e7eb);
+      font-size: 0.85rem;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .avail-detail-amount {
+      color: #10b981;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .avail-order-actions {
+      padding: 0 1.2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .avail-btn-accept {
+      padding: 0.9rem 1rem !important;
+      font-size: 1.05rem !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.5px;
+      border-radius: 10px !important;
+    }
+
+    .avail-btn-reject {
+      padding: 0.6rem 1rem !important;
+      font-size: 0.85rem !important;
+      border-radius: 10px !important;
+      opacity: 0.7;
+    }
+
+    .avail-order-timer {
+      text-align: center;
+      padding: 0 1.2rem 1rem;
+      color: var(--text-muted, #9ca3af);
+      font-size: 0.75rem;
+    }
   </style>
 </head>
 <body>
@@ -266,6 +408,52 @@
       <!-- Map -->
       <div id="driver-map" class="map-container-mini"></div>
     </section>
+  </div>
+
+  <!-- Modal: Nuevo Pedido Disponible -->
+  <div id="modal-available-order" class="modal-overlay hidden">
+    <div class="modal-content modal-available-order">
+      <div class="avail-order-header">
+        <span class="avail-order-pulse"></span>
+        <h3>Nuevo Pedido Disponible!</h3>
+      </div>
+      <div class="avail-order-body">
+        <div class="avail-order-code" id="avail-order-code">ORD-XXXX</div>
+        <div class="avail-order-details">
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Cliente:</span>
+            <span class="avail-detail-value" id="avail-order-customer">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Recoger en:</span>
+            <span class="avail-detail-value" id="avail-order-pickup">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Entregar en:</span>
+            <span class="avail-detail-value" id="avail-order-dropoff">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Articulos:</span>
+            <span class="avail-detail-value" id="avail-order-items">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Valor:</span>
+            <span class="avail-detail-value avail-detail-amount" id="avail-order-amount">--</span>
+          </div>
+        </div>
+      </div>
+      <div class="avail-order-actions">
+        <button id="btn-accept-order" class="btn btn-success btn-block avail-btn-accept">
+          Aceptar Pedido
+        </button>
+        <button id="btn-reject-order" class="btn btn-outline btn-block avail-btn-reject">
+          Ignorar
+        </button>
+      </div>
+      <div class="avail-order-timer">
+        <small>Se oculta automaticamente en 60 segundos</small>
+      </div>
+    </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
