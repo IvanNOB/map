@@ -240,15 +240,12 @@
   border-radius: 16px;
   border: 1px solid #2a2a30;
   overflow: hidden;
-  min-height: 180px;
-  height: 200px;
+  height: 220px;
   transition: height 0.3s ease;
+  flex-shrink: 0;
 }
 .drv-map-section.expanded {
-  height: 350px;
-}
-.drv-map-section.collapsed {
-  height: 80px;
+  height: 380px;
 }
 .drv-map-section #driver-map {
   position: absolute;
@@ -264,31 +261,25 @@
   z-index: 1;
 }
 .drv-map-section .map-collapsed-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #666;
-  font-size: 0.85rem;
-  z-index: 2;
-  pointer-events: none;
+  display: none;
 }
 .drv-map-section .map-expand-btn {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 10;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.7);
   border: none;
   color: #fff;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(4px);
 }
 
 /* ─── GPS activate CTA ──────────────────────────────────────────────────── */

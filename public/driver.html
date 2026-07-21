@@ -82,9 +82,8 @@
       </div>
 
       <!-- Map -->
-      <section class="drv-map-section collapsed" id="map-section">
+      <section class="drv-map-section" id="map-section">
         <div id="driver-map"></div>
-        <span class="map-collapsed-text" id="map-collapsed-text">mapa (colapsado, offline)</span>
         <button class="map-expand-btn" id="btn-expand-map">⛶</button>
       </section>
 
@@ -206,22 +205,19 @@
     // ─── Map expand/collapse ────────────────────────────────────────────────
     var mapSection = document.getElementById('map-section');
     var btnExpand = document.getElementById('btn-expand-map');
-    var mapText = document.getElementById('map-collapsed-text');
     if (btnExpand) {
       btnExpand.addEventListener('click', function() {
-        if (mapSection.classList.contains('collapsed')) {
-          mapSection.classList.remove('collapsed');
-          mapSection.classList.add('expanded');
-          mapText.style.display = 'none';
-          btnExpand.textContent = '✕';
-          // Invalidate map size
-          if (window._driverMap) window._driverMap.invalidateSize();
-        } else {
+        if (mapSection.classList.contains('expanded')) {
           mapSection.classList.remove('expanded');
-          mapSection.classList.add('collapsed');
-          mapText.style.display = '';
           btnExpand.textContent = '⛶';
+        } else {
+          mapSection.classList.add('expanded');
+          btnExpand.textContent = '✕';
         }
+        // Invalidate map size after transition
+        setTimeout(function() {
+          if (window._driverMap) window._driverMap.invalidateSize();
+        }, 350);
       });
     }
 
