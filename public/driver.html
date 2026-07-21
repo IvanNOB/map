@@ -221,6 +221,18 @@
       });
     }
 
+    // ─── Force map redraw on load ───────────────────────────────────────────
+    // Leaflet needs invalidateSize when container becomes visible
+    setInterval(function() {
+      if (window._driverMap) {
+        window._driverMap.invalidateSize();
+      }
+    }, 2000); // Check every 2s until map renders correctly
+    // Also on window resize
+    window.addEventListener('resize', function() {
+      if (window._driverMap) window._driverMap.invalidateSize();
+    });
+
     // ─── Settings ───────────────────────────────────────────────────────────
     var bs = document.getElementById('btn-settings'), sm = document.getElementById('settings-menu');
     if (bs) {
