@@ -1,9 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   DRIVER APP — Interfaz limpia y bien organizada
-   Espaciado correcto, fuentes legibles, nada desborda
+   DRIVER APP — Diseño compacto estilo app delivery moderna
+   Fondo oscuro, cards redondeadas, bottom nav
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── Layout fullscreen ──────────────────────────────────────────────────── */
+/* ─── Reset & Layout ─────────────────────────────────────────────────────── */
 #app.app-container {
   display: flex;
   flex-direction: column;
@@ -11,29 +11,44 @@
   height: 100dvh;
   overflow: hidden;
   background: #0a0a0c;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */
 .drv-header {
   display: flex;
   align-items: center;
-  padding: 0.6rem 1rem;
-  background: #0f0e14 !important;
-  border-bottom: 1px solid rgba(212,175,55,0.15) !important;
-  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  background: #151519;
+  border-bottom: none;
+  gap: 0.7rem;
   flex-shrink: 0;
 }
 .drv-header .drv-name {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.6rem;
   flex: 1;
   font-weight: 700;
-  font-size: 0.9rem;
-  color: #f0c75e !important;
+  font-size: 1rem;
+  color: #ffffff;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+.drv-header .drv-name .drv-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2a2a30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  border: 2px solid #3a3a42;
 }
 .drv-header .drv-actions {
   display: flex;
@@ -42,83 +57,198 @@
   flex-shrink: 0;
 }
 
-/* Toggle Online */
-.online-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: rgba(212,175,55,0.08) !important;
-  border: 1px solid rgba(212,175,55,0.25) !important;
-  border-radius: 20px;
-  padding: 0.35rem 0.7rem;
-  cursor: pointer;
-}
-.online-toggle.active {
-  background: rgba(34,197,94,0.12) !important;
-  border-color: #22c55e !important;
-}
-.online-toggle .ot-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #555;
-  flex-shrink: 0;
-}
-.online-toggle.active .ot-dot { background: #22c55e !important; }
-.online-toggle .ot-text {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #999;
-}
-.online-toggle.active .ot-text { color: #22c55e !important; }
-
-/* Settings */
+/* Settings button */
 .drv-header .icon-btn {
-  width: 32px;
-  height: 32px;
-  font-size: 0.9rem;
-  background: rgba(255,255,255,0.05) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+  background: transparent;
+  border: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #888;
+  cursor: pointer;
 }
+.drv-header .icon-btn:active { background: rgba(255,255,255,0.05); }
 .drv-settings { position: relative; }
 .drv-settings-menu {
   display: none;
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: #18171f !important;
-  border: 1px solid rgba(212,175,55,0.2) !important;
-  border-radius: 10px;
+  background: #1e1e24;
+  border: 1px solid #2a2a30;
+  border-radius: 12px;
   padding: 0.4rem;
-  min-width: 140px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.7) !important;
+  min-width: 150px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.7);
   z-index: 999;
 }
 .drv-settings-menu.show { display: block; }
 .drv-settings-menu button {
   display: block;
   width: 100%;
-  padding: 0.55rem 0.8rem;
+  padding: 0.6rem 0.8rem;
   border: none;
   background: transparent;
   color: #ddd;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   text-align: left;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
 }
-.drv-settings-menu button:hover { background: rgba(255,255,255,0.06); }
+.drv-settings-menu button:hover { background: rgba(255,255,255,0.05); }
 
-/* ─── MAPA ───────────────────────────────────────────────────────────────── */
+/* ─── Main scrollable content ────────────────────────────────────────────── */
+.drv-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-bottom: 70px; /* space for bottom nav */
+}
+
+/* ─── Card base ──────────────────────────────────────────────────────────── */
+.drv-card {
+  background: #1a1a20;
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  border: 1px solid #2a2a30;
+}
+
+/* ─── Earnings + Online Toggle row ───────────────────────────────────────── */
+.drv-earnings-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: stretch;
+}
+.drv-earnings-card {
+  flex: 1;
+  background: #1a1a20;
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  border: 1px solid #2a2a30;
+}
+.drv-earnings-card .earnings-label {
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 0.3rem;
+}
+.drv-earnings-card .earnings-value {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+}
+.drv-earnings-card .earnings-sub {
+  font-size: 0.78rem;
+  color: #666;
+  margin-top: 0.2rem;
+}
+
+/* Online/Offline toggle button */
+.drv-online-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: #1a1a20;
+  border-radius: 16px;
+  padding: 1rem 1.2rem;
+  border: 1px solid #2a2a30;
+  cursor: pointer;
+  min-width: 100px;
+  transition: all 0.2s ease;
+}
+.drv-online-btn .online-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #888;
+  transition: all 0.2s ease;
+}
+.drv-online-btn .online-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #888;
+  text-transform: lowercase;
+}
+.drv-online-btn.active {
+  border-color: #22c55e;
+  background: rgba(34,197,94,0.05);
+}
+.drv-online-btn.active .online-icon {
+  border-color: #22c55e;
+  color: #22c55e;
+  background: rgba(34,197,94,0.1);
+}
+.drv-online-btn.active .online-text {
+  color: #22c55e;
+}
+
+/* ─── GPS Status Bar ─────────────────────────────────────────────────────── */
+.drv-gps-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: #1a1a20;
+  border-radius: 16px;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid #2a2a30;
+}
+.drv-gps-bar .gps-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.drv-gps-bar .gps-text {
+  flex: 1;
+  font-size: 0.85rem;
+  color: #ccc;
+  font-weight: 500;
+}
+.drv-gps-bar .gps-speed-val {
+  color: #888;
+  font-size: 0.82rem;
+}
+.drv-gps-bar .sos-btn {
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.drv-gps-bar .sos-btn:active { background: #b91c1c; }
+
+/* ─── Map section ────────────────────────────────────────────────────────── */
 .drv-map-section {
   position: relative;
-  flex: 1 1 50%;
-  min-height: 200px;
-  overflow: visible;
+  background: #1a1a20;
+  border-radius: 16px;
+  border: 1px solid #2a2a30;
+  overflow: hidden;
+  min-height: 180px;
+  height: 200px;
+  transition: height 0.3s ease;
+}
+.drv-map-section.expanded {
+  height: 350px;
+}
+.drv-map-section.collapsed {
+  height: 80px;
 }
 .drv-map-section #driver-map {
   position: absolute;
@@ -130,180 +260,151 @@
   height: 100%;
   border: none;
   margin: 0;
-  border-radius: 0;
+  border-radius: 16px;
   z-index: 1;
 }
-
-/* GPS Overlay */
-.gps-overlay {
+.drv-map-section .map-collapsed-text {
   position: absolute;
-  bottom: 12px;
-  left: 12px;
-  right: 12px;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  background: rgba(10,10,14,0.93);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(212,175,55,0.15);
-  border-radius: 14px;
-  padding: 0.7rem 1rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-.gps-overlay .gps-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.gps-overlay .gps-speed {
-  font-size: 1.6rem;
-  font-weight: 900;
-  color: #f0c75e;
-  line-height: 1.1;
-}
-.gps-overlay .gps-detail {
-  font-size: 0.72rem;
-  color: #888;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.gps-overlay .gps-btn {
-  flex-shrink: 0;
-  padding: 0.75rem 1.3rem;
-  border-radius: 12px;
-  font-weight: 800;
-  font-size: 0.85rem;
-  border: none;
-  cursor: pointer;
-}
-.gps-btn-start {
-  background: #d4af37;
-  color: #111;
-  box-shadow: 0 3px 12px rgba(212,175,55,0.35);
-}
-.gps-btn-stop {
-  background: #ef4444;
-  color: #fff;
-  animation: none !important;
-}
-
-/* ─── Stats ──────────────────────────────────────────────────────────────── */
-.drv-stats {
-  display: flex;
-  align-items: center;
-  padding: 0.6rem 1rem;
-  background: #0f0e14 !important;
-  border-bottom: 1px solid rgba(212,175,55,0.1) !important;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-.drv-stat {
-  flex: 1;
-  text-align: center;
-}
-.drv-stat .val {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #f0c75e;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.drv-stat .lbl {
-  font-size: 0.62rem;
-  color: #888;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  margin-top: 1px;
-}
-.drv-stats .stats-label {
-  display: none;
-}
-
-/* ─── Bottom (Tabs + Content) ────────────────────────────────────────────── */
-.drv-bottom {
-  flex: 1 1 50%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: #0a0a0c;
-  border-top: 1px solid rgba(212,175,55,0.08);
-}
-
-/* Tabs */
-.drv-tabs {
-  display: flex;
-  background: #0f0e14 !important;
-  border-bottom: 1px solid rgba(212,175,55,0.08) !important;
-  padding: 0;
-  flex-shrink: 0;
-}
-.drv-tab {
-  flex: 1;
-  padding: 0.7rem 0.5rem;
-  text-align: center;
-  font-size: 0.82rem;
-  font-weight: 700;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   color: #666;
+  font-size: 0.85rem;
+  z-index: 2;
+  pointer-events: none;
+}
+.drv-map-section .map-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── GPS activate CTA ──────────────────────────────────────────────────── */
+.drv-gps-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: #1a1a20;
+  border-radius: 16px;
+  padding: 1.5rem 1rem;
+  border: 1px solid #2a2a30;
+  text-align: center;
+}
+.drv-gps-cta .cta-icon {
+  font-size: 1.5rem;
+  color: #555;
+}
+.drv-gps-cta .cta-text {
+  font-size: 0.88rem;
+  color: #888;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.drv-gps-cta.hidden { display: none; }
+
+/* ─── Stats row (inside content) ─────────────────────────────────────────── */
+.drv-stats {
+  display: none; /* Hidden - replaced by earnings card */
+}
+
+/* ─── Bottom Navigation ──────────────────────────────────────────────────── */
+.drv-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: #111115;
+  border-top: 1px solid #2a2a30;
+  padding: 0.6rem 0;
+  padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
+  z-index: 1000;
+}
+.drv-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 1rem;
   border: none;
   background: transparent;
+  color: #666;
+  font-size: 0.68rem;
+  font-weight: 600;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  transition: color 0.2s;
   position: relative;
 }
-.drv-tab.active {
-  color: #f0c75e;
-  border-bottom-color: #d4af37;
+.drv-nav-item .nav-icon {
+  font-size: 1.2rem;
 }
-.drv-tab .tab-badge {
+.drv-nav-item.active {
+  color: #ffffff;
+}
+.drv-nav-item.active .nav-icon {
+  color: #ffffff;
+}
+.drv-nav-item .nav-badge {
   position: absolute;
-  top: 6px;
-  right: calc(50% - 28px);
-  background: #ef4444;
+  top: 0;
+  right: 0.5rem;
+  background: #dc2626;
   color: #fff;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  min-width: 16px;
-  height: 16px;
+  min-width: 14px;
+  height: 14px;
   border-radius: 99px;
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 3px;
 }
-.drv-tab .tab-badge.show { display: flex; }
+.drv-nav-item .nav-badge.show { display: flex; }
 
-/* Panel */
+/* ─── Panels (for tab switching) ─────────────────────────────────────────── */
 .drv-panel {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.7rem 0.8rem;
+  display: none;
 }
-.drv-panel.hidden { display: none; }
+.drv-panel.active {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
 
 /* ─── Order cards ────────────────────────────────────────────────────────── */
 .drv-panel .driver-order-card {
-  background: #14131a !important;
-  border: 1px solid rgba(212,175,55,0.1) !important;
-  border-radius: 12px !important;
-  padding: 0.9rem 1rem;
-  margin-bottom: 0.6rem;
-  border-left: 3px solid #d4af37 !important;
+  background: #1a1a20;
+  border: 1px solid #2a2a30;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0;
+  border-left: 3px solid #d4af37;
 }
 .order-code {
-  color: #f0c75e !important;
+  color: #f0c75e;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 .order-detail {
   font-size: 0.82rem;
-  color: #ccc;
+  color: #bbb;
   line-height: 1.5;
   margin-bottom: 0.2rem;
   word-wrap: break-word;
@@ -311,17 +412,17 @@
 }
 .order-detail strong { color: #eee; }
 
-/* Boton principal */
+/* Boton principal pedido */
 .order-main-action {
   display: block;
   width: 100%;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 800;
-  padding: 0.8rem;
+  padding: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  margin-top: 0.6rem;
+  margin-top: 0.7rem;
   border: none;
   cursor: pointer;
 }
@@ -345,17 +446,49 @@
   white-space: nowrap;
 }
 
+/* ─── Weekly stats panel ─────────────────────────────────────────────────── */
+.drv-weekly-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.drv-weekly-card {
+  background: #1a1a20;
+  border-radius: 14px;
+  border: 1px solid #2a2a30;
+  padding: 1rem 1.1rem;
+}
+.drv-weekly-card .weekly-title {
+  font-size: 0.78rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.drv-weekly-card .weekly-value {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fff;
+}
+.drv-weekly-card .weekly-sub {
+  font-size: 0.78rem;
+  color: #666;
+  margin-top: 0.2rem;
+}
+
 /* ─── Chat ───────────────────────────────────────────────────────────────── */
 .drv-chat-wrap {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 300px;
 }
 .drv-chat-wrap .chat-messages {
   flex: 1;
   overflow-y: auto;
   padding: 0.8rem;
   background: #0c0b10;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -366,23 +499,21 @@
   border-radius: 14px;
   max-width: 80%;
   word-wrap: break-word;
-  overflow-wrap: break-word;
   line-height: 1.4;
-  overflow: visible !important;
 }
 .chat-msg.mine {
-  background: #d4af37 !important;
-  color: #111 !important;
+  background: #d4af37;
+  color: #111;
   align-self: flex-end;
-  border-bottom-right-radius: 4px !important;
+  border-bottom-right-radius: 4px;
   margin-left: auto;
 }
 .chat-msg.theirs {
-  background: #1a1920 !important;
-  color: #ddd !important;
-  border: 1px solid rgba(255,255,255,0.06) !important;
+  background: #1e1e24;
+  color: #ddd;
+  border: 1px solid #2a2a30;
   align-self: flex-start;
-  border-bottom-left-radius: 4px !important;
+  border-bottom-left-radius: 4px;
   margin-right: auto;
 }
 .chat-msg .cm-time { font-size: 0.62rem; opacity: 0.6; display: block; margin-top: 2px; }
@@ -390,14 +521,13 @@
 .chat-quick-replies {
   display: flex;
   gap: 0.3rem;
-  padding: 0.5rem 0.8rem;
+  padding: 0.5rem 0;
   overflow-x: auto;
-  border-top: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
 }
 .chat-quick-btn {
   flex-shrink: 0;
-  background: rgba(212,175,55,0.1);
+  background: rgba(212,175,55,0.08);
   border: 1px solid rgba(212,175,55,0.2);
   color: #d4af37;
   font-weight: 600;
@@ -407,16 +537,12 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.chat-quick-btn:active {
-  background: #d4af37;
-  color: #111;
-}
+.chat-quick-btn:active { background: #d4af37; color: #111; }
 
 .chat-input-row {
   display: flex;
   gap: 0.5rem;
-  padding: 0.6rem 0.8rem;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 0.6rem 0;
   flex-shrink: 0;
 }
 .chat-input-row input {
@@ -425,7 +551,7 @@
   border-radius: 22px;
   font-size: 0.85rem;
   background: #1a1920;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid #2a2a30;
   color: #eee;
   outline: none;
 }
@@ -441,47 +567,76 @@
   cursor: pointer;
 }
 
-.chat-empty { color: #666; text-align: center; padding: 2rem 1rem; font-size: 0.85rem; }
+.chat-empty { color: #555; text-align: center; padding: 2rem 1rem; font-size: 0.85rem; }
 
-/* ─── Responsive ─────────────────────────────────────────────────────────── */
-@media (min-height: 750px) {
-  .drv-map-section { flex: 1 1 55%; }
-  .drv-bottom { flex: 1 1 45%; }
+/* ─── Badges ─────────────────────────────────────────────────────────────── */
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  white-space: nowrap;
 }
-@media (max-height: 600px) {
-  .drv-map-section { flex: 1 1 40%; min-height: 160px; }
-  .drv-bottom { flex: 1 1 60%; }
-}
+
+/* ─── Hidden utility ─────────────────────────────────────────────────────── */
+.hidden { display: none !important; }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-.drv-panel::-webkit-scrollbar { width: 4px; }
-.drv-panel::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.2); border-radius: 4px; }
+.drv-content::-webkit-scrollbar { width: 3px; }
+.drv-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
-/* ─── Extras ─────────────────────────────────────────────────────────────── */
+/* ─── Available order modal ──────────────────────────────────────────────── */
+.avail-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 1rem;
+  animation: avFadeIn .2s ease;
+}
+.avail-modal-overlay.hidden { display: none; }
+@keyframes avFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.avail-modal {
+  background: #1a1a20;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 360px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: avSlideUp .3s ease;
+  border: 1px solid #2a2a30;
+}
+@keyframes avSlideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.avail-modal-header {
+  background: linear-gradient(135deg, #d4af37, #b8942e);
+  padding: 1rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.avail-modal-header h3 { margin: 0; color: #111; font-size: 1rem; font-weight: 800; }
+.avail-pulse { width: 12px; height: 12px; border-radius: 50%; background: #111; animation: avPulse 1.5s infinite; flex-shrink: 0; }
+@keyframes avPulse { 0% { box-shadow: 0 0 0 0 rgba(0,0,0,0.4); } 70% { box-shadow: 0 0 0 8px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+.avail-modal-body { padding: 1.2rem; }
+.avail-code { font-size: 1.2rem; font-weight: 800; color: #d4af37; text-align: center; margin-bottom: 1rem; }
+.avail-details { display: flex; flex-direction: column; gap: 0.5rem; }
+.avail-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.85rem; }
+.avail-row span:first-child { color: #888; flex-shrink: 0; }
+.avail-row span:last-child { text-align: right; word-break: break-word; color: #eee; }
+.avail-modal-actions { padding: 0 1.2rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.avail-btn-accept { width: 100%; padding: 0.9rem; font-size: 1rem; font-weight: 800; background: #d4af37; color: #111; border: none; border-radius: 12px; cursor: pointer; }
+.avail-btn-accept:disabled { opacity: 0.5; cursor: not-allowed; }
+.avail-btn-ignore { width: 100%; padding: 0.6rem; font-size: 0.82rem; background: transparent; color: #888; border: 1px solid #2a2a30; border-radius: 12px; cursor: pointer; }
+
+/* ─── Misc ───────────────────────────────────────────────────────────────── */
 .sync-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #22c55e;
-  display: inline-block;
-  flex-shrink: 0;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #22c55e; display: inline-block; flex-shrink: 0;
 }
 * { -webkit-tap-highlight-color: transparent; }
-@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-@keyframes gps-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
-  70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
-  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-}
 
-/* ─── Fix text overflow everywhere ───────────────────────────────────────── */
-.drv-header, .drv-stats, .drv-tabs,
-.drv-panel .driver-order-card {
-  overflow: hidden;
-}
-.badge {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100px;
-}
+/* Old elements hidden */
+.drv-tabs, .drv-bottom, .gps-overlay { display: none !important; }

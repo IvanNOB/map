@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#d4af37">
+  <meta name="theme-color" content="#0a0a0c">
   <link rel="manifest" href="/manifest-driver.json">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon-192.png">
@@ -42,20 +42,14 @@
     <!-- 1. Header -->
     <header class="drv-header">
       <div class="drv-name">
-        <span>👻</span>
+        <div class="drv-avatar" id="driver-avatar">G</div>
         <span id="driver-name">Ghost</span>
         <span id="sync-dot" class="sync-dot"></span>
       </div>
       <div class="drv-actions">
-        <div class="online-toggle" id="online-toggle">
-          <span class="ot-dot"></span>
-          <span class="ot-text" id="status-label">OFFLINE</span>
-          <input type="checkbox" id="toggle-online" hidden>
-        </div>
         <div class="drv-settings">
           <button class="icon-btn" id="btn-settings" title="Ajustes">⚙️</button>
           <div class="drv-settings-menu" id="settings-menu">
-            <button id="btn-theme">🌙 Tema</button>
             <button id="btn-refresh-driver">🔄 Refrescar</button>
             <button id="btn-logout">🚪 Salir</button>
           </div>
@@ -63,50 +57,69 @@
       </div>
     </header>
 
-    <!-- 2. Mapa (prioridad maxima) -->
-    <section class="drv-map-section">
-      <div id="driver-map"></div>
-      <div class="gps-overlay">
-        <div class="gps-info">
-          <div class="gps-speed" id="gps-speed">0 km/h</div>
-          <div class="gps-detail" id="gps-readout">Toca para activar GPS</div>
+    <!-- 2. Scrollable content -->
+    <div class="drv-content">
+
+      <!-- Earnings + Online toggle -->
+      <div class="drv-earnings-row">
+        <div class="drv-earnings-card">
+          <div class="earnings-label">Ganancia hoy</div>
+          <div class="earnings-value" id="earn-today">$0</div>
+          <div class="earnings-sub"><span id="earn-deliveries">0</span> entregas</div>
         </div>
-        <button id="btn-share-location" class="gps-btn gps-btn-start">▶ GPS</button>
-        <button id="btn-stop-location" class="gps-btn gps-btn-stop hidden">⏹ STOP</button>
+        <div class="drv-online-btn" id="online-toggle">
+          <div class="online-icon" id="online-icon">⏻</div>
+          <div class="online-text" id="status-label">salir online</div>
+          <input type="checkbox" id="toggle-online" hidden>
+        </div>
       </div>
-      <input type="checkbox" id="consent-location" checked hidden>
-    </section>
 
-    <!-- 3. Stats -->
-    <div class="drv-stats">
-      <div class="drv-stat">
-        <div class="val" id="earn-today">$0</div>
-        <div class="lbl">Ganancia</div>
+      <!-- GPS status bar -->
+      <div class="drv-gps-bar">
+        <span class="gps-icon" id="gps-status-icon">📍</span>
+        <span class="gps-text" id="gps-readout">GPS desactivado · <span id="gps-speed">0 km/h</span></span>
+        <button class="sos-btn" id="btn-sos">SOS</button>
       </div>
-      <div class="drv-stat">
-        <div class="val" id="earn-deliveries">0</div>
-        <div class="lbl">Entregas</div>
-      </div>
-      <div class="drv-stat">
-        <div class="val" id="earn-pct">0%</div>
-        <div class="lbl">Comision</div>
-      </div>
-      <div class="drv-stat">
-        <div class="val" id="stat-active-orders">0</div>
-        <div class="lbl">Activos</div>
-      </div>
-    </div>
 
-    <!-- 4. Tabs + Contenido -->
-    <div class="drv-bottom">
-      <div class="drv-tabs">
-        <button class="drv-tab active" data-panel="panel-pedidos">📦 Pedidos</button>
-        <button class="drv-tab" data-panel="panel-chat">💬 Chat <span class="tab-badge" id="chat-badge">0</span></button>
+      <!-- Map -->
+      <section class="drv-map-section collapsed" id="map-section">
+        <div id="driver-map"></div>
+        <span class="map-collapsed-text" id="map-collapsed-text">mapa (colapsado, offline)</span>
+        <button class="map-expand-btn" id="btn-expand-map">⛶</button>
+      </section>
+
+      <!-- GPS CTA -->
+      <div class="drv-gps-cta" id="gps-cta">
+        <span class="cta-icon">📡</span>
+        <span class="cta-text">Activa el GPS para empezar a recibir pedidos</span>
       </div>
-      <div id="panel-pedidos" class="drv-panel">
+
+      <!-- Pedidos panel -->
+      <div id="panel-pedidos" class="drv-panel active">
         <div id="driver-orders"></div>
       </div>
-      <div id="panel-chat" class="drv-panel hidden">
+
+      <!-- Semana panel -->
+      <div id="panel-semana" class="drv-panel">
+        <div class="drv-weekly-stats">
+          <div class="drv-weekly-card">
+            <div class="weekly-title">Ganancias esta semana</div>
+            <div class="weekly-value" id="weekly-earnings">$0</div>
+            <div class="weekly-sub"><span id="weekly-deliveries">0</span> entregas</div>
+          </div>
+          <div class="drv-weekly-card">
+            <div class="weekly-title">Tiempo promedio por entrega</div>
+            <div class="weekly-value" id="weekly-avg-time">-- min</div>
+          </div>
+          <div class="drv-weekly-card">
+            <div class="weekly-title">Comision acumulada</div>
+            <div class="weekly-value" id="weekly-commission">$0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat panel -->
+      <div id="panel-chat" class="drv-panel">
         <div class="drv-chat-wrap">
           <div class="chat-messages" id="dchat-messages">
             <div class="chat-empty">Escribe a tu central</div>
@@ -124,7 +137,33 @@
           </div>
         </div>
       </div>
+
     </div>
+
+    <!-- 3. Bottom Navigation -->
+    <nav class="drv-bottom-nav">
+      <button class="drv-nav-item active" data-panel="panel-pedidos">
+        <span class="nav-icon">📦</span>
+        <span>Pedidos</span>
+      </button>
+      <button class="drv-nav-item" data-panel="panel-chat">
+        <span class="nav-icon">💬</span>
+        <span>Chat</span>
+        <span class="nav-badge" id="chat-badge">0</span>
+      </button>
+      <button class="drv-nav-item" data-panel="panel-semana">
+        <span class="nav-icon">📊</span>
+        <span>Semana</span>
+      </button>
+    </nav>
+
+    <!-- Hidden elements for backwards compatibility -->
+    <input type="checkbox" id="consent-location" checked hidden>
+    <button id="btn-share-location" class="hidden"></button>
+    <button id="btn-stop-location" class="hidden"></button>
+    <div id="stat-active-orders" class="hidden">0</div>
+    <div id="earn-pct" class="hidden">0%</div>
+
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -132,33 +171,102 @@
   <script src="/js/driver.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
-    // Tabs
-    document.querySelectorAll('.drv-tab').forEach(function(t){
-      t.addEventListener('click',function(){
-        document.querySelectorAll('.drv-tab').forEach(function(b){b.classList.remove('active');});
-        t.classList.add('active');
-        var p=t.getAttribute('data-panel');
-        document.querySelectorAll('.drv-panel').forEach(function(x){x.classList.add('hidden');});
-        document.getElementById(p).classList.remove('hidden');
-        if(p==='panel-chat'){var b=document.getElementById('chat-badge');if(b){b.classList.remove('show');b.textContent='0';}}
+    // ─── Bottom Navigation ──────────────────────────────────────────────────
+    document.querySelectorAll('.drv-nav-item').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.drv-nav-item').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var panel = btn.getAttribute('data-panel');
+        document.querySelectorAll('.drv-panel').forEach(function(p) { p.classList.remove('active'); });
+        document.getElementById(panel).classList.add('active');
+        if (panel === 'panel-chat') {
+          var badge = document.getElementById('chat-badge');
+          if (badge) { badge.classList.remove('show'); badge.textContent = '0'; }
+        }
       });
     });
-    // Online toggle
-    var ot=document.getElementById('online-toggle'),cb=document.getElementById('toggle-online');
-    if(ot)ot.addEventListener('click',function(){
-      cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'));
-      if(cb.checked){ot.classList.add('active');document.getElementById('status-label').textContent='EN LINEA';}
-      else{ot.classList.remove('active');document.getElementById('status-label').textContent='OFFLINE';}
+
+    // ─── Online Toggle ──────────────────────────────────────────────────────
+    var onlineBtn = document.getElementById('online-toggle');
+    var onlineCb = document.getElementById('toggle-online');
+    if (onlineBtn) {
+      onlineBtn.addEventListener('click', function() {
+        onlineCb.checked = !onlineCb.checked;
+        onlineCb.dispatchEvent(new Event('change'));
+        if (onlineCb.checked) {
+          onlineBtn.classList.add('active');
+          document.getElementById('status-label').textContent = 'en linea';
+        } else {
+          onlineBtn.classList.remove('active');
+          document.getElementById('status-label').textContent = 'salir online';
+        }
+      });
+    }
+
+    // ─── Map expand/collapse ────────────────────────────────────────────────
+    var mapSection = document.getElementById('map-section');
+    var btnExpand = document.getElementById('btn-expand-map');
+    var mapText = document.getElementById('map-collapsed-text');
+    if (btnExpand) {
+      btnExpand.addEventListener('click', function() {
+        if (mapSection.classList.contains('collapsed')) {
+          mapSection.classList.remove('collapsed');
+          mapSection.classList.add('expanded');
+          mapText.style.display = 'none';
+          btnExpand.textContent = '✕';
+          // Invalidate map size
+          if (window._driverMap) window._driverMap.invalidateSize();
+        } else {
+          mapSection.classList.remove('expanded');
+          mapSection.classList.add('collapsed');
+          mapText.style.display = '';
+          btnExpand.textContent = '⛶';
+        }
+      });
+    }
+
+    // ─── Settings ───────────────────────────────────────────────────────────
+    var bs = document.getElementById('btn-settings'), sm = document.getElementById('settings-menu');
+    if (bs) {
+      bs.addEventListener('click', function(e) { e.stopPropagation(); sm.classList.toggle('show'); });
+      document.addEventListener('click', function() { sm.classList.remove('show'); });
+    }
+
+    // ─── Quick replies ──────────────────────────────────────────────────────
+    document.querySelectorAll('.chat-quick-btn').forEach(function(b) {
+      b.addEventListener('click', function() {
+        var i = document.getElementById('dchat-input');
+        i.value = b.getAttribute('data-msg');
+        document.getElementById('dchat-send').click();
+      });
     });
-    // Settings
-    var bs=document.getElementById('btn-settings'),sm=document.getElementById('settings-menu');
-    if(bs){bs.addEventListener('click',function(e){e.stopPropagation();sm.classList.toggle('show');});document.addEventListener('click',function(){sm.classList.remove('show');});}
-    // Quick replies
-    document.querySelectorAll('.chat-quick-btn').forEach(function(b){b.addEventListener('click',function(){var i=document.getElementById('dchat-input');i.value=b.getAttribute('data-msg');document.getElementById('dchat-send').click();});});
-    // GPS auto
-    localStorage.setItem('gps_consent','true');
-    var c=document.getElementById('consent-location');if(c)c.checked=true;
-    var g=document.getElementById('btn-share-location');if(g)g.disabled=false;
+
+    // ─── SOS Button ─────────────────────────────────────────────────────────
+    var sosBtn = document.getElementById('btn-sos');
+    if (sosBtn) {
+      sosBtn.addEventListener('click', function() {
+        if (confirm('Enviar alerta SOS a la central?')) {
+          // Will be handled by driver.js if socket is connected
+          if (window._driverSocket && window._driverSocket.connected) {
+            window._driverSocket.emit('sos', { timestamp: new Date().toISOString() });
+          }
+          alert('Alerta SOS enviada a la central');
+        }
+      });
+    }
+
+    // ─── GPS consent auto ───────────────────────────────────────────────────
+    localStorage.setItem('gps_consent', 'true');
+    var c = document.getElementById('consent-location'); if (c) c.checked = true;
+    var g = document.getElementById('btn-share-location'); if (g) g.disabled = false;
+
+    // ─── Avatar initial ─────────────────────────────────────────────────────
+    function updateAvatar(name) {
+      var av = document.getElementById('driver-avatar');
+      if (av && name) av.textContent = name.charAt(0).toUpperCase();
+    }
+    // Will be called from driver.js when user logs in
+    window._updateDriverAvatar = updateAvatar;
   </script>
 </body>
 </html>
