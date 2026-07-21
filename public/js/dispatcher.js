@@ -1461,6 +1461,16 @@
     }
   }
 
+  /**
+   * Tarifa fija de domicilio por horario:
+   * - $3000 hasta las 9:00 PM (21:00)
+   * - $4000 después de las 9:00 PM
+   */
+  function getDeliveryFare() {
+    const hour = new Date().getHours();
+    return hour >= 21 ? 4000 : 3000;
+  }
+
   let fareReqSeq = 0;
   async function updateFareHint() {
     const plat = parseFloat(document.getElementById('pickup_lat').value);
@@ -1492,8 +1502,8 @@
       try { pickerMap.fitBounds(pickerLine.getBounds(), { padding: [30, 30] }); } catch (e) {}
     }
 
-    const fare = Math.round((base + km * perKm) / 500) * 500;
-    hint.innerHTML = `📏 Distancia: <strong>${km.toFixed(1)} km</strong>${minutesTxt} · 💰 Tarifa sugerida: <strong>$${fare.toLocaleString()}</strong>`;
+    const fare = getDeliveryFare();
+    hint.innerHTML = `📏 Distancia: <strong>${km.toFixed(1)} km</strong>${minutesTxt} · 💰 Tarifa: <strong>$${fare.toLocaleString()}</strong>${new Date().getHours() >= 21 ? ' <span style="color:#f59e0b;">(nocturna)</span>' : ''}`;
     const amountInput = formNewOrder.querySelector('[name="amount"]');
     if (amountInput && (!amountInput.value || amountInput.value === '0')) amountInput.value = fare;
     if (!isWithinCoverage(dlat, dlng)) {
@@ -1881,7 +1891,7 @@
       dropoff_lng: num(fd.get('dropoff_lng')),
       items: fd.get('items'),
       notes: fd.get('notes'),
-      amount: parseFloat(fd.get('amount')) || 0,
+      amount: parseFloat(fd.get('amount')) || getDeliveryFare(),
       payment_method: fd.get('payment_method'),
       scheduled_at: fd.get('scheduled_at') ? fd.get('scheduled_at').replace('T', ' ') + ':00' : undefined,
       branch_id: fd.get('branch_id') ? parseInt(fd.get('branch_id')) : undefined,

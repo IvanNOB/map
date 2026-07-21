@@ -22,6 +22,18 @@ export default function createOrdersRouter(io) {
   }
 
   /**
+   * Tarifa fija de domicilio por horario (zona horaria Colombia UTC-5):
+   * - $3000 hasta las 9:00 PM (21:00)
+   * - $4000 después de las 9:00 PM
+   */
+  function getDeliveryFare() {
+    const now = new Date();
+    // Colombia es UTC-5
+    const colombiaHour = new Date(now.toLocaleString("en-US", { timeZone: "America/Bogota" })).getHours();
+    return colombiaHour >= 21 ? 4000 : 3000;
+  }
+
+  /**
    * Normalizes a Colombian phone number to +57XXXXXXXXXX format.
    * Accepts: "300 123 4567", "3001234567", "+573001234567", "573001234567", "03001234567"
    * Returns: "+573001234567" or null if empty/invalid.
@@ -263,7 +275,7 @@ export default function createOrdersRouter(io) {
             dropoff_lng || null,
             items || null,
             notes || null,
-            amount || 0,
+            amount || getDeliveryFare(),
             payment_method || "cash",
           ]
         );
