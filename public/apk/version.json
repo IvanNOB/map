@@ -1,7 +1,7 @@
 {
-  "version": "1.1.0",
-  "versionCode": 2,
-  "releaseNotes": "Walkie-talkie, asignacion competitiva de pedidos, mejoras de GPS, permiso de microfono",
+  "version": "1.1.1",
+  "versionCode": 3,
+  "releaseNotes": "Fix: icono de la app restaurado, walkie-talkie con microfono",
   "apkUrl": "https://github.com/IvanNOB/map/releases/latest/download/repartidor.apk",
   "minVersion": "1.0.0",
   "forceUpdate": true
