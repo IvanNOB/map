@@ -6,7 +6,9 @@
   "scripts": {
     "add:android": "cap add android",
     "sync": "cap sync",
-    "open": "cap open android"
+    "open": "cap open android",
+    "patch": "node patch-manifest.mjs && node patch-webview-permissions.mjs",
+    "build": "cap add android && cap sync && npm run patch"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",

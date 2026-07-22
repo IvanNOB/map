@@ -6,5 +6,15 @@
     "url": "https://map-rgi5.onrender.com/driver.html",
     "androidScheme": "https",
     "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#d4af37"
+    }
   }
 }

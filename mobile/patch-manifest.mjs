@@ -18,6 +18,8 @@ const perms = [
   "android.permission.FOREGROUND_SERVICE_LOCATION",
   "android.permission.WAKE_LOCK",
   "android.permission.POST_NOTIFICATIONS",
+  "android.permission.RECORD_AUDIO",
+  "android.permission.MODIFY_AUDIO_SETTINGS",
 ];
 
 const toAdd = perms

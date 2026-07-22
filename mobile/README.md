@@ -34,21 +34,20 @@ npx cap add android
 npx cap sync
 ```
 
-### 5. Agregar permisos de ubicación en segundo plano
-Abre el archivo `mobile/android/app/src/main/AndroidManifest.xml` y, dentro de
-`<manifest>` (antes de `<application>`), agrega estos permisos:
-
-```xml
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-<uses-permission android:name="android.permission.WAKE_LOCK" />
+### 5. Agregar permisos y habilitar microfono
+```bash
+# Esto agrega permisos de ubicacion + microfono al AndroidManifest
+# y modifica MainActivity para auto-conceder microfono al WebView
+npm run patch
 ```
 
-> El plugin `@capacitor-community/background-geolocation` ya registra su servicio
-> automáticamente al sincronizar; estos permisos son los que Android exige.
+Los permisos que se agregan:
+- `ACCESS_FINE_LOCATION` / `ACCESS_BACKGROUND_LOCATION` — GPS en segundo plano
+- `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_LOCATION` — servicio en primer plano
+- `WAKE_LOCK` — mantener CPU activo
+- `POST_NOTIFICATIONS` — notificaciones push
+- `RECORD_AUDIO` — microfono para walkie-talkie
+- `MODIFY_AUDIO_SETTINGS` — control de audio
 
 ### 6. Abrir en Android Studio y compilar
 ```bash
