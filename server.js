@@ -18,7 +18,7 @@ import customersRouter from "./src/customers.js";
 import settingsRouter from "./src/settings.js";
 import activityRouter from "./src/activity.js";
 import zonesRouter from "./src/zones.js";
-import pushRouter, { initPush } from "./src/push.js";
+import pushRouter, { initPush, sendPush } from "./src/push.js";
 import branchesRouter from "./src/branches.js";
 import placesRouter from "./src/places.js";
 import restaurantsRouter from "./src/restaurants.js";
@@ -409,6 +409,54 @@ setInterval(async () => {
     console.error("Offline check error:", err.message);
   }
 }, 10_000);
+
+// ─── Alarma 8:00 AM — Push a todos los repartidores ─────────────────────────
+
+/**
+ * Verifica cada minuto si son las 8:00 AM (hora Colombia).
+ * Si es así, envía push notification a todos los repartidores registrados.
+ * Solo se envía una vez por día (guarda la fecha del último envío).
+ */
+let lastAlarmDate = null;
+
+setInterval(async () => {
+  try {
+    // Obtener hora actual en Colombia (UTC-5)
+    const now = new Date();
+    const colombiaTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const hour = colombiaTime.getHours();
+    const minute = colombiaTime.getMinutes();
+    const today = colombiaTime.toISOString().slice(0, 10);
+
+    // Solo disparar a las 8:00 AM y si no se ha enviado hoy
+    if (hour === 8 && minute === 0 && lastAlarmDate !== today) {
+      lastAlarmDate = today;
+      console.log("[alarma] 8:00 AM Colombia — Enviando push a todos los repartidores...");
+
+      // Obtener todos los repartidores
+      const drivers = await db.all(
+        "SELECT u.id, u.name FROM users u WHERE u.role = 'driver'"
+      );
+
+      let sent = 0;
+      for (const driver of drivers) {
+        await sendPush(driver.id, {
+          title: "🚨 ¡Buenos días! Es hora de trabajar",
+          body: "Conéctate ahora para empezar a recibir pedidos. ¡Los clientes te esperan!",
+          url: "/driver.html",
+          tag: "alarm-morning",
+          vibrate: [500, 200, 500, 200, 500],
+          requireInteraction: true,
+        });
+        sent++;
+      }
+
+      console.log(`[alarma] Push enviado a ${sent} repartidores`);
+    }
+  } catch (err) {
+    console.error("[alarma] Error:", err.message);
+  }
+}, 60_000); // Verificar cada 60 segundos
 
 // ─── Start Server ────────────────────────────────────────────────────────────
 
