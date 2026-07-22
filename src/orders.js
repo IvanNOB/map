@@ -616,7 +616,7 @@ export default function createOrdersRouter(io) {
     }
 
     if (status === "delivered") {
-      await db.run("UPDATE orders SET status = ?, delivered_at = datetime('now') WHERE id = ?", [
+      await db.run("UPDATE orders SET status = ?, delivered_at = datetime('now'), archived = 1 WHERE id = ?", [
         status,
         req.params.id,
       ]);
