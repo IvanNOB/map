@@ -355,6 +355,49 @@ io.on("connection", (socket) => {
     io.to(`driver:${driverId}`).emit("chat:message", msg);
   });
 
+  // ─── Walkie-Talkie: push-to-talk audio messages ─────────────────────────────
+  socket.on("walkie:audio", (payload) => {
+    if (!payload || !payload.audio) return;
+    const driverId = user.role === "driver" ? user.id : parseInt(payload.driverId, 10);
+    if (!driverId) return;
+
+    const audioMsg = {
+      audio: payload.audio, // base64 encoded audio
+      sender_id: user.id,
+      sender_role: user.role,
+      sender_name: user.name,
+      driver_id: driverId,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Route: admin -> driver, driver -> admins
+    if (user.role === "admin") {
+      io.to(`driver:${driverId}`).emit("walkie:audio", audioMsg);
+    } else {
+      io.to("admins").emit("walkie:audio", audioMsg);
+    }
+  });
+
+  // Walkie-talkie: notify when someone starts/stops talking
+  socket.on("walkie:talking", (payload) => {
+    const driverId = user.role === "driver" ? user.id : parseInt(payload.driverId, 10);
+    if (!driverId) return;
+
+    const talkMsg = {
+      talking: payload.talking, // true/false
+      sender_id: user.id,
+      sender_role: user.role,
+      sender_name: user.name,
+      driver_id: driverId,
+    };
+
+    if (user.role === "admin") {
+      io.to(`driver:${driverId}`).emit("walkie:talking", talkMsg);
+    } else {
+      io.to("admins").emit("walkie:talking", talkMsg);
+    }
+  });
+
   // Driver stops sharing location
   socket.on("driver:stop", async () => {
     if (user.role !== "driver") return;

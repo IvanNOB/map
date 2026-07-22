@@ -119,6 +119,23 @@
 
       <!-- Chat panel -->
       <div id="panel-chat" class="drv-panel">
+        <!-- Walkie-Talkie -->
+        <div class="walkie-section">
+          <div class="walkie-status" id="walkie-status">
+            <span class="walkie-icon">📻</span>
+            <span class="walkie-label">Walkie-Talkie</span>
+          </div>
+          <div class="walkie-indicator hidden" id="walkie-indicator">
+            <span class="walkie-pulse"></span>
+            <span id="walkie-indicator-text">Central hablando...</span>
+          </div>
+          <button class="walkie-btn" id="btn-walkie-talk">
+            <span class="walkie-btn-icon">🎙️</span>
+            <span class="walkie-btn-text">Mantener para hablar</span>
+          </button>
+        </div>
+
+        <!-- Chat text -->
         <div class="drv-chat-wrap">
           <div class="chat-messages" id="dchat-messages">
             <div class="chat-empty">Escribe a tu central</div>
@@ -167,6 +184,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/walkie-talkie.js"></script>
   <script src="/js/driver.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
@@ -275,6 +293,66 @@
     }
     // Will be called from driver.js when user logs in
     window._updateDriverAvatar = updateAvatar;
+
+    // ─── Walkie-Talkie setup ────────────────────────────────────────────────
+    var walkieBtn = document.getElementById('btn-walkie-talk');
+    var walkieIndicator = document.getElementById('walkie-indicator');
+    var walkieIndicatorText = document.getElementById('walkie-indicator-text');
+
+    if (walkieBtn) {
+      // Touch/mouse events for push-to-talk
+      function startTalk(e) {
+        e.preventDefault();
+        walkieBtn.classList.add('active');
+        if (window.WalkieTalkie) window.WalkieTalkie.startTalking();
+      }
+      function stopTalk(e) {
+        e.preventDefault();
+        walkieBtn.classList.remove('active');
+        if (window.WalkieTalkie) window.WalkieTalkie.stopTalking();
+      }
+
+      walkieBtn.addEventListener('mousedown', startTalk);
+      walkieBtn.addEventListener('mouseup', stopTalk);
+      walkieBtn.addEventListener('mouseleave', stopTalk);
+      walkieBtn.addEventListener('touchstart', startTalk, { passive: false });
+      walkieBtn.addEventListener('touchend', stopTalk);
+      walkieBtn.addEventListener('touchcancel', stopTalk);
+    }
+
+    // Listen for remote talking indicator
+    window.addEventListener('walkie:remoteTalking', function(e) {
+      var d = e.detail;
+      if (d.talking) {
+        walkieIndicator.classList.remove('hidden');
+        walkieIndicatorText.textContent = (d.sender_name || 'Central') + ' hablando...';
+      } else {
+        walkieIndicator.classList.add('hidden');
+      }
+    });
+
+    // Listen for received audio
+    window.addEventListener('walkie:received', function(e) {
+      var d = e.detail;
+      // Vibrate on receive
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    });
+
+    // Listen for errors
+    window.addEventListener('walkie:error', function(e) {
+      var toast = document.createElement('div');
+      toast.className = 'toast error';
+      toast.textContent = e.detail.message || 'Error de microfono';
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(function() { toast.remove(); }, 4000);
+    });
+
+    // Initialize walkie-talkie when socket connects (from driver.js)
+    window._initWalkie = function(sock, driverId) {
+      if (window.WalkieTalkie) {
+        window.WalkieTalkie.init(sock, { role: 'driver', driverId: driverId });
+      }
+    };
   </script>
 </body>
 </html>

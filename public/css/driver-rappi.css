@@ -639,3 +639,82 @@
 
 /* Old elements hidden */
 .drv-tabs, .drv-bottom, .gps-overlay { display: none !important; }
+
+/* ─── Walkie-Talkie ──────────────────────────────────────────────────────── */
+.walkie-section {
+  background: #1a1a20;
+  border-radius: 16px;
+  border: 1px solid #2a2a30;
+  padding: 1rem;
+  margin-bottom: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+.walkie-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #aaa;
+  font-weight: 600;
+}
+.walkie-icon { font-size: 1.2rem; }
+.walkie-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #ef4444;
+  font-weight: 600;
+  animation: walkie-fade 1s infinite alternate;
+}
+.walkie-indicator.hidden { display: none; }
+@keyframes walkie-fade { from { opacity: 0.6; } to { opacity: 1; } }
+.walkie-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: walkie-pulse-anim 1s infinite;
+}
+@keyframes walkie-pulse-anim {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+.walkie-btn {
+  width: 100%;
+  max-width: 250px;
+  padding: 1.2rem 1rem;
+  border-radius: 16px;
+  border: 2px solid #2a2a30;
+  background: #111115;
+  color: #ccc;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.walkie-btn:active, .walkie-btn.active {
+  background: #dc2626;
+  border-color: #ef4444;
+  color: #fff;
+  transform: scale(0.95);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+}
+.walkie-btn-icon { font-size: 1.8rem; }
+.walkie-btn-text { font-size: 0.72rem; color: #888; }
+.walkie-btn:active .walkie-btn-text,
+.walkie-btn.active .walkie-btn-text { color: #fca5a5; }

@@ -1013,6 +1013,12 @@
     socket = io({ auth: { token: token } });
     socket.on('connect', function () {
       console.log('Socket conectado (repartidor)');
+      // Initialize Walkie-Talkie
+      if (window._initWalkie && currentUser) {
+        window._initWalkie(socket, currentUser.id);
+      }
+      // Expose socket for walkie and SOS
+      window._driverSocket = socket;
     });
 
     // ═══════════════════════════════════════════════════════════════════════════

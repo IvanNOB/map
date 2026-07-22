@@ -1139,6 +1139,44 @@
     if (e.key === 'Enter') sendChat();
   });
 
+  // ─── Walkie-Talkie (admin) ──────────────────────────────────────────────────
+  const btnWalkieAdmin = document.getElementById('btn-walkie-admin');
+  if (btnWalkieAdmin) {
+    function adminStartTalk(e) {
+      e.preventDefault();
+      if (!chatActiveDriver) { showToast('Selecciona un repartidor primero', 'warning'); return; }
+      btnWalkieAdmin.style.background = '#ef4444';
+      btnWalkieAdmin.style.transform = 'scale(1.1)';
+      if (window.WalkieTalkie) {
+        window.WalkieTalkie.setTargetDriver(chatActiveDriver);
+        window.WalkieTalkie.startTalking(chatActiveDriver);
+      }
+    }
+    function adminStopTalk(e) {
+      e.preventDefault();
+      btnWalkieAdmin.style.background = '#dc2626';
+      btnWalkieAdmin.style.transform = 'scale(1)';
+      if (window.WalkieTalkie) window.WalkieTalkie.stopTalking();
+    }
+    btnWalkieAdmin.addEventListener('mousedown', adminStartTalk);
+    btnWalkieAdmin.addEventListener('mouseup', adminStopTalk);
+    btnWalkieAdmin.addEventListener('mouseleave', adminStopTalk);
+    btnWalkieAdmin.addEventListener('touchstart', adminStartTalk, { passive: false });
+    btnWalkieAdmin.addEventListener('touchend', adminStopTalk);
+    btnWalkieAdmin.addEventListener('touchcancel', adminStopTalk);
+
+    // Remote talking indicator
+    window.addEventListener('walkie:remoteTalking', (e) => {
+      const d = e.detail;
+      if (d.talking) {
+        showToast('🎙️ ' + (d.sender_name || 'Repartidor') + ' está hablando...', 'info');
+      }
+    });
+    window.addEventListener('walkie:received', () => {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    });
+  }
+
   // ─── Enviar notificacion (aviso) a repartidores ─────────────────────────────
   const btnNotify = document.getElementById('btn-notify');
   if (btnNotify) {
@@ -2427,6 +2465,10 @@
       console.log('Socket conectado');
       const dot = document.getElementById('conn-dot');
       if (dot) dot.classList.add('online');
+      // Initialize Walkie-Talkie for admin
+      if (window.WalkieTalkie) {
+        window.WalkieTalkie.init(socket, { role: 'admin' });
+      }
     });
 
     socket.on('order:new', (order) => {
