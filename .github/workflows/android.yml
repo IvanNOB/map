@@ -1,8 +1,5 @@
 name: Compilar APK del Repartidor
 
-# Se ejecuta:
-# - Manualmente desde Actions (workflow_dispatch)
-# - Automáticamente cuando cambia algo en mobile/ o version.json
 on:
   workflow_dispatch:
   push:
@@ -38,27 +35,31 @@ jobs:
         working-directory: mobile
         run: npx cap add android
 
+      - name: Sincronizar Capacitor (genera MainActivity.java)
+        working-directory: mobile
+        run: npx cap sync android
+
       - name: Generar iconos y splash
         working-directory: mobile
         run: npx @capacitor/assets generate --android || true
 
-      - name: Agregar permisos (ubicacion + microfono)
+      - name: Agregar permisos al AndroidManifest
         working-directory: mobile
         run: node patch-manifest.mjs
 
-      - name: Habilitar microfono en WebView
+      - name: Habilitar microfono en WebView (MainActivity)
         working-directory: mobile
         run: node patch-webview-permissions.mjs
 
-      - name: Sincronizar Capacitor
+      - name: Segunda sincronizacion (aplica cambios del MainActivity)
         working-directory: mobile
         run: npx cap sync android
 
-      - name: Compilar APK (debug)
+      - name: Compilar APK
         working-directory: mobile/android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Subir APK como artefacto
         uses: actions/upload-artifact@v4
@@ -67,35 +68,33 @@ jobs:
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      # ─── Crear Release con el APK ──────────────────────────────────────────
       - name: Leer version de version.json
         id: version
         run: |
-          VERSION=$(cat public/apk/version.json | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
-          NOTES=$(cat public/apk/version.json | python3 -c "import sys,json; print(json.load(sys.stdin)['releaseNotes'])")
+          VERSION=$(python3 -c "import json; d=json.load(open('public/apk/version.json')); print(d['version'])")
+          NOTES=$(python3 -c "import json; d=json.load(open('public/apk/version.json')); print(d['releaseNotes'])")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "notes=$NOTES" >> $GITHUB_OUTPUT
 
-      - name: Renombrar APK
+      - name: Renombrar APK para el release
         run: cp mobile/android/app/build/outputs/apk/debug/app-debug.apk repartidor.apk
 
-      - name: Crear o actualizar Release en GitHub
+      - name: Crear Release en GitHub con el APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          name: v${{ steps.version.outputs.version }} - Repartidor Domicilios
+          name: "v${{ steps.version.outputs.version }} - Repartidor Domicilios"
           body: |
             ## Repartidor Domicilios v${{ steps.version.outputs.version }}
-            
+
             ${{ steps.version.outputs.notes }}
-            
-            ### Instalar:
-            1. Descarga `repartidor.apk` de abajo
+
+            ### Como instalar:
+            1. Descarga **repartidor.apk** de abajo ⬇️
             2. Abre el archivo en tu celular
-            3. Permite instalar de orígenes desconocidos si lo pide
-            4. Listo!
+            3. Si aparece aviso de seguridad → toca **"Instalar de todas formas"**
+            4. Se instala encima de la version anterior (no pierdes datos)
           files: repartidor.apk
           make_latest: true
-          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
