@@ -91,24 +91,28 @@ La app verifica automáticamente si hay una nueva versión al abrirse.
 ### Cómo publicar una actualización:
 
 1. **Genera la nueva APK** (siguiendo los pasos de arriba)
-2. **Sube el APK** al servidor:
-   ```bash
-   # Copia el APK generado a public/apk/
-   cp android/app/build/outputs/apk/debug/app-debug.apk ../public/apk/repartidor.apk
-   ```
+2. **Sube el APK a GitHub Releases:**
+   - Ve a https://github.com/IvanNOB/map/releases
+   - Click "Create a new release"
+   - Tag: `v1.1.0` (o la nueva versión)
+   - Arrastra el APK y **renombralo a `repartidor.apk`**
+   - Publica
 3. **Actualiza la versión** en `public/apk/version.json`:
    ```json
    {
-     "version": "1.2.0",
-     "versionCode": 3,
-     "releaseNotes": "Descripcion de los cambios",
-     "apkUrl": "/apk/repartidor.apk",
-     "forceUpdate": false
+     "version": "1.1.0",
+     "versionCode": 2,
+     "releaseNotes": "Walkie-talkie y asignacion competitiva",
+     "apkUrl": "https://github.com/IvanNOB/map/releases/latest/download/repartidor.apk",
+     "forceUpdate": true
    }
    ```
 4. **Actualiza `APP_VERSION`** en `public/js/driver.js` (busca `var APP_VERSION =`)
    para que coincida con la versión nueva.
 5. **Haz deploy** (push a main).
+
+> **Nota:** Render no persiste archivos entre deploys, por eso se usa
+> GitHub Releases para alojar el APK (gratis y permanente).
 
 Los repartidores verán un **banner dorado** al abrir la app:
 > "Nueva versión disponible (v1.2.0) — [Actualizar]"

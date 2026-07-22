@@ -1,6 +1,6 @@
 {
   "name": "domicilios-mobile",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "App Android (Capacitor) que envuelve la app web del repartidor con rastreo en segundo plano",
   "private": true,
   "scripts": {
