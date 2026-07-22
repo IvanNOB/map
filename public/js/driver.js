@@ -1592,6 +1592,81 @@
     document.head.appendChild(style);
   })();
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // AUTO-UPDATE: Verificar si hay nueva version de la APK
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  var APP_VERSION = '1.0.0'; // Version actual de la APK instalada
+
+  async function checkAppUpdate() {
+    try {
+      var res = await fetch('/apk/version.json?t=' + Date.now());
+      if (!res.ok) return;
+      var data = await res.json();
+
+      // Comparar versiones
+      if (isNewerVersion(data.version, APP_VERSION)) {
+        showUpdateBanner(data);
+      }
+    } catch (e) {
+      // Silently fail - no connection or server down
+    }
+  }
+
+  function isNewerVersion(remote, local) {
+    var r = remote.split('.').map(Number);
+    var l = local.split('.').map(Number);
+    for (var i = 0; i < 3; i++) {
+      if ((r[i] || 0) > (l[i] || 0)) return true;
+      if ((r[i] || 0) < (l[i] || 0)) return false;
+    }
+    return false;
+  }
+
+  function showUpdateBanner(data) {
+    // Don't show if already dismissed this version
+    var dismissed = localStorage.getItem('update_dismissed_version');
+    if (dismissed === data.version && !data.forceUpdate) return;
+
+    var banner = document.createElement('div');
+    banner.id = 'update-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(135deg,#d4af37,#b8942e);padding:0.8rem 1rem;display:flex;align-items:center;gap:0.7rem;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+    
+    var textDiv = document.createElement('div');
+    textDiv.style.cssText = 'flex:1;';
+    textDiv.innerHTML = '<div style="font-weight:800;font-size:0.9rem;color:#111;">Nueva version disponible (v' + data.version + ')</div>' +
+      '<div style="font-size:0.75rem;color:#333;">' + (data.releaseNotes || 'Mejoras y correcciones') + '</div>';
+    
+    var btnUpdate = document.createElement('button');
+    btnUpdate.textContent = 'Actualizar';
+    btnUpdate.style.cssText = 'background:#111;color:#d4af37;border:none;border-radius:8px;padding:0.6rem 1rem;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;';
+    btnUpdate.addEventListener('click', function() {
+      // Download the APK
+      window.location.href = data.apkUrl || '/apk/repartidor.apk';
+    });
+
+    banner.appendChild(textDiv);
+    banner.appendChild(btnUpdate);
+
+    // Close button (if not force update)
+    if (!data.forceUpdate) {
+      var btnClose = document.createElement('button');
+      btnClose.textContent = '✕';
+      btnClose.style.cssText = 'background:none;border:none;color:#111;font-size:1.2rem;cursor:pointer;padding:0.2rem;';
+      btnClose.addEventListener('click', function() {
+        banner.remove();
+        localStorage.setItem('update_dismissed_version', data.version);
+      });
+      banner.appendChild(btnClose);
+    }
+
+    document.body.prepend(banner);
+  }
+
+  // Check for update on load and every 6 hours
+  checkAppUpdate();
+  setInterval(checkAppUpdate, 6 * 60 * 60 * 1000);
+
   // ─── Init ──────────────────────────────────────────────────────────────────
 
   checkAuth();

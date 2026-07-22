@@ -1,0 +1,8 @@
+{
+  "version": "1.1.0",
+  "versionCode": 2,
+  "releaseNotes": "Walkie-talkie, asignacion competitiva de pedidos, mejoras de GPS",
+  "apkUrl": "/apk/repartidor.apk",
+  "minVersion": "1.0.0",
+  "forceUpdate": false
+}

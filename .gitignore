@@ -9,3 +9,7 @@ yarn-error.log*
 db/data.sqlite
 db/data.sqlite-shm
 db/data.sqlite-wal
+
+
+# APK binaries (uploaded manually to server, not tracked in git)
+public/apk/*.apk

@@ -81,3 +81,40 @@ En Android Studio:
 - El APK **no necesita** la Play Store; se instala directo. Si más adelante quieres
   publicarlo en Google Play, hay que generar un APK/AAB firmado (te puedo guiar).
 - Si cambias la URL de producción, edita `server.url` en `capacitor.config.json`.
+
+---
+
+## Sistema de Auto-Actualización
+
+La app verifica automáticamente si hay una nueva versión al abrirse.
+
+### Cómo publicar una actualización:
+
+1. **Genera la nueva APK** (siguiendo los pasos de arriba)
+2. **Sube el APK** al servidor:
+   ```bash
+   # Copia el APK generado a public/apk/
+   cp android/app/build/outputs/apk/debug/app-debug.apk ../public/apk/repartidor.apk
+   ```
+3. **Actualiza la versión** en `public/apk/version.json`:
+   ```json
+   {
+     "version": "1.2.0",
+     "versionCode": 3,
+     "releaseNotes": "Descripcion de los cambios",
+     "apkUrl": "/apk/repartidor.apk",
+     "forceUpdate": false
+   }
+   ```
+4. **Actualiza `APP_VERSION`** en `public/js/driver.js` (busca `var APP_VERSION =`)
+   para que coincida con la versión nueva.
+5. **Haz deploy** (push a main).
+
+Los repartidores verán un **banner dorado** al abrir la app:
+> "Nueva versión disponible (v1.2.0) — [Actualizar]"
+
+Al tocar "Actualizar", se descarga el APK y Android ofrece instalarlo.
+
+### Forzar actualización:
+Si pones `"forceUpdate": true` en `version.json`, el banner no se puede cerrar
+y el repartidor DEBE actualizar para seguir usando la app.
