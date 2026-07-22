@@ -73,7 +73,17 @@ export default function createOrdersRouter(io) {
     const { role, id: userId } = req.user;
 
     if (role === "admin") {
-      const { status } = req.query;
+      const { status, driver_id } = req.query;
+
+      // Filter by driver_id (for history view)
+      if (driver_id) {
+        const orders = await db.all(
+          "SELECT * FROM orders WHERE driver_id = ? ORDER BY created_at DESC LIMIT 200",
+          [parseInt(driver_id, 10)]
+        );
+        return res.json({ orders });
+      }
+
       if (status) {
         const orders = await db.all(
           "SELECT * FROM orders WHERE status = ? AND archived = 0 ORDER BY created_at DESC",

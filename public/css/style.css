@@ -2135,3 +2135,32 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 .place-tooltip.leaflet-tooltip-top::before { border-top-color: rgba(212,175,55,0.3); }
+
+
+/* ─── Driver Stats Row (panel admin) ─────────────────────────────────────── */
+.driver-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: var(--bg-alt);
+  border-radius: 8px;
+}
+.driver-stat-mini {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.driver-stat-mini .driver-stat-num {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.driver-stat-mini .driver-stat-lbl {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}

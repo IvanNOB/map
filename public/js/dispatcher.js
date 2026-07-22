@@ -2128,16 +2128,32 @@
           </span>
         </div>
         <div class="driver-card-details">
-          ${d.avg_rating ? '<div class="driver-rating">⭐ ' + escapeHtml(String(d.avg_rating)) + ' / 5</div>' : '<div style="color:var(--text-muted);font-size:0.8rem;">Sin calificaciones</div>'}
-          ${d.deliveries != null ? '<div>📦 Entregas: ' + escapeHtml(String(d.deliveries)) + '</div>' : ''}
-          ${d.vehicle ? '<div>Vehiculo: ' + escapeHtml(d.vehicle) + '</div>' : ''}
-          ${d.plate ? '<div>Placa: ' + escapeHtml(d.plate) + '</div>' : ''}
-          ${d.phone ? '<div>Tel: ' + escapeHtml(d.phone) + '</div>' : ''}
-          ${d.email ? '<div>Email: ' + escapeHtml(d.email) + '</div>' : ''}
+          ${d.avg_rating ? '<div class="driver-rating">⭐ ' + escapeHtml(String(d.avg_rating)) + ' / 5</div>' : ''}
+          <div class="driver-stats-row">
+            <div class="driver-stat-mini">
+              <span class="driver-stat-num">${d.deliveries_today || 0}</span>
+              <span class="driver-stat-lbl">Hoy</span>
+            </div>
+            <div class="driver-stat-mini">
+              <span class="driver-stat-num">${d.deliveries_week || 0}</span>
+              <span class="driver-stat-lbl">Semana</span>
+            </div>
+            <div class="driver-stat-mini">
+              <span class="driver-stat-num">${d.deliveries || 0}</span>
+              <span class="driver-stat-lbl">Total</span>
+            </div>
+            <div class="driver-stat-mini">
+              <span class="driver-stat-num">$${(d.earnings_today || 0).toLocaleString()}</span>
+              <span class="driver-stat-lbl">$ Hoy</span>
+            </div>
+          </div>
+          ${d.vehicle ? '<div>🛵 ' + escapeHtml(d.vehicle) + (d.plate ? ' · ' + escapeHtml(d.plate) : '') + '</div>' : ''}
+          ${d.phone ? '<div>📱 ' + escapeHtml(d.phone) + '</div>' : ''}
         </div>
         <div class="order-actions" style="margin-top:0.6rem;">
           <button class="btn btn-outline btn-sm" data-edit-driver="${d.id}">Editar</button>
-          <button class="btn btn-warning btn-sm" data-vibrate-driver="${d.id}" title="Enviar alerta para que active la ubicacion">📍 Activar UBI</button>
+          <button class="btn btn-outline btn-sm" data-history-driver="${d.id}">📊 Historial</button>
+          <button class="btn btn-warning btn-sm" data-vibrate-driver="${d.id}" title="Enviar alerta para que active la ubicacion">📍 UBI</button>
           <button class="btn btn-danger btn-sm" data-del-driver="${d.id}">Eliminar</button>
         </div>
       `;
@@ -2152,6 +2168,9 @@
     });
     driversGrid.querySelectorAll('[data-vibrate-driver]').forEach((b) => {
       b.addEventListener('click', () => vibrateDriver(parseInt(b.dataset.vibrateDriver)));
+    });
+    driversGrid.querySelectorAll('[data-history-driver]').forEach((b) => {
+      b.addEventListener('click', () => showDriverHistory(parseInt(b.dataset.historyDriver)));
     });
   }
 
@@ -2169,6 +2188,100 @@
         showToast(data.error || 'No se pudo enviar la alerta', 'error');
       }
     } catch { showToast('Error de conexion', 'error'); }
+  }
+
+  // ─── Historial de entregas del repartidor ───────────────────────────────────
+  async function showDriverHistory(driverId) {
+    const d = drivers.find((x) => x.id === driverId);
+    if (!d) return;
+
+    // Fetch orders for this driver
+    try {
+      const res = await apiFetch('/api/orders?driver_id=' + driverId + '&limit=200');
+      if (!res.ok) { showToast('Error al cargar historial', 'error'); return; }
+      const data = await res.json();
+      const driverOrders = data.orders || data || [];
+
+      // Build modal
+      let overlay = document.getElementById('modal-driver-history');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'modal-driver-history';
+        overlay.className = 'modal-overlay';
+        document.body.appendChild(overlay);
+      }
+
+      const delivered = driverOrders.filter(o => o.status === 'delivered');
+      const cancelled = driverOrders.filter(o => o.status === 'cancelled');
+      const active = driverOrders.filter(o => ['assigned','picked_up','on_the_way'].includes(o.status));
+
+      const totalEarnings = delivered.reduce((s, o) => s + (o.amount || 0), 0);
+
+      let historyHtml = delivered.slice(0, 50).map(o => 
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--border);">
+          <div>
+            <span style="font-weight:700;color:var(--primary);">${escapeHtml(o.code)}</span>
+            <span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.5rem;">${escapeHtml(o.delivered_at ? o.delivered_at.slice(0, 16) : o.created_at.slice(0, 16))}</span>
+          </div>
+          <div>
+            <span style="font-weight:600;">$${(o.amount || 0).toLocaleString()}</span>
+          </div>
+        </div>`
+      ).join('');
+
+      if (delivered.length === 0) {
+        historyHtml = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">Sin entregas realizadas</p>';
+      }
+
+      overlay.innerHTML = `
+        <div class="modal-content" style="max-width:500px;max-height:80vh;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h2 style="margin:0;">📊 ${escapeHtml(d.name)}</h2>
+            <button class="btn btn-outline btn-sm" id="close-driver-history">✕</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;">
+            <div style="background:var(--bg-alt);border-radius:10px;padding:0.7rem;text-align:center;">
+              <div style="font-size:1.4rem;font-weight:900;color:var(--success);">${delivered.length}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Entregados</div>
+            </div>
+            <div style="background:var(--bg-alt);border-radius:10px;padding:0.7rem;text-align:center;">
+              <div style="font-size:1.4rem;font-weight:900;color:var(--primary);">$${totalEarnings.toLocaleString()}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Ingresos total</div>
+            </div>
+            <div style="background:var(--bg-alt);border-radius:10px;padding:0.7rem;text-align:center;">
+              <div style="font-size:1.4rem;font-weight:900;color:var(--warning);">${active.length}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Activos</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;">
+            <div style="background:var(--bg-alt);border-radius:10px;padding:0.7rem;text-align:center;">
+              <div style="font-size:1.1rem;font-weight:800;">${d.deliveries_today || 0}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Hoy</div>
+            </div>
+            <div style="background:var(--bg-alt);border-radius:10px;padding:0.7rem;text-align:center;">
+              <div style="font-size:1.1rem;font-weight:800;">${d.deliveries_week || 0}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">Esta semana</div>
+            </div>
+          </div>
+          <h4 style="margin:0.8rem 0 0.5rem;font-size:0.85rem;color:var(--text-muted);">Ultimas entregas</h4>
+          <div style="font-size:0.85rem;">
+            ${historyHtml}
+          </div>
+          ${delivered.length > 50 ? '<p style="text-align:center;color:var(--text-muted);font-size:0.75rem;">...y ' + (delivered.length - 50) + ' mas</p>' : ''}
+        </div>
+      `;
+      overlay.classList.remove('hidden');
+      overlay.style.display = 'flex';
+
+      document.getElementById('close-driver-history').addEventListener('click', () => {
+        overlay.style.display = 'none';
+      });
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.style.display = 'none';
+      });
+    } catch (e) {
+      showToast('Error al cargar historial', 'error');
+    }
   }
 
   // ─── Edit / Delete driver ───────────────────────────────────────────────────
