@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import db from "../db/database.js";
+import db, { isPostgres } from "../db/database.js";
 import { requireAuth, requireRole } from "./auth.js";
 import { logActivity } from "./activity.js";
 
@@ -8,17 +8,22 @@ const router = Router();
 
 /** Returns drivers joined with their user info + average rating + stats. */
 async function listDrivers() {
+  // Use different date functions for PostgreSQL vs SQLite
+  const dateToday = isPostgres ? "CURRENT_DATE" : "date('now')";
+  const date7dAgo = isPostgres ? "(NOW() - INTERVAL '7 days')" : "date('now', '-7 days')";
+  const dateOfCol = (col) => isPostgres ? `${col}::date` : `date(${col})`;
+
   return db.all(
     `SELECT u.id, u.name, u.email,
             d.phone, d.vehicle, d.plate, d.status,
             d.lat, d.lng, d.speed, d.last_seen,
             (SELECT ROUND(AVG(rating), 1) FROM orders WHERE driver_id = u.id AND rating IS NOT NULL) AS avg_rating,
             (SELECT COUNT(*) FROM orders WHERE driver_id = u.id AND status = 'delivered') AS deliveries,
-            (SELECT COUNT(*) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND date(delivered_at) = date('now')) AS deliveries_today,
-            (SELECT COUNT(*) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND delivered_at >= date('now', '-7 days')) AS deliveries_week,
+            (SELECT COUNT(*) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND ${dateOfCol('delivered_at')} = ${dateToday}) AS deliveries_today,
+            (SELECT COUNT(*) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND delivered_at >= ${date7dAgo}) AS deliveries_week,
             (SELECT COALESCE(SUM(amount), 0) FROM orders WHERE driver_id = u.id AND status = 'delivered') AS total_earnings,
-            (SELECT COALESCE(SUM(amount), 0) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND date(delivered_at) = date('now')) AS earnings_today,
-            (SELECT COALESCE(SUM(amount), 0) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND delivered_at >= date('now', '-7 days')) AS earnings_week
+            (SELECT COALESCE(SUM(amount), 0) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND ${dateOfCol('delivered_at')} = ${dateToday}) AS earnings_today,
+            (SELECT COALESCE(SUM(amount), 0) FROM orders WHERE driver_id = u.id AND status = 'delivered' AND delivered_at >= ${date7dAgo}) AS earnings_week
      FROM users u
      JOIN drivers d ON d.user_id = u.id
      WHERE u.role = 'driver'
