@@ -51,6 +51,10 @@ jobs:
         working-directory: mobile
         run: npx cap sync android
 
+      - name: Generar iconos y splash desde assets/
+        working-directory: mobile
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#000000' --splashBackgroundColor '#0a0a0c'
+
       - name: Agregar permisos al AndroidManifest
         working-directory: mobile
         run: node patch-manifest.mjs

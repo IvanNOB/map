@@ -1596,7 +1596,7 @@
   // AUTO-UPDATE: Verificar si hay nueva version de la APK
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  var APP_VERSION = '1.1.0'; // Version actual de la APK instalada
+  var APP_VERSION = '1.1.1'; // Version actual de la APK instalada
 
   async function checkAppUpdate() {
     try {
