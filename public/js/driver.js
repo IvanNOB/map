@@ -1626,9 +1626,16 @@
   }
 
   function showUpdateBanner(data) {
+    // No mostrar si ya se actualizó a esta version
+    var installed = localStorage.getItem('installed_apk_version') || '1.0.0';
+    if (!isNewerVersion(data.version, installed)) return;
+
     // Don't show if already dismissed this version (and not force)
     var dismissed = localStorage.getItem('update_dismissed_version');
     if (dismissed === data.version && !data.forceUpdate) return;
+
+    // Si ya existe el banner, no duplicar
+    if (document.getElementById('update-banner')) return;
 
     var banner = document.createElement('div');
     banner.id = 'update-banner';
@@ -1643,8 +1650,11 @@
     btnUpdate.textContent = 'Actualizar';
     btnUpdate.style.cssText = 'background:#111;color:#d4af37;border:none;border-radius:8px;padding:0.6rem 1rem;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;';
     btnUpdate.addEventListener('click', function() {
-      // Guardar la nueva version como instalada (se confirmará cuando abra la app nueva)
+      // Guardar la nueva version como instalada
       localStorage.setItem('installed_apk_version', data.version);
+      // Quitar el banner inmediatamente
+      var b = document.getElementById('update-banner');
+      if (b) b.remove();
       // Download the APK
       window.location.href = data.apkUrl || '/apk/repartidor.apk';
     });
