@@ -60,4 +60,3 @@ public class MainActivity extends BridgeActivity {
 writeFileSync(mainActivityPath, newContent);
 console.log("✅ MainActivity.java modificado: permisos de microfono habilitados en WebView");
 console.log("   Ahora ejecuta: npx cap sync && npx cap open android");
-`;
