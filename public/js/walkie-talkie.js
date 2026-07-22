@@ -48,7 +48,16 @@
       const targetDriver = driverId || currentDriverId;
       if (!targetDriver && role === 'admin') return;
 
+      // Check if mediaDevices is available (requires HTTPS)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        window.dispatchEvent(new CustomEvent('walkie:error', { 
+          detail: { message: 'Tu navegador no soporta microfono. Asegurate de usar HTTPS.' } 
+        }));
+        return;
+      }
+
       try {
+        // Request microphone permission
         const stream = await navigator.mediaDevices.getUserMedia({ 
           audio: {
             echoCancellation: true,
@@ -111,7 +120,19 @@
       } catch (err) {
         console.error('[Walkie] Microphone error:', err);
         isTalking = false;
-        window.dispatchEvent(new CustomEvent('walkie:error', { detail: { message: 'No se pudo acceder al microfono' } }));
+        let errorMsg = 'No se pudo acceder al microfono';
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          errorMsg = 'Permiso de microfono denegado. Ve a Configuracion del navegador > Permisos > Microfono y permitelo.';
+        } else if (err.name === 'NotFoundError') {
+          errorMsg = 'No se encontro microfono en este dispositivo.';
+        } else if (err.name === 'NotReadableError') {
+          errorMsg = 'El microfono esta siendo usado por otra app. Cierra otras apps y reintenta.';
+        } else if (err.name === 'OverconstrainedError') {
+          errorMsg = 'Error de configuracion del microfono.';
+        } else if (err.message && err.message.includes('secure')) {
+          errorMsg = 'Se requiere HTTPS para usar el microfono.';
+        }
+        window.dispatchEvent(new CustomEvent('walkie:error', { detail: { message: errorMsg } }));
       }
     },
 

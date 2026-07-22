@@ -125,6 +125,10 @@
             <span class="walkie-icon">📻</span>
             <span class="walkie-label">Walkie-Talkie</span>
           </div>
+          <div class="walkie-permission hidden" id="walkie-permission">
+            <button class="walkie-permission-btn" id="btn-walkie-permission">🎙️ Permitir microfono</button>
+            <span class="walkie-permission-hint">Toca para dar acceso al microfono</span>
+          </div>
           <div class="walkie-indicator hidden" id="walkie-indicator">
             <span class="walkie-pulse"></span>
             <span id="walkie-indicator-text">Central hablando...</span>
@@ -298,11 +302,69 @@
     var walkieBtn = document.getElementById('btn-walkie-talk');
     var walkieIndicator = document.getElementById('walkie-indicator');
     var walkieIndicatorText = document.getElementById('walkie-indicator-text');
+    var walkiePermission = document.getElementById('walkie-permission');
+    var btnWalkiePermission = document.getElementById('btn-walkie-permission');
+    var micReady = false;
+
+    // Check if mic permission already granted
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'microphone' }).then(function(result) {
+        if (result.state === 'granted') {
+          micReady = true;
+          if (walkiePermission) walkiePermission.classList.add('hidden');
+          if (walkieBtn) walkieBtn.classList.add('mic-ready');
+        } else if (result.state === 'prompt') {
+          if (walkiePermission) walkiePermission.classList.remove('hidden');
+        } else {
+          // denied
+          if (walkiePermission) walkiePermission.classList.remove('hidden');
+        }
+      }).catch(function() {
+        // permissions API not supported, show button anyway
+        if (walkiePermission) walkiePermission.classList.remove('hidden');
+      });
+    } else {
+      if (walkiePermission) walkiePermission.classList.remove('hidden');
+    }
+
+    // Permission button - request mic access
+    if (btnWalkiePermission) {
+      btnWalkiePermission.addEventListener('click', async function() {
+        try {
+          var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Permission granted! Stop the stream immediately
+          stream.getTracks().forEach(function(t) { t.stop(); });
+          micReady = true;
+          walkiePermission.classList.add('hidden');
+          walkieBtn.classList.add('mic-ready');
+          var toast = document.createElement('div');
+          toast.className = 'toast success';
+          toast.textContent = 'Microfono activado! Ya puedes usar el walkie-talkie.';
+          document.getElementById('toast-container').appendChild(toast);
+          setTimeout(function() { toast.remove(); }, 4000);
+        } catch (err) {
+          var msg = 'No se pudo acceder al microfono.';
+          if (err.name === 'NotAllowedError') {
+            msg = 'Permiso denegado. Ve a la configuracion de tu navegador > Permisos del sitio > Microfono > Permitir';
+          }
+          var toast = document.createElement('div');
+          toast.className = 'toast error';
+          toast.textContent = msg;
+          document.getElementById('toast-container').appendChild(toast);
+          setTimeout(function() { toast.remove(); }, 6000);
+        }
+      });
+    }
 
     if (walkieBtn) {
       // Touch/mouse events for push-to-talk
       function startTalk(e) {
         e.preventDefault();
+        if (!micReady) {
+          // Try requesting permission on first press
+          if (btnWalkiePermission) btnWalkiePermission.click();
+          return;
+        }
         walkieBtn.classList.add('active');
         if (window.WalkieTalkie) window.WalkieTalkie.startTalking();
       }
