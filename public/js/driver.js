@@ -1596,7 +1596,9 @@
   // AUTO-UPDATE: Verificar si hay nueva version de la APK
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  var APP_VERSION = '1.1.1'; // Version actual de la APK instalada
+  // La version instalada se guarda en localStorage del dispositivo.
+  // Si no existe, asumimos v1.0.0 (la primera APK que se distribuyó).
+  var APP_VERSION = localStorage.getItem('installed_apk_version') || '1.0.0';
 
   async function checkAppUpdate() {
     try {
@@ -1624,7 +1626,7 @@
   }
 
   function showUpdateBanner(data) {
-    // Don't show if already dismissed this version
+    // Don't show if already dismissed this version (and not force)
     var dismissed = localStorage.getItem('update_dismissed_version');
     if (dismissed === data.version && !data.forceUpdate) return;
 
@@ -1641,6 +1643,8 @@
     btnUpdate.textContent = 'Actualizar';
     btnUpdate.style.cssText = 'background:#111;color:#d4af37;border:none;border-radius:8px;padding:0.6rem 1rem;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;';
     btnUpdate.addEventListener('click', function() {
+      // Guardar la nueva version como instalada (se confirmará cuando abra la app nueva)
+      localStorage.setItem('installed_apk_version', data.version);
       // Download the APK
       window.location.href = data.apkUrl || '/apk/repartidor.apk';
     });
