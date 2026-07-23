@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: Agencia de Domicilios API
+  description: |
+    API REST para la plataforma de delivery "Servicio Ghost".
+    Gestiona pedidos, repartidores, seguimiento en tiempo real, chat y notificaciones.
+  version: 2.1.0
+  contact:
+    name: Servicio Ghost
+    url: https://map-rgi5.onrender.com
+
+servers:
+  - url: https://map-rgi5.onrender.com
+    description: Produccion (Render)
+  - url: http://localhost:3000
+    description: Desarrollo local
+
+tags:
+  - name: Auth
+    description: Autenticacion y sesiones
+  - name: Orders
+    description: Gestion de pedidos
+  - name: Drivers
+    description: Gestion de repartidores
+  - name: Tracking
+    description: Seguimiento publico de pedidos
+  - name: Location
+    description: Ubicacion GPS de repartidores
+  - name: Chat
+    description: Mensajeria admin-repartidor
+  - name: Push
+    description: Notificaciones push (Web Push)
+  - name: Reports
+    description: Reportes y exportacion
+  - name: Settings
+    description: Configuracion de la agencia
+  - name: Zones
+    description: Zonas de cobertura
+  - name: Places
+    description: Puntos de interes
+  - name: Restaurants
+    description: Portal de restaurantes
+  - name: Health
+    description: Estado del servicio
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Estado del servicio
+      responses:
+        200:
+          description: Servicio saludable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [healthy, degraded] }
+                  uptime: { type: integer }
+                  database: { type: object, properties: { type: { type: string }, status: { type: string } } }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        200:
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+        401:
+          description: Credenciales invalidas
+        429:
+          description: Cuenta bloqueada por intentos fallidos
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Obtener usuario actual
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Usuario autenticado
+        401:
+          description: No autenticado
+
+  /api/orders:
+    get:
+      tags: [Orders]
+      summary: Listar pedidos
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, assigned, picked_up, on_the_way, delivered, cancelled] }
+        - name: driver_id
+          in: query
+          schema: { type: integer }
+          description: Filtrar por repartidor (historial)
+      responses:
+        200:
+          description: Lista de pedidos
+    post:
+      tags: [Orders]
+      summary: Crear pedido (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_name, pickup_address, dropoff_address]
+              properties:
+                customer_name: { type: string }
+                customer_phone: { type: string }
+                pickup_address: { type: string }
+                pickup_lat: { type: number }
+                pickup_lng: { type: number }
+                dropoff_address: { type: string }
+                dropoff_lat: { type: number }
+                dropoff_lng: { type: number }
+                items: { type: string }
+                notes: { type: string }
+                amount: { type: number }
+                payment_method: { type: string, enum: [cash, transfer, card] }
+      responses:
+        201:
+          description: Pedido creado
+
+  /api/orders/{id}/accept:
+    post:
+      tags: [Orders]
+      summary: Repartidor acepta un pedido disponible (competitivo)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Pedido aceptado exitosamente
+        409:
+          description: Otro repartidor ya tomo el pedido
+
+  /api/orders/{id}/status:
+    post:
+      tags: [Orders]
+      summary: Actualizar estado del pedido (workflow)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [picked_up, on_the_way, delivered] }
+      responses:
+        200:
+          description: Estado actualizado
+        400:
+          description: Transicion de estado invalida
+
+  /api/drivers:
+    get:
+      tags: [Drivers]
+      summary: Listar repartidores con stats (admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        200:
+          description: Lista de repartidores con entregas hoy/semana/total
+    post:
+      tags: [Drivers]
+      summary: Crear repartidor (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string }
+                phone: { type: string }
+                vehicle: { type: string }
+                plate: { type: string }
+
+  /api/track/{code}:
+    get:
+      tags: [Tracking]
+      summary: Seguimiento publico por codigo de pedido (sin auth)
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+          example: ORD-A1B2CD
+      responses:
+        200:
+          description: Info del pedido + posicion del repartidor + ETA
+        404:
+          description: Pedido no encontrado
+
+  /api/location/batch:
+    post:
+      tags: [Location]
+      summary: Subir ubicaciones en lote (background sync)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locations]
+              properties:
+                locations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      lat: { type: number }
+                      lng: { type: number }
+                      speed: { type: number }
+                      timestamp: { type: string, format: date-time }
+      responses:
+        200:
+          description: Ubicaciones procesadas
+
+  /api/reports/orders:
+    get:
+      tags: [Reports]
+      summary: Exportar reporte de pedidos (CSV o PDF)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, pdf] }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        200:
+          description: Archivo descargable
+
+  /api/push/subscribe:
+    post:
+      tags: [Push]
+      summary: Registrar suscripcion push del navegador
+      security: [{ bearerAuth: [] }]
+
+  /api/settings:
+    get:
+      tags: [Settings]
+      summary: Obtener configuracion de la agencia (admin)
+      security: [{ bearerAuth: [] }]
+    post:
+      tags: [Settings]
+      summary: Guardar configuracion
+      security: [{ bearerAuth: [] }]
+
+  /api/zones:
+    get:
+      tags: [Zones]
+      summary: Listar zonas de cobertura
+      security: [{ bearerAuth: [] }]
+
+  /api/places:
+    get:
+      tags: [Places]
+      summary: Listar puntos de interes
+      security: [{ bearerAuth: [] }]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [admin, driver, restaurant] }
+
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        customer_name: { type: string }
+        status: { type: string, enum: [pending, assigned, picked_up, on_the_way, delivered, cancelled] }
+        driver_id: { type: integer, nullable: true }
+        amount: { type: number }
+        created_at: { type: string, format: date-time }
+
+    Driver:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        status: { type: string, enum: [offline, available, busy] }
+        lat: { type: number, nullable: true }
+        lng: { type: number, nullable: true }
+        deliveries: { type: integer }
+        deliveries_today: { type: integer }
