@@ -845,6 +845,42 @@
     hotel: '🏨', estacion: '🚉', aeropuerto: '✈️', plaza: '🏛️', bodega: '📦',
     casa: '🏡', edificio: '🏗️', punto_encuentro: '🎯', favorito: '⭐'
   };
+  const PLACE_CATEGORY_META = {
+    favorito: { label: 'Favoritos', order: 0 },
+    local: { label: 'Mis locales', order: 1 },
+    restaurante: { label: 'Restaurantes', order: 2 },
+    cafe: { label: 'Cafés', order: 3 },
+    bar: { label: 'Bares', order: 4 },
+    panaderia: { label: 'Panaderías', order: 5 },
+    heladeria: { label: 'Heladerías', order: 6 },
+    tienda: { label: 'Tiendas', order: 7 },
+    supermercado: { label: 'Supermercados', order: 8 },
+    farmacia: { label: 'Farmacias', order: 9 },
+    cliente: { label: 'Clientes', order: 10 },
+    casa: { label: 'Casas', order: 11 },
+    edificio: { label: 'Edificios', order: 12 },
+    oficina: { label: 'Oficinas', order: 13 },
+    bodega: { label: 'Bodegas', order: 14 },
+    gasolinera: { label: 'Gasolineras', order: 15 },
+    estacion: { label: 'Estaciones', order: 16 },
+    aeropuerto: { label: 'Aeropuertos', order: 17 },
+    taller: { label: 'Talleres', order: 18 },
+    hospital: { label: 'Hospitales', order: 19 },
+    veterinaria: { label: 'Veterinarias', order: 20 },
+    colegio: { label: 'Colegios / universidades', order: 21 },
+    banco: { label: 'Bancos', order: 22 },
+    ferreteria: { label: 'Ferreterías', order: 23 },
+    lavanderia: { label: 'Lavanderías', order: 24 },
+    peluqueria: { label: 'Peluquerías', order: 25 },
+    gym: { label: 'Gimnasios', order: 26 },
+    hotel: { label: 'Hoteles', order: 27 },
+    parque: { label: 'Parques', order: 28 },
+    iglesia: { label: 'Iglesias', order: 29 },
+    plaza: { label: 'Plazas / centros', order: 30 },
+    punto_encuentro: { label: 'Puntos de encuentro', order: 31 },
+    otro: { label: 'Otros', order: 99 }
+  };
+  const placeNameCollator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
   let places = [];
   let editingPlaceId = null;
   let placeMap = null;
@@ -951,19 +987,253 @@
     if (cancel) cancel.classList.add('hidden');
   }
 
-  function populatePlaceSelect() {
-    const sel = document.getElementById('order-place');
-    if (sel) {
-      sel.innerHTML = '<option value="">— Ninguno —</option>' +
-        places.map((p) => '<option value="' + p.id + '">' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + '</option>').join('');
-    }
-    // Also populate the dropoff place selector
-    const selDrop = document.getElementById('order-dropoff-place');
-    if (selDrop) {
-      selDrop.innerHTML = '<option value="">— Ninguno —</option>' +
-        places.map((p) => '<option value="' + p.id + '">' + (PLACE_EMOJI[p.category] || '📍') + ' ' + escapeHtml(p.name) + '</option>').join('');
+  function placeCategoryInfo(rawCategory) {
+    const key = typeof rawCategory === 'string' && rawCategory.trim() ? rawCategory.trim() : 'otro';
+    const meta = PLACE_CATEGORY_META[key];
+    if (meta) return { key, label: meta.label, order: meta.order, emoji: PLACE_EMOJI[key] || '📍' };
+    const label = key.replace(/_/g, ' ').replace(/^./, (letter) => letter.toUpperCase());
+    return { key, label, order: 98, emoji: PLACE_EMOJI[key] || '📍' };
+  }
+
+  function groupedPlaces() {
+    const groups = new Map();
+    places.forEach((place) => {
+      const category = placeCategoryInfo(place.category);
+      if (!groups.has(category.key)) groups.set(category.key, { ...category, places: [] });
+      groups.get(category.key).places.push(place);
+    });
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        places: group.places.slice().sort((a, b) => placeNameCollator.compare(a.name || '', b.name || '')),
+      }))
+      .sort((a, b) => a.order - b.order || placeNameCollator.compare(a.label, b.label));
+  }
+
+  function populateNativePlaceSelect(select, groups) {
+    if (!select) return;
+    const previousValue = select.value;
+    const emptyOption = document.createElement('option');
+    emptyOption.value = '';
+    emptyOption.textContent = '— Ninguno —';
+    select.replaceChildren(emptyOption);
+
+    groups.forEach((group) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group.emoji + ' ' + group.label + ' (' + group.places.length + ')';
+      group.places.forEach((place) => {
+        const option = document.createElement('option');
+        option.value = String(place.id);
+        option.textContent = group.emoji + ' ' + place.name;
+        optgroup.appendChild(option);
+      });
+      select.appendChild(optgroup);
+    });
+
+    if (previousValue && places.some((place) => String(place.id) === previousValue)) {
+      select.value = previousValue;
     }
   }
+
+  function closePlacePicker(picker, restoreFocus = false) {
+    if (!picker) return;
+    const trigger = picker.querySelector('.place-picker-trigger');
+    const menu = picker.querySelector('.place-picker-menu');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    if (menu) menu.hidden = true;
+    picker.classList.remove('open');
+    if (restoreFocus && trigger) trigger.focus();
+  }
+
+  function closeOtherPlacePickers(currentPicker, restoreFocus = false) {
+    document.querySelectorAll('.place-picker.open').forEach((picker) => {
+      if (picker !== currentPicker) closePlacePicker(picker, restoreFocus);
+    });
+  }
+
+  function syncPlacePicker(select, picker) {
+    if (!select || !picker) return;
+    const selected = places.find((place) => String(place.id) === select.value);
+    const selectedText = picker.querySelector('.place-picker-selected');
+    const trigger = picker.querySelector('.place-picker-trigger');
+    const category = selected ? placeCategoryInfo(selected.category) : null;
+    const displayText = selected ? category.emoji + ' ' + selected.name : '— Ninguno —';
+    selectedText.textContent = displayText;
+    if (trigger) {
+      const purpose = select.id === 'order-place' ? 'Lugar de recogida' : 'Lugar de entrega';
+      trigger.setAttribute('aria-label', purpose + ': ' + (selected ? selected.name : 'ninguno'));
+    }
+    picker.querySelectorAll('[data-place-picker-id]').forEach((button) => {
+      const active = button.dataset.placePickerId === select.value;
+      button.classList.toggle('selected', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function renderPlacePicker(select, groups) {
+    if (!select) return;
+    let picker = select.nextElementSibling;
+    if (!picker || !picker.classList.contains('place-picker')) {
+      picker = document.createElement('div');
+      picker.className = 'place-picker';
+
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'place-picker-trigger';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-label', select.id === 'order-place'
+        ? 'Seleccionar lugar de recogida'
+        : 'Seleccionar lugar de entrega');
+
+      const selectedText = document.createElement('span');
+      selectedText.className = 'place-picker-selected';
+      const chevron = document.createElement('span');
+      chevron.className = 'place-picker-chevron';
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.textContent = '▾';
+      trigger.append(selectedText, chevron);
+
+      const menu = document.createElement('div');
+      menu.className = 'place-picker-menu';
+      menu.id = select.id + '-menu';
+      menu.hidden = true;
+      trigger.setAttribute('aria-controls', menu.id);
+      picker.append(trigger, menu);
+      select.insertAdjacentElement('afterend', picker);
+      select.classList.add('place-select-enhanced');
+      select.setAttribute('aria-hidden', 'true');
+      select.tabIndex = -1;
+
+      trigger.addEventListener('click', () => {
+        const opening = menu.hidden;
+        closeOtherPlacePickers(picker);
+        menu.hidden = !opening;
+        picker.classList.toggle('open', opening);
+        trigger.setAttribute('aria-expanded', String(opening));
+      });
+      trigger.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        closeOtherPlacePickers(picker);
+        menu.hidden = false;
+        picker.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        const firstControl = menu.querySelector('button, summary');
+        if (firstControl) firstControl.focus();
+      });
+      picker.addEventListener('keydown', (event) => {
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || menu.hidden) return;
+        const controls = Array.from(menu.querySelectorAll('button, summary'))
+          .filter((control) => control.getClientRects().length > 0);
+        if (!controls.length) return;
+        const currentIndex = controls.indexOf(document.activeElement);
+        let nextIndex;
+        if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = controls.length - 1;
+        else if (event.key === 'ArrowDown') nextIndex = Math.min(controls.length - 1, currentIndex + 1);
+        else nextIndex = Math.max(0, currentIndex < 0 ? 0 : currentIndex - 1);
+        event.preventDefault();
+        controls[nextIndex].focus();
+      });
+      select.addEventListener('change', () => syncPlacePicker(select, picker));
+    }
+
+    const menu = picker.querySelector('.place-picker-menu');
+    menu.replaceChildren();
+
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.className = 'place-picker-clear';
+    clearButton.dataset.placePickerId = '';
+    clearButton.textContent = '— Ninguno / entrada manual —';
+    clearButton.addEventListener('click', () => {
+      select.value = '';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closePlacePicker(picker, true);
+    });
+    menu.appendChild(clearButton);
+
+    groups.forEach((group) => {
+      const details = document.createElement('details');
+      details.className = 'place-picker-category';
+      details.open = group.places.some((place) => String(place.id) === select.value);
+
+      const summary = document.createElement('summary');
+      const categoryName = document.createElement('span');
+      categoryName.textContent = group.emoji + ' ' + group.label;
+      const count = document.createElement('span');
+      count.className = 'place-picker-count';
+      count.textContent = String(group.places.length);
+      summary.append(categoryName, count);
+      details.appendChild(summary);
+
+      const options = document.createElement('div');
+      options.className = 'place-picker-options';
+      group.places.forEach((place) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'place-picker-option';
+        button.dataset.placePickerId = String(place.id);
+        button.setAttribute('aria-pressed', 'false');
+
+        const name = document.createElement('span');
+        name.textContent = place.name;
+        const check = document.createElement('span');
+        check.className = 'place-picker-check';
+        check.setAttribute('aria-hidden', 'true');
+        check.textContent = '✓';
+        button.append(name, check);
+        button.addEventListener('click', () => {
+          select.value = String(place.id);
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          closePlacePicker(picker);
+        });
+        options.appendChild(button);
+      });
+      details.appendChild(options);
+      details.addEventListener('toggle', () => {
+        if (!details.open) return;
+        menu.querySelectorAll('.place-picker-category[open]').forEach((openDetails) => {
+          if (openDetails !== details) openDetails.open = false;
+        });
+      });
+      menu.appendChild(details);
+    });
+
+    syncPlacePicker(select, picker);
+  }
+
+  function populatePlaceSelect() {
+    const groups = groupedPlaces();
+    const pickupSelect = document.getElementById('order-place');
+    const dropoffSelect = document.getElementById('order-dropoff-place');
+    [pickupSelect, dropoffSelect].forEach((select) => {
+      populateNativePlaceSelect(select, groups);
+      renderPlacePicker(select, groups);
+    });
+  }
+
+  function syncOrderPlacePickers() {
+    ['order-place', 'order-dropoff-place'].forEach((id) => {
+      const select = document.getElementById(id);
+      const picker = select && select.nextElementSibling;
+      if (select && picker && picker.classList.contains('place-picker')) syncPlacePicker(select, picker);
+    });
+  }
+
+  if (formNewOrder) {
+    formNewOrder.addEventListener('reset', () => setTimeout(() => {
+      syncOrderPlacePickers();
+      closeOtherPlacePickers(null);
+    }, 0));
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.place-picker')) closeOtherPlacePickers(null);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeOtherPlacePickers(null, true);
+  });
 
   function drawPlacesConfig() {
     if (!placeMap) return;
