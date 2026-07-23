@@ -132,6 +132,19 @@
   const btnLogout = document.getElementById('btn-logout');
   const toastContainer = document.getElementById('toast-container');
 
+  // Monitoring assistant
+  const btnAiAssistant = document.getElementById('btn-ai-assistant');
+  const aiAssistant = document.getElementById('ai-assistant');
+  const aiBackdrop = document.getElementById('ai-assistant-backdrop');
+  const btnCloseAi = document.getElementById('btn-close-ai');
+  const aiForm = document.getElementById('ai-assistant-form');
+  const aiQuestion = document.getElementById('ai-question');
+  const aiAnswer = document.getElementById('ai-answer');
+  const btnAskAi = document.getElementById('btn-ask-ai');
+  let aiRequestController = null;
+  let aiRequestSequence = 0;
+  let aiPreviousFocus = null;
+
   // Views
   const viewPedidos = document.getElementById('view-pedidos');
   const viewRepartidores = document.getElementById('view-repartidores');
@@ -252,6 +265,7 @@
   }
 
   function showLogin() {
+    closeAiAssistant();
     loginScreen.classList.remove('hidden');
     app.classList.add('hidden');
   }
@@ -360,6 +374,212 @@
       }
     });
   }
+
+  // ─── OpenAI monitoring assistant ───────────────────────────────────────────
+
+  function openAiAssistant() {
+    if (!aiAssistant || !aiBackdrop) return;
+    aiPreviousFocus = document.activeElement;
+    aiAssistant.classList.remove('hidden');
+    aiBackdrop.classList.remove('hidden');
+    aiAssistant.setAttribute('aria-hidden', 'false');
+    const navbar = app.querySelector('.navbar');
+    const main = app.querySelector('main');
+    if (navbar) navbar.inert = true;
+    if (main) main.inert = true;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => aiQuestion && aiQuestion.focus(), 0);
+    refreshAiStatus();
+  }
+
+  function closeAiAssistant() {
+    if (!aiAssistant || !aiBackdrop) return;
+    aiRequestSequence += 1;
+    if (aiRequestController) aiRequestController.abort();
+    aiRequestController = null;
+    setAiBusy(false);
+    aiAssistant.classList.add('hidden');
+    aiBackdrop.classList.add('hidden');
+    aiAssistant.setAttribute('aria-hidden', 'true');
+    const navbar = app.querySelector('.navbar');
+    const main = app.querySelector('main');
+    if (navbar) navbar.inert = false;
+    if (main) main.inert = false;
+    document.body.style.overflow = '';
+    if (aiPreviousFocus && !app.classList.contains('hidden')) aiPreviousFocus.focus();
+    aiPreviousFocus = null;
+  }
+
+  async function refreshAiStatus() {
+    const dot = aiAssistant && aiAssistant.querySelector('.ai-status-dot');
+    const label = document.getElementById('ai-connection-status');
+    if (!dot) return;
+    try {
+      const res = await apiFetch('/api/assistant/status');
+      const data = await res.json();
+      const configured = res.ok && data.configured;
+      dot.classList.toggle('offline', !configured);
+      dot.title = configured ? 'OpenAI configurado' : 'Falta configurar OPENAI_API_KEY';
+      if (label) label.textContent = configured ? 'OpenAI listo · modo solo lectura' : 'OpenAI pendiente de configuración';
+    } catch {
+      dot.classList.add('offline');
+      dot.title = 'No se pudo comprobar OpenAI';
+      if (label) label.textContent = 'No se pudo comprobar OpenAI';
+    }
+  }
+
+  function minutesSince(value) {
+    const time = value ? new Date(value).getTime() : NaN;
+    if (!Number.isFinite(time)) return 0;
+    return Math.max(0, Math.round((Date.now() - time) / 60000));
+  }
+
+  function nearestAvailableDrivers(order, sourceDrivers) {
+    if (order.pickup_lat == null || order.pickup_lng == null) return [];
+    return sourceDrivers
+      .filter((driver) => driver.status === 'available' && driver.lat != null && driver.lng != null)
+      .map((driver) => ({
+        name: driver.name,
+        distance_km: Number(haversineKm(order.pickup_lat, order.pickup_lng, driver.lat, driver.lng).toFixed(1)),
+      }))
+      .sort((a, b) => a.distance_km - b.distance_km)
+      .slice(0, 3);
+  }
+
+  function buildAssistantContext(sourceOrders = orders, sourceDrivers = drivers) {
+    const activeStatuses = new Set(['pending', 'assigned', 'picked_up', 'on_the_way']);
+    return {
+      orders: sourceOrders.map((order) => ({
+        code: order.code,
+        status: order.status,
+        assigned_to: (sourceDrivers.find((driver) => driver.id === order.driver_id) || {}).name || null,
+        age_minutes: minutesSince(order.created_at),
+        estimated_minutes: Number(order.estimated_minutes) || 0,
+        amount: Number(order.amount) || 0,
+        scheduled: Boolean(order.scheduled_at),
+        nearest_available: order.status === 'pending' ? nearestAvailableDrivers(order, sourceDrivers) : [],
+      })),
+      drivers: sourceDrivers.map((driver) => ({
+        name: driver.name,
+        status: driver.status,
+        last_seen_minutes: minutesSince(driver.last_seen),
+        speed_kmh: Number(driver.speed) || 0,
+        deliveries_today: Number(driver.deliveries_today) || 0,
+        active_orders: sourceOrders.filter((order) => order.driver_id === driver.id && activeStatuses.has(order.status)).length,
+      })),
+    };
+  }
+
+  async function loadAssistantContext(signal) {
+    let sourceOrders = orders;
+    let sourceDrivers = drivers;
+    try {
+      const [ordersResponse, driversResponse] = await Promise.all([
+        apiFetch('/api/orders', { signal }),
+        apiFetch('/api/drivers', { signal }),
+      ]);
+      if (ordersResponse.ok) sourceOrders = await ordersResponse.json();
+      if (driversResponse.ok) sourceDrivers = await driversResponse.json();
+    } catch (error) {
+      if (error && error.name === 'AbortError') throw error;
+      /* Fall back to the current real-time dashboard state. */
+    }
+    return buildAssistantContext(sourceOrders, sourceDrivers);
+  }
+
+  function setAiAnswer(message, state) {
+    if (!aiAnswer) return;
+    aiAnswer.classList.toggle('is-loading', state === 'loading');
+    aiAnswer.classList.toggle('is-error', state === 'error');
+    aiAnswer.textContent = message;
+  }
+
+  function setAiBusy(busy) {
+    if (btnAskAi) btnAskAi.disabled = busy;
+    if (aiQuestion) aiQuestion.disabled = busy;
+    document.querySelectorAll('[data-ai-question]').forEach((button) => { button.disabled = busy; });
+  }
+
+  async function consultAssistant(question) {
+    const cleanQuestion = String(question || '').trim();
+    if (cleanQuestion.length < 3) {
+      showToast('Escribe una pregunta para el asistente', 'warning');
+      return;
+    }
+
+    if (aiRequestController) aiRequestController.abort();
+    const controller = new AbortController();
+    const sequence = ++aiRequestSequence;
+    aiRequestController = controller;
+    const timeout = setTimeout(() => controller.abort(), 35000);
+    setAiBusy(true);
+    setAiAnswer('Analizando la operación actual', 'loading');
+
+    try {
+      const context = await loadAssistantContext(controller.signal);
+      if (sequence !== aiRequestSequence) return;
+      if (!context.orders.length && !context.drivers.length) {
+        throw new Error('No hay datos operativos para analizar');
+      }
+
+      const res = await apiFetch('/api/assistant/consult', {
+        method: 'POST',
+        body: JSON.stringify({ question: cleanQuestion, context }),
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (sequence !== aiRequestSequence) return;
+      if (!res.ok) throw new Error(data.error || 'El asistente no pudo responder');
+      setAiAnswer(data.answer, 'success');
+      aiQuestion.value = '';
+    } catch (error) {
+      if (sequence !== aiRequestSequence) return;
+      const message = error && error.name === 'AbortError'
+        ? 'La consulta fue cancelada o tardó demasiado.'
+        : (error.message || 'Error de conexión con el asistente');
+      setAiAnswer(message, 'error');
+    } finally {
+      clearTimeout(timeout);
+      if (sequence === aiRequestSequence) {
+        aiRequestController = null;
+        setAiBusy(false);
+        if (!aiAssistant.classList.contains('hidden')) aiQuestion.focus();
+      }
+    }
+  }
+
+  if (btnAiAssistant) btnAiAssistant.addEventListener('click', openAiAssistant);
+  if (btnCloseAi) btnCloseAi.addEventListener('click', closeAiAssistant);
+  if (aiBackdrop) aiBackdrop.addEventListener('click', closeAiAssistant);
+  if (aiForm) aiForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    consultAssistant(aiQuestion.value);
+  });
+  document.querySelectorAll('[data-ai-question]').forEach((button) => {
+    button.addEventListener('click', () => {
+      aiQuestion.value = button.dataset.aiQuestion || '';
+      consultAssistant(aiQuestion.value);
+    });
+  });
+  document.addEventListener('keydown', (event) => {
+    if (!aiAssistant || aiAssistant.classList.contains('hidden')) return;
+    if (event.key === 'Escape') {
+      closeAiAssistant();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = Array.from(aiAssistant.querySelectorAll('button:not([disabled]), textarea:not([disabled])'));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 
   // ─── Tab Navigation ─────────────────────────────────────────────────────────
 

@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/css/panel-refresh.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/css/panel-polish.css">
+  <link rel="stylesheet" href="/css/assistant.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -56,6 +57,7 @@
         <span class="conn-indicator" id="conn-dot" title="Estado de conexion"></span>
         <a href="/customer.html" class="navbar-link" title="Seguimiento de Pedido">Seguimiento</a>
         <a href="/restaurant.html" class="navbar-link" title="Portal de Restaurantes" target="_blank" rel="noopener">Restaurantes</a>
+        <button id="btn-ai-assistant" class="btn btn-outline btn-sm ai-trigger" title="Abrir asistente operativo">✦ IA</button>
         <button id="btn-refresh" class="icon-btn" title="Refrescar datos">🔄</button>
         <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
         <span id="user-name" class="navbar-user"></span>
@@ -434,6 +436,42 @@
         </div>
       </section>
     </main>
+
+    <button id="ai-assistant-backdrop" class="ai-assistant-backdrop hidden" type="button" aria-label="Cerrar asistente"></button>
+    <aside id="ai-assistant" class="ai-assistant hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="ai-assistant-title">
+      <div class="ai-assistant-head">
+        <div>
+          <span class="ai-eyebrow">COPILOTO OPERATIVO</span>
+          <h2 id="ai-assistant-title">Asistente IA</h2>
+        </div>
+        <button id="btn-close-ai" class="icon-btn" type="button" aria-label="Cerrar asistente">✕</button>
+      </div>
+      <div class="ai-assistant-body">
+        <div class="ai-intro">
+          <span class="ai-status-dot" aria-hidden="true"></span>
+          <div>
+            <strong id="ai-connection-status" aria-live="polite">Comprobando conexión con OpenAI</strong>
+            <p>Analiza pedidos y repartidores actuales. Solo recomienda: nunca modifica la operación.</p>
+          </div>
+        </div>
+        <div class="ai-suggestions" aria-label="Consultas sugeridas">
+          <button type="button" data-ai-question="Resume la operación actual y señala lo más urgente.">Resumen operativo</button>
+          <button type="button" data-ai-question="¿Qué pedidos requieren atención inmediata y por qué?">Detectar retrasos</button>
+          <button type="button" data-ai-question="¿Cómo está distribuida la carga entre los repartidores?">Carga de repartidores</button>
+        </div>
+        <div id="ai-answer" class="ai-answer" role="status" aria-live="polite">
+          <p class="ai-empty">Selecciona una consulta o escribe una pregunta sobre la operación actual.</p>
+        </div>
+      </div>
+      <form id="ai-assistant-form" class="ai-assistant-form">
+        <label for="ai-question">Pregunta sobre el monitoreo</label>
+        <textarea id="ai-question" maxlength="500" rows="3" placeholder="Ejemplo: ¿qué pedidos necesitan atención ahora?"></textarea>
+        <div class="ai-form-footer">
+          <span>No incluyas teléfonos, correos ni direcciones. Confirma antes de actuar.</span>
+          <button id="btn-ask-ai" class="btn btn-primary" type="submit">Consultar</button>
+        </div>
+      </form>
+    </aside>
   </div>
 
   <!-- New Order Modal -->

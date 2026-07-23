@@ -43,6 +43,7 @@ import pushRouter, { initPush } from "./src/push.js";
 import branchesRouter from "./src/branches.js";
 import placesRouter from "./src/places.js";
 import restaurantsRouter from "./src/restaurants.js";
+import assistantRouter from "./src/assistant.js";
 
 // ─── Socket & Cron ──────────────────────────────────────────────────────────
 import { setupSocketHandlers } from "./src/socket/handler.js";
@@ -98,6 +99,7 @@ app.use("/api/push", pushRouter);
 app.use("/api/branches", branchesRouter);
 app.use("/api/places", placesRouter);
 app.use("/api/restaurants", restaurantsRouter);
+app.use("/api/assistant", assistantRouter);
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 

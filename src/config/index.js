@@ -3,6 +3,15 @@
  * All environment variables and constants in one place.
  */
 
+function boundedEnvInt(name, fallback, min, max) {
+  const raw = process.env[name];
+  const value = raw == null || raw === "" ? fallback : Number(raw);
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}`);
+  }
+  return value;
+}
+
 export const config = {
   // ─── Server ────────────────────────────────────────────────────────────────
   port: parseInt(process.env.PORT || "3000", 10),
@@ -52,6 +61,14 @@ export const config = {
   // ─── Rate Limiting ─────────────────────────────────────────────────────────
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "15000", 10),
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
+
+  // ─── OpenAI monitoring assistant ────────────────────────────────────────────
+  openaiApiKey: process.env.OPENAI_API_KEY || "",
+  openaiModel: process.env.OPENAI_MODEL || "gpt-5.6-terra",
+  assistantTimeoutMs: boundedEnvInt("ASSISTANT_TIMEOUT_MS", 30000, 5000, 120000),
+  assistantMaxOutputTokens: boundedEnvInt("ASSISTANT_MAX_OUTPUT_TOKENS", 900, 200, 4000),
+  assistantRateLimitWindowMs: boundedEnvInt("ASSISTANT_RATE_LIMIT_WINDOW_MS", 60000, 10000, 3600000),
+  assistantRateLimitMax: boundedEnvInt("ASSISTANT_RATE_LIMIT_MAX", 10, 1, 100),
 
   // ─── Logging ───────────────────────────────────────────────────────────────
   logLevel: process.env.LOG_LEVEL || "info",

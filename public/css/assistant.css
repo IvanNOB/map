@@ -1,0 +1,231 @@
+/* Asistente operativo OpenAI — panel consultivo de solo lectura. */
+
+.ai-trigger {
+  color: var(--gold, #d4af37);
+  white-space: nowrap;
+}
+
+.ai-assistant-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1190;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(2px);
+}
+
+.ai-assistant {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  width: min(430px, 94vw);
+  height: 100dvh;
+  color: var(--text);
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: -16px 0 42px rgba(0, 0, 0, 0.35);
+}
+
+.ai-assistant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-assistant-head h2 {
+  margin: 1px 0 0;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.ai-eyebrow {
+  color: var(--gold, #d4af37);
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.ai-assistant-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.ai-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 11px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-alt);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.ai-intro > div { min-width: 0; }
+
+.ai-intro strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text);
+  font-size: 0.7rem;
+}
+
+.ai-intro p { margin: 0; }
+
+.ai-status-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 3px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.ai-status-dot.offline {
+  background: var(--danger, #ef4444);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-suggestions button {
+  min-height: 30px;
+  padding: 5px 8px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  font-size: 0.68rem;
+}
+
+.ai-suggestions button:hover {
+  color: var(--gold, #d4af37);
+  border-color: var(--gold, #d4af37);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.ai-answer {
+  flex: 1;
+  min-height: 180px;
+  padding: 13px;
+  overflow-y: auto;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-alt);
+  font-size: 0.83rem;
+  line-height: 1.58;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.ai-answer.is-loading {
+  color: var(--text-muted);
+}
+
+.ai-answer.is-loading::after {
+  display: inline-block;
+  width: 12px;
+  margin-left: 3px;
+  overflow: hidden;
+  vertical-align: bottom;
+  animation: ai-dots 1.2s steps(4, end) infinite;
+  content: "...";
+}
+
+.ai-answer.is-error {
+  color: var(--danger, #ef4444);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.ai-assistant-form {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.ai-assistant-form label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ai-assistant-form textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: 9px 10px;
+  resize: vertical;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  background: var(--bg-alt);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.ai-assistant-form textarea:focus {
+  border-color: var(--gold, #d4af37);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.ai-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ai-form-footer span {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.ai-form-footer .btn { flex: 0 0 auto; }
+
+@keyframes ai-dots {
+  from { width: 0; }
+  to { width: 12px; }
+}
+
+@media (max-width: 640px) {
+  .ai-trigger { padding-inline: 8px; }
+  .ai-assistant { width: 100%; }
+  .ai-assistant-head { min-height: 64px; }
+  .ai-assistant-body { padding: 11px; }
+  .ai-assistant-form { padding: 10px 11px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-answer.is-loading::after { animation: none; }
+}

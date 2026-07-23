@@ -246,3 +246,19 @@ Las notificaciones push del navegador funcionan automáticamente: las claves
 VAPID se generan y guardan en la base de datos en el primer arranque. Solo
 requieren HTTPS (Render ya lo provee) y que el usuario acepte el permiso de
 notificaciones. Opcional: `VAPID_CONTACT` (ej. `mailto:tu@correo.com`).
+
+
+## Activar el asistente OpenAI del panel
+
+El asistente de monitoreo funciona únicamente para administradores y es de solo lectura. La clave nunca debe agregarse a archivos JavaScript ni compartirse con el navegador.
+
+1. Crea una clave de API en tu cuenta de OpenAI.
+2. En Render abre el servicio web y entra a **Environment**.
+3. Agrega estas variables:
+   - `OPENAI_API_KEY`: tu clave secreta de OpenAI.
+   - `OPENAI_MODEL`: `gpt-5.6-terra`.
+   - `ASSISTANT_RATE_LIMIT_MAX`: `10` (opcional; consultas por minuto e instancia).
+4. Guarda los cambios para iniciar un nuevo despliegue.
+5. En el panel administrador pulsa **IA**. El indicador debe mostrar “OpenAI listo · modo solo lectura”.
+
+La integración no envía teléfonos, correos, direcciones ni coordenadas exactas. Los códigos de pedido y nombres de repartidores se sustituyen por alias antes de llamar a OpenAI y se restauran localmente en la respuesta del servidor. No incluyas datos personales manualmente en las preguntas.
