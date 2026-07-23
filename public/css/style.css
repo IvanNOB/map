@@ -2164,3 +2164,43 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   text-transform: uppercase;
   font-weight: 600;
 }
+
+
+/* ─── Driver speed display ───────────────────────────────────────────────── */
+.driver-speed-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+  padding: 0.45rem 0.6rem;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.driver-speed-icon { font-size: 1rem; }
+.driver-speed-value { color: var(--success); font-variant-numeric: tabular-nums; }
+
+/* Live people speed badge */
+.live-speed {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.live-speed.speed-stopped {
+  color: var(--text-muted);
+  background: rgba(156, 163, 175, 0.15);
+}
+.live-speed.speed-moving {
+  color: var(--success);
+  background: var(--success-soft);
+}
+.live-speed.speed-fast {
+  color: var(--warning);
+  background: var(--warning-soft);
+}

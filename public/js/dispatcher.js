@@ -2619,6 +2619,7 @@
         </div>
         <div class="driver-card-details">
           ${d.avg_rating ? '<div class="driver-rating">⭐ ' + escapeHtml(String(d.avg_rating)) + ' / 5</div>' : ''}
+          ${d.status !== 'offline' ? '<div class="driver-speed-row"><span class="driver-speed-icon">🏎️</span><span class="driver-speed-value">' + Math.round(d.speed || 0) + ' km/h</span></div>' : ''}
           <div class="driver-stats-row">
             <div class="driver-stat-mini">
               <span class="driver-stat-num">${d.deliveries_today || 0}</span>
@@ -2963,10 +2964,12 @@
 
   function addDriverMarker(d) {
     if (!d.lat || !d.lng) return;
-    const popupContent = `<strong>${escapeHtml(d.name)}</strong><br>🛵 ${escapeHtml(d.vehicle || '-')}<br>Velocidad: ${Math.round(d.speed || 0)} km/h<br><button class="btn btn-primary btn-sm" style="margin-top:6px;font-size:0.7rem;" onclick="window._saveDriverLocationAsPOI(${d.lat}, ${d.lng}, '${escapeHtml(d.name)}')">📍 Guardar como lugar</button>`;
+    const speedText = Math.round(d.speed || 0) + ' km/h';
+    const tooltipContent = escapeHtml(d.name) + ' · ' + speedText;
+    const popupContent = `<strong>${escapeHtml(d.name)}</strong><br>🛵 ${escapeHtml(d.vehicle || '-')}<br>🏎️ ${speedText}<br><button class="btn btn-primary btn-sm" style="margin-top:6px;font-size:0.7rem;" onclick="window._saveDriverLocationAsPOI(${d.lat}, ${d.lng}, '${escapeHtml(d.name)}')">📍 Guardar como lugar</button>`;
     const marker = L.marker([d.lat, d.lng], { icon: ICON_DRIVER() })
       .bindPopup(popupContent)
-      .bindTooltip(escapeHtml(d.name), { permanent: true, direction: 'top', offset: [0, -16], className: 'driver-label' });
+      .bindTooltip(tooltipContent, { permanent: true, direction: 'top', offset: [0, -16], className: 'driver-label' });
     marker.addTo(map);
     driverMarkers[d.id] = marker;
   }
@@ -2991,16 +2994,17 @@
 
   function updateDriverMarker(data) {
     if (!map) return;
+    const speedText = Math.round(data.speed || 0) + ' km/h';
+    const tooltipContent = escapeHtml(data.name) + ' · ' + speedText;
+    const popupContent = `<strong>${escapeHtml(data.name)}</strong><br>🏎️ ${speedText}`;
     if (driverMarkers[data.id]) {
       driverMarkers[data.id].setLatLng([data.lat, data.lng]);
-      driverMarkers[data.id].setPopupContent(
-        `<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${Math.round(data.speed || 0)} km/h`
-      );
-      if (driverMarkers[data.id].getTooltip()) driverMarkers[data.id].setTooltipContent(escapeHtml(data.name));
+      driverMarkers[data.id].setPopupContent(popupContent);
+      if (driverMarkers[data.id].getTooltip()) driverMarkers[data.id].setTooltipContent(tooltipContent);
     } else {
       const marker = L.marker([data.lat, data.lng], { icon: ICON_DRIVER() })
-        .bindPopup(`<strong>${escapeHtml(data.name)}</strong><br>Velocidad: ${Math.round(data.speed || 0)} km/h`)
-        .bindTooltip(escapeHtml(data.name), { permanent: true, direction: 'top', offset: [0, -16], className: 'driver-label' });
+        .bindPopup(popupContent)
+        .bindTooltip(tooltipContent, { permanent: true, direction: 'top', offset: [0, -16], className: 'driver-label' });
       marker.addTo(map);
       driverMarkers[data.id] = marker;
     }
@@ -3018,16 +3022,19 @@
       box.innerHTML = '<p class="live-empty">Nadie en línea por ahora.</p>';
       return;
     }
-    box.innerHTML = online.map((d) =>
-      '<div class="live-person" data-center="' + d.id + '">' +
+    box.innerHTML = online.map((d) => {
+      const speed = Math.round(d.speed || 0);
+      const speedClass = speed > 40 ? 'speed-fast' : speed > 0 ? 'speed-moving' : 'speed-stopped';
+      return '<div class="live-person" data-center="' + d.id + '">' +
         '<span class="live-avatar">🛵</span>' +
         '<div class="live-info">' +
           '<span class="live-name">' + escapeHtml(d.name) + '</span>' +
-          '<span class="live-meta">' + escapeHtml(d.vehicle || 'Repartidor') + ' · ' + Math.round(d.speed || 0) + ' km/h</span>' +
+          '<span class="live-meta">' + escapeHtml(d.vehicle || 'Repartidor') + '</span>' +
         '</div>' +
+        '<span class="live-speed ' + speedClass + '">' + speed + ' km/h</span>' +
         '<button class="btn btn-outline btn-sm live-go" data-center="' + d.id + '">Ver</button>' +
-      '</div>'
-    ).join('');
+      '</div>';
+    }).join('');
     box.querySelectorAll('[data-center]').forEach((el) => {
       el.addEventListener('click', (e) => { e.stopPropagation(); centerOnDriver(parseInt(el.dataset.center)); });
     });
