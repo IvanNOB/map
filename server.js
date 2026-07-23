@@ -19,6 +19,7 @@ import { dirname, join } from "path";
 // ─── Config & Infrastructure ─────────────────────────────────────────────────
 import config from "./src/config/index.js";
 import logger from "./src/config/logger.js";
+import metrics from "./src/config/metrics.js";
 import db, { init, isPostgres } from "./db/database.js";
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ const io = new Server(httpServer, {
 app.set("trust proxy", 1);
 app.use(cors);
 app.use(securityHeaders);
+app.use(metrics.httpMiddleware());
 app.use(logger.requestLogger);
 app.use(express.json({ limit: "2mb" }));
 app.use(sanitizeBody);
@@ -103,8 +105,11 @@ app.get("/api/health", async (req, res) => {
   const uptime = process.uptime();
   const mem = process.memoryUsage();
   let dbStatus = "unknown";
+  let dbLatency = 0;
   try {
+    const start = Date.now();
     await db.get("SELECT 1 as ok");
+    dbLatency = Date.now() - start;
     dbStatus = "connected";
   } catch { dbStatus = "error"; }
 
@@ -112,11 +117,23 @@ app.get("/api/health", async (req, res) => {
     status: dbStatus === "connected" ? "healthy" : "degraded",
     uptime: Math.round(uptime),
     uptime_human: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
-    database: { type: isPostgres ? "postgresql" : "sqlite", status: dbStatus },
+    database: { type: isPostgres ? "postgresql" : "sqlite", status: dbStatus, latency_ms: dbLatency },
     memory: { rss_mb: Math.round(mem.rss / 1024 / 1024), heap_mb: Math.round(mem.heapUsed / 1024 / 1024) },
+    connections: { websocket: metrics.getMetrics().socket.active_connections },
     redis: config.redisEnabled ? "configured" : "not_configured",
     timestamp: new Date().toISOString(),
   });
+});
+
+// ─── Metrics Endpoint ────────────────────────────────────────────────────────
+
+app.get("/api/metrics", (req, res) => {
+  // Support Prometheus format via Accept header
+  if (req.headers.accept && req.headers.accept.includes("text/plain")) {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    return res.send(metrics.getPrometheusMetrics());
+  }
+  res.json(metrics.getMetrics());
 });
 
 // ─── Socket.IO ───────────────────────────────────────────────────────────────

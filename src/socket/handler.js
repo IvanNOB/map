@@ -6,6 +6,7 @@ import db from "../../db/database.js";
 import { verifyToken } from "../auth.js";
 import { notifyAdmins } from "../notifications.js";
 import logger from "../config/logger.js";
+import metrics from "../config/metrics.js";
 
 /**
  * Sets up Socket.IO authentication middleware and connection handlers.
@@ -41,6 +42,7 @@ export function setupSocketHandlers(io) {
   // ─── Connection Handler ─────────────────────────────────────────────────
   io.on("connection", (socket) => {
     const user = socket.data.user;
+    metrics.trackSocketConnection();
 
     // Tracking-only connections (unauthenticated customers)
     if (socket.data.trackingCode) {
@@ -61,6 +63,7 @@ export function setupSocketHandlers(io) {
 
     // ─── Driver Location Update ──────────────────────────────────────────
     socket.on("driver:update", async (payload) => {
+      metrics.trackSocketEvent("driver:update");
       if (!payload || typeof payload.lat !== "number" || typeof payload.lng !== "number") return;
       if (user.role !== "driver") return;
 
@@ -107,6 +110,7 @@ export function setupSocketHandlers(io) {
 
     // ─── Chat ────────────────────────────────────────────────────────────
     socket.on("chat:send", async (payload) => {
+      metrics.trackSocketEvent("chat:send");
       if (!payload || !payload.body || !String(payload.body).trim()) return;
       const body = String(payload.body).trim().slice(0, 1000);
       const driverId = user.role === "driver" ? user.id : parseInt(payload.driverId, 10);
@@ -181,6 +185,7 @@ export function setupSocketHandlers(io) {
 
     // ─── Disconnect ──────────────────────────────────────────────────────
     socket.on("disconnect", async () => {
+      metrics.trackSocketDisconnect();
       if (user.role === "driver") {
         await db.run("UPDATE drivers SET status = 'offline', last_seen = datetime('now') WHERE user_id = ?", [user.id]);
         io.to("admins").emit("driver:offline", { id: user.id });
