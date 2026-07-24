@@ -2319,7 +2319,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 768px) {
-  .drivers-section-grid {
+  .drivers-grid {
     grid-template-columns: 1fr;
   }
 }
