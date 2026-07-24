@@ -1,0 +1,194 @@
+/* Ghosty Voice & Suggestions UI */
+
+.ghosty-voice-trigger {
+  color: #a78bfa;
+}
+.ghosty-voice-trigger.listening {
+  color: #fff;
+  background: #7c3aed;
+  border-color: #7c3aed;
+  animation: ghosty-pulse 1.2s infinite;
+}
+
+@keyframes ghosty-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
+}
+
+/* Voice Panel */
+.ghosty-voice-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1300;
+  width: min(380px, calc(100vw - 40px));
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.ghosty-voice-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(168, 85, 247, 0.08));
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.ghosty-voice-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ghosty-voice-status {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ghosty-voice-status.idle { color: var(--text-muted); }
+.ghosty-voice-status.listening { color: #a78bfa; }
+.ghosty-voice-status.processing { color: var(--warning); }
+.ghosty-voice-status.error { color: var(--danger); }
+
+.ghosty-transcript {
+  min-height: 42px;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+.ghosty-transcript.interim {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.ghosty-response {
+  min-height: 0;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.ghosty-response:empty { display: none; }
+.ghosty-response.loading { color: var(--text-muted); }
+.ghosty-response.loading::after { content: "..."; animation: ai-dots 1.2s steps(4, end) infinite; }
+.ghosty-response.error { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+
+/* Suggestions floating cards */
+.ghosty-suggestions {
+  position: fixed;
+  top: 68px;
+  right: 16px;
+  z-index: 1250;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(400px, calc(100vw - 32px));
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+.ghosty-suggestion-card {
+  background: var(--panel);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  animation: ghosty-slide-in 0.3s ease;
+}
+
+@keyframes ghosty-slide-in {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.ghosty-suggest-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ghosty-suggest-icon { font-size: 1.4rem; }
+.ghosty-suggest-header strong { font-size: 0.82rem; display: block; }
+.ghosty-suggest-code {
+  font-size: 0.72rem;
+  color: var(--gold, #d4af37);
+  font-weight: 700;
+}
+
+.ghosty-suggest-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.ghosty-suggest-driver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+}
+.ghosty-suggest-driver label { font-weight: 650; white-space: nowrap; }
+.ghosty-driver-select {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.ghosty-suggest-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ghosty-suggest-done {
+  text-align: center;
+  padding: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--success);
+}
+
+@media (max-width: 640px) {
+  .ghosty-voice-panel {
+    bottom: 10px;
+    right: 10px;
+    width: calc(100vw - 20px);
+  }
+  .ghosty-suggestions {
+    top: auto;
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghosty-voice-trigger.listening { animation: none; }
+  .ghosty-suggestion-card { animation: none; }
+}

@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/css/panel-polish.css">
   <link rel="stylesheet" href="/css/assistant.css">
   <link rel="stylesheet" href="/css/place-picker.css">
+  <link rel="stylesheet" href="/css/ghosty.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -59,6 +60,7 @@
         <a href="/customer.html" class="navbar-link" title="Seguimiento de Pedido">Seguimiento</a>
         <a href="/restaurant.html" class="navbar-link" title="Portal de Restaurantes" target="_blank" rel="noopener">Restaurantes</a>
         <button id="btn-ai-assistant" class="btn btn-outline btn-sm ai-trigger" title="Abrir asistente operativo">✦ IA</button>
+        <button id="btn-ghosty-voice" class="btn btn-outline btn-sm ghosty-voice-trigger" title="Ghosty Voice (Ctrl+Shift+G)">👻 Voz</button>
         <button id="btn-refresh" class="icon-btn" title="Refrescar datos">🔄</button>
         <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
         <span id="user-name" class="navbar-user"></span>
@@ -440,6 +442,22 @@
 
     <button id="ai-assistant-backdrop" class="ai-assistant-backdrop hidden" type="button" aria-label="Cerrar asistente"></button>
     <aside id="ai-assistant" class="ai-assistant hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="ai-assistant-title">
+
+    <!-- Ghosty Voice Panel -->
+    <div id="ghosty-voice-panel" class="ghosty-voice-panel hidden">
+      <div class="ghosty-voice-header">
+        <span>👻 Ghosty Voice</span>
+        <button id="btn-ghosty-voice-close" class="icon-btn" type="button">✕</button>
+      </div>
+      <div class="ghosty-voice-body">
+        <div id="ghosty-voice-status" class="ghosty-voice-status idle">Listo</div>
+        <div id="ghosty-transcript" class="ghosty-transcript">Presiona el botón y habla...</div>
+        <div id="ghosty-response" class="ghosty-response"></div>
+      </div>
+    </div>
+
+    <!-- Ghosty Suggestions (floating) -->
+    <div id="ghosty-suggestions" class="ghosty-suggestions hidden"></div>
       <div class="ai-assistant-head">
         <div>
           <span class="ai-eyebrow">COPILOTO OPERATIVO</span>
@@ -697,6 +715,7 @@
   <script src="/js/dispatcher.js"></script>
   <script src="/js/dispatcher-enhancements.js"></script>
   <script src="/js/contacts-ui.js"></script>
+  <script src="/js/ghosty-voice.js"></script>
   <script src="/js/pwa.js"></script>
 </body>
 </html>

@@ -3066,6 +3066,7 @@
   function initSocket() {
     if (socket) return;
     socket = io({ auth: { token } });
+    window._appSocket = socket;
 
     socket.on('connect', () => {
       console.log('Socket conectado');
