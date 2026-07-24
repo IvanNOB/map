@@ -46,6 +46,7 @@ import restaurantsRouter from "./src/restaurants.js";
 import assistantRouter from "./src/assistant.js";
 import clientMemoryRouter, { initClientMemory } from "./src/ghosty/client-memory.js";
 import whatsappCloudRouter from "./src/ghosty/whatsapp-cloud.js";
+import dispatcherSuggestRouter, { initDispatcher } from "./src/ghosty/dispatcher-suggest.js";
 
 // ─── Socket & Cron ──────────────────────────────────────────────────────────
 import { setupSocketHandlers } from "./src/socket/handler.js";
@@ -112,6 +113,7 @@ app.use("/api/restaurants", restaurantsRouter);
 app.use("/api/assistant", assistantRouter);
 app.use("/api/ghosty/clients", clientMemoryRouter);
 app.use("/api/ghosty/whatsapp", whatsappCloudRouter);
+app.use("/api/ghosty/dispatch", dispatcherSuggestRouter);
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 
@@ -158,6 +160,7 @@ setupSocketHandlers(io);
 
 await init();
 await initClientMemory();
+initDispatcher(io);
 await initPush();
 startCronJobs(io);
 
