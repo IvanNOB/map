@@ -2605,51 +2605,66 @@
       driversGrid.innerHTML = '<p style="color:var(--text-muted);padding:2rem;">No hay repartidores registrados</p>';
       return;
     }
-    drivers.forEach((d) => {
+
+    const online = drivers.filter((d) => d.status === 'available' || d.status === 'busy');
+    const offline = drivers.filter((d) => d.status !== 'available' && d.status !== 'busy');
+
+    function buildDriverCard(d) {
       const statusClass = d.status === 'available' ? 'online' : d.status === 'busy' ? 'busy' : 'offline';
-      const statusText = d.status === 'available' ? 'En linea' : d.status === 'busy' ? 'Ocupado' : 'Desconectado';
-      const card = document.createElement('div');
-      card.className = 'driver-card';
-      card.innerHTML = `
-        <div class="driver-card-header">
-          <h3>${escapeHtml(d.name)}</h3>
-          <span class="badge badge-${d.status === 'available' ? 'delivered' : d.status === 'busy' ? 'assigned' : 'cancelled'}">
-            <span class="status-dot ${statusClass}"></span> ${escapeHtml(statusText)}
-          </span>
-        </div>
-        <div class="driver-card-details">
-          ${d.avg_rating ? '<div class="driver-rating">⭐ ' + escapeHtml(String(d.avg_rating)) + ' / 5</div>' : ''}
-          ${d.status !== 'offline' ? '<div class="driver-speed-row"><span class="driver-speed-icon">🏎️</span><span class="driver-speed-value">' + Math.round(d.speed || 0) + ' km/h</span></div>' : ''}
-          <div class="driver-stats-row">
-            <div class="driver-stat-mini">
-              <span class="driver-stat-num">${d.deliveries_today || 0}</span>
-              <span class="driver-stat-lbl">Hoy</span>
+      const statusText = d.status === 'available' ? 'Disponible' : d.status === 'busy' ? 'Ocupado' : 'Desconectado';
+      const statusBadge = d.status === 'available' ? 'delivered' : d.status === 'busy' ? 'assigned' : 'cancelled';
+      const speed = Math.round(d.speed || 0);
+      const isOnline = d.status !== 'offline';
+
+      return `
+        <div class="driver-card driver-card--${statusClass}">
+          <div class="driver-card-top">
+            <div class="driver-card-identity">
+              <span class="driver-avatar">${isOnline ? '🛵' : '👤'}</span>
+              <div>
+                <h3 class="driver-card-name">${escapeHtml(d.name)}</h3>
+                <span class="badge badge-${statusBadge}"><span class="status-dot ${statusClass}"></span> ${statusText}</span>
+              </div>
             </div>
-            <div class="driver-stat-mini">
-              <span class="driver-stat-num">${d.deliveries_week || 0}</span>
-              <span class="driver-stat-lbl">Semana</span>
-            </div>
-            <div class="driver-stat-mini">
-              <span class="driver-stat-num">${d.deliveries || 0}</span>
-              <span class="driver-stat-lbl">Total</span>
-            </div>
-            <div class="driver-stat-mini">
-              <span class="driver-stat-num">$${(d.earnings_today || 0).toLocaleString()}</span>
-              <span class="driver-stat-lbl">$ Hoy</span>
-            </div>
+            ${isOnline ? '<div class="driver-card-speed"><span class="driver-card-speed-value">' + speed + '</span><span class="driver-card-speed-unit">km/h</span></div>' : ''}
           </div>
-          ${d.vehicle ? '<div>🛵 ' + escapeHtml(d.vehicle) + (d.plate ? ' · ' + escapeHtml(d.plate) : '') + '</div>' : ''}
-          ${d.phone ? '<div>📱 ' + escapeHtml(d.phone) + '</div>' : ''}
-        </div>
-        <div class="order-actions" style="margin-top:0.6rem;">
-          <button class="btn btn-outline btn-sm" data-edit-driver="${d.id}">Editar</button>
-          <button class="btn btn-outline btn-sm" data-history-driver="${d.id}">📊 Historial</button>
-          <button class="btn btn-warning btn-sm" data-vibrate-driver="${d.id}" title="Enviar alerta para que active la ubicacion">📍 UBI</button>
-          <button class="btn btn-danger btn-sm" data-del-driver="${d.id}">Eliminar</button>
-        </div>
-      `;
-      driversGrid.appendChild(card);
-    });
+          <div class="driver-card-stats">
+            <div class="driver-stat-mini"><span class="driver-stat-num">${d.deliveries_today || 0}</span><span class="driver-stat-lbl">Hoy</span></div>
+            <div class="driver-stat-mini"><span class="driver-stat-num">${d.deliveries_week || 0}</span><span class="driver-stat-lbl">Semana</span></div>
+            <div class="driver-stat-mini"><span class="driver-stat-num">${d.deliveries || 0}</span><span class="driver-stat-lbl">Total</span></div>
+            <div class="driver-stat-mini"><span class="driver-stat-num">$${(d.earnings_today || 0).toLocaleString()}</span><span class="driver-stat-lbl">$ Hoy</span></div>
+          </div>
+          <div class="driver-card-info">
+            ${d.vehicle ? '<span>🛵 ' + escapeHtml(d.vehicle) + (d.plate ? ' · ' + escapeHtml(d.plate) : '') + '</span>' : ''}
+            ${d.phone ? '<span>📱 ' + escapeHtml(d.phone) + '</span>' : ''}
+            ${d.avg_rating ? '<span>⭐ ' + escapeHtml(String(d.avg_rating)) + '</span>' : ''}
+          </div>
+          <div class="driver-card-actions">
+            <button class="btn btn-outline btn-sm" data-edit-driver="${d.id}">Editar</button>
+            <button class="btn btn-outline btn-sm" data-history-driver="${d.id}">📊 Historial</button>
+            <button class="btn btn-warning btn-sm" data-vibrate-driver="${d.id}" title="Enviar alerta para que active la ubicacion">📍 UBI</button>
+            <button class="btn btn-danger btn-sm" data-del-driver="${d.id}">Eliminar</button>
+          </div>
+        </div>`;
+    }
+
+    let html = '';
+
+    if (online.length > 0) {
+      html += '<div class="drivers-section"><div class="drivers-section-header"><span class="drivers-section-dot online"></span><h3>En línea (' + online.length + ')</h3></div>';
+      html += '<div class="drivers-section-grid">';
+      online.forEach((d) => { html += buildDriverCard(d); });
+      html += '</div></div>';
+    }
+
+    if (offline.length > 0) {
+      html += '<div class="drivers-section drivers-section--offline"><div class="drivers-section-header"><span class="drivers-section-dot offline"></span><h3>Offline (' + offline.length + ')</h3></div>';
+      html += '<div class="drivers-section-grid">';
+      offline.forEach((d) => { html += buildDriverCard(d); });
+      html += '</div></div>';
+    }
+
+    driversGrid.innerHTML = html;
 
     driversGrid.querySelectorAll('[data-edit-driver]').forEach((b) => {
       b.addEventListener('click', () => openEditDriver(parseInt(b.dataset.editDriver)));
