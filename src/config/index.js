@@ -43,6 +43,13 @@ export const config = {
   twilioPhone: process.env.TWILIO_PHONE || "",
   whatsappEnabled: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
 
+  // ─── WhatsApp (Meta Cloud API — Ghosty) ────────────────────────────────────
+  metaWhatsappToken: process.env.META_WHATSAPP_TOKEN || "",
+  metaWhatsappPhoneId: process.env.META_WHATSAPP_PHONE_ID || "",
+  metaWhatsappVerifyToken: process.env.META_WHATSAPP_VERIFY_TOKEN || "",
+  metaWhatsappAppSecret: process.env.META_WHATSAPP_APP_SECRET || "",
+  ghostyEnabled: !!(process.env.META_WHATSAPP_TOKEN && process.env.META_WHATSAPP_PHONE_ID),
+
   // ─── Delivery Pricing ──────────────────────────────────────────────────────
   fareDay: parseInt(process.env.FARE_DAY || "3000", 10),
   fareNight: parseInt(process.env.FARE_NIGHT || "4000", 10),

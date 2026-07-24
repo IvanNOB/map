@@ -44,6 +44,7 @@ import branchesRouter from "./src/branches.js";
 import placesRouter from "./src/places.js";
 import restaurantsRouter from "./src/restaurants.js";
 import assistantRouter from "./src/assistant.js";
+import clientMemoryRouter, { initClientMemory } from "./src/ghosty/client-memory.js";
 
 // ─── Socket & Cron ──────────────────────────────────────────────────────────
 import { setupSocketHandlers } from "./src/socket/handler.js";
@@ -100,6 +101,7 @@ app.use("/api/branches", branchesRouter);
 app.use("/api/places", placesRouter);
 app.use("/api/restaurants", restaurantsRouter);
 app.use("/api/assistant", assistantRouter);
+app.use("/api/ghosty/clients", clientMemoryRouter);
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 
@@ -145,6 +147,7 @@ setupSocketHandlers(io);
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 await init();
+await initClientMemory();
 await initPush();
 startCronJobs(io);
 
