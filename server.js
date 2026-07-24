@@ -45,6 +45,7 @@ import placesRouter from "./src/places.js";
 import restaurantsRouter from "./src/restaurants.js";
 import assistantRouter from "./src/assistant.js";
 import clientMemoryRouter, { initClientMemory } from "./src/ghosty/client-memory.js";
+import whatsappCloudRouter from "./src/ghosty/whatsapp-cloud.js";
 
 // ─── Socket & Cron ──────────────────────────────────────────────────────────
 import { setupSocketHandlers } from "./src/socket/handler.js";
@@ -67,7 +68,15 @@ app.use(cors);
 app.use(securityHeaders);
 app.use(metrics.httpMiddleware());
 app.use(logger.requestLogger);
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({
+  limit: "2mb",
+  verify: (req, _res, buf) => {
+    // Store raw body for webhook signature verification
+    if (req.url && req.url.includes("/ghosty/whatsapp/webhook")) {
+      req.rawBody = buf.toString("utf8");
+    }
+  },
+}));
 app.use(sanitizeBody);
 app.use(cookieParser());
 app.use(express.static(join(__dirname, "public")));
@@ -102,6 +111,7 @@ app.use("/api/places", placesRouter);
 app.use("/api/restaurants", restaurantsRouter);
 app.use("/api/assistant", assistantRouter);
 app.use("/api/ghosty/clients", clientMemoryRouter);
+app.use("/api/ghosty/whatsapp", whatsappCloudRouter);
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 
