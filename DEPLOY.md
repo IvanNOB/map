@@ -262,3 +262,72 @@ El asistente de monitoreo funciona únicamente para administradores y es de solo
 5. En el panel administrador pulsa **IA**. El indicador debe mostrar “OpenAI listo · modo solo lectura”.
 
 La integración no envía teléfonos, correos, direcciones ni coordenadas exactas. Los códigos de pedido y nombres de repartidores se sustituyen por alias antes de llamar a OpenAI y se restauran localmente en la respuesta del servidor. No incluyas datos personales manualmente en las preguntas.
+
+
+
+## Activar Ghosty (asistente WhatsApp + voz)
+
+Ghosty permite que los clientes hagan pedidos conversando por WhatsApp y que tú des comandos de voz desde el panel.
+
+### Requisitos previos
+1. **OpenAI API Key** configurada (ver sección anterior).
+2. **Cuenta de Meta Business** con WhatsApp Business Platform.
+
+### Paso 1: Crear app en Meta Developers
+
+1. Ve a [developers.facebook.com](https://developers.facebook.com/) y crea una app de tipo "Business".
+2. En la app, agrega el producto "WhatsApp".
+3. En **WhatsApp > API Setup** obtendrás:
+   - **Phone Number ID** (el ID numérico, no el teléfono).
+   - **Temporary Access Token** (luego generas uno permanente en System Users).
+
+### Paso 2: Configurar el Webhook
+
+1. En **WhatsApp > Configuration > Webhook**, configura:
+   - **Callback URL:** `https://tu-servicio.onrender.com/api/ghosty/whatsapp/webhook`
+   - **Verify Token:** El mismo valor que pongas en `META_WHATSAPP_VERIFY_TOKEN`.
+2. Suscríbete al campo **messages**.
+
+### Paso 3: Variables de entorno en Render
+
+Agrega estas variables en tu servicio de Render:
+
+| Variable | Valor |
+|----------|-------|
+| `META_WHATSAPP_TOKEN` | Token permanente de System User |
+| `META_WHATSAPP_PHONE_ID` | Phone Number ID de la API Setup |
+| `META_WHATSAPP_VERIFY_TOKEN` | Una frase secreta (ej: `ghosty-2024-secret`) |
+| `META_WHATSAPP_APP_SECRET` | App Secret de tu Meta App (opcional, para verificar firmas) |
+
+### Paso 4: Verificar
+
+1. Guarda las variables y espera el despliegue.
+2. En tu panel admin, haz clic en **👻 Voz** y di "Hola Ghosty".
+3. Envía un mensaje de prueba al número de WhatsApp configurado.
+4. Ghosty debe responder automáticamente pidiendo los datos del pedido.
+
+### Cómo funciona
+
+```
+Cliente WhatsApp → Meta → Webhook → Ghosty Brain (OpenAI) → Respuesta automática
+                                          ↓
+                                    Pedido completo
+                                          ↓
+                              Panel Admin ← Socket.IO ← Sugerencia de repartidor
+                                          ↓
+                              Admin confirma → Se asigna → Cliente notificado
+```
+
+### Comandos de voz (panel admin)
+
+- Presiona **👻 Voz** o usa **Ctrl+Shift+G**.
+- Ejemplos:
+  - "Ghosty, crea un pedido para Juan, recogida en Subway, entrega en Calle 5"
+  - "Ghosty, qué pedidos hay pendientes?"
+  - "Ghosty, confirma el pedido"
+
+### Costos
+
+- **Meta WhatsApp Cloud API:** 1000 conversaciones gratis/mes.
+- **OpenAI:** ~$0.01-0.03 por conversación (usa GPT-5.6 Terra).
+- **Sin costos adicionales** de infraestructura.
