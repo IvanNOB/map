@@ -46,6 +46,7 @@ import restaurantsRouter from "./src/restaurants.js";
 import assistantRouter from "./src/assistant.js";
 import clientMemoryRouter, { initClientMemory } from "./src/ghosty/client-memory.js";
 import whatsappCloudRouter from "./src/ghosty/whatsapp-cloud.js";
+import twilioConnectorRouter from "./src/ghosty/twilio-connector.js";
 import dispatcherSuggestRouter, { initDispatcher } from "./src/ghosty/dispatcher-suggest.js";
 import voiceApiRouter from "./src/ghosty/voice-api.js";
 
@@ -114,6 +115,7 @@ app.use("/api/restaurants", restaurantsRouter);
 app.use("/api/assistant", assistantRouter);
 app.use("/api/ghosty/clients", clientMemoryRouter);
 app.use("/api/ghosty/whatsapp", whatsappCloudRouter);
+app.use("/api/ghosty/twilio", twilioConnectorRouter);
 app.use("/api/ghosty/dispatch", dispatcherSuggestRouter);
 app.use("/api/ghosty/voice", voiceApiRouter);
 
