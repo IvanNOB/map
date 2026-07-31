@@ -47,6 +47,7 @@ import assistantRouter from "./src/assistant.js";
 import clientMemoryRouter, { initClientMemory } from "./src/ghosty/client-memory.js";
 import whatsappCloudRouter from "./src/ghosty/whatsapp-cloud.js";
 import twilioConnectorRouter from "./src/ghosty/twilio-connector.js";
+import { startGhostyPolling } from "./src/ghosty/twilio-polling.js";
 import dispatcherSuggestRouter, { initDispatcher } from "./src/ghosty/dispatcher-suggest.js";
 import voiceApiRouter from "./src/ghosty/voice-api.js";
 
@@ -165,6 +166,7 @@ setupSocketHandlers(io);
 await init();
 await initClientMemory();
 initDispatcher(io);
+startGhostyPolling(io);
 await initPush();
 startCronJobs(io);
 
