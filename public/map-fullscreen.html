@@ -24,6 +24,17 @@
     .lg-pickup { background: #22c55e; }
     .lg-dropoff { background: #ef4444; }
     .lg-driver { background: #3b82f6; }
+    .map-fit-btn {
+      background: rgba(17,17,17,0.9);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #eee;
+      font-family: system-ui, sans-serif;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .map-fit-btn:hover { background: rgba(255,255,255,0.1); }
   </style>
 </head>
 <body>
@@ -61,13 +72,41 @@
       div.innerHTML =
         '<div class="lg-row"><span class="lg-dot lg-pickup"></span> Recogida</div>' +
         '<div class="lg-row"><span class="lg-dot lg-dropoff"></span> Entrega</div>' +
-        '<div class="lg-row"><span class="lg-dot lg-driver"></span> Repartidor</div>';
+        '<div class="lg-row"><span class="lg-dot lg-driver"></span> Repartidor</div>' +
+        '<button class="map-fit-btn" id="btn-fit-all" style="margin-top:6px;width:100%;">📍 Ver todos</button>';
+      L.DomEvent.disableClickPropagation(div);
       return div;
     };
     legend.addTo(map);
+    document.getElementById('btn-fit-all').addEventListener('click', fitAllMarkers);
 
     var driverMarkers = {};
     var orderLayerGroup = L.layerGroup().addTo(map);
+    var hasAutoFitted = false;
+
+    function fitAllMarkers() {
+      var pts = [];
+      Object.keys(driverMarkers).forEach(function (id) {
+        pts.push(driverMarkers[id].getLatLng());
+      });
+      orderLayerGroup.eachLayer(function (layer) {
+        if (layer.getLatLng) pts.push(layer.getLatLng());
+      });
+      if (pts.length === 1) {
+        map.setView(pts[0], 15);
+      } else if (pts.length > 1) {
+        try { map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 16 }); } catch (e) {}
+      }
+    }
+
+    function autoFitOnce() {
+      if (hasAutoFitted) return;
+      var count = Object.keys(driverMarkers).length + orderLayerGroup.getLayers().length;
+      if (count > 0) {
+        hasAutoFitted = true;
+        fitAllMarkers();
+      }
+    }
 
     function escapeHtml(str) {
       if (str == null) return '';
@@ -153,8 +192,8 @@
     socket.on('order:new', function () { loadOrders(); });
     socket.on('order:status', function () { loadOrders(); });
 
-    loadDrivers();
-    loadOrders();
+    loadDrivers().then(autoFitOnce);
+    loadOrders().then(autoFitOnce);
     setInterval(loadOrders, 30000);
   })();
   </script>
