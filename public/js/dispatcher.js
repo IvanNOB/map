@@ -131,6 +131,7 @@
   const userName = document.getElementById('user-name');
   const btnLogout = document.getElementById('btn-logout');
   const toastContainer = document.getElementById('toast-container');
+  const ghostWelcome = document.getElementById('ghost-welcome');
 
   // Monitoring assistant
   const btnAiAssistant = document.getElementById('btn-ai-assistant');
@@ -216,6 +217,27 @@
     }, 4000);
   }
 
+  // ─── Ghost Welcome ──────────────────────────────────────────────────────────
+
+  let ghostTimeout = null;
+
+  function showGhostWelcome() {
+    if (!ghostWelcome) return;
+    clearTimeout(ghostTimeout);
+    ghostWelcome.classList.remove('hidden', 'leaving');
+    ghostWelcome.style.animation = 'none';
+    void ghostWelcome.offsetWidth;
+    ghostWelcome.style.animation = '';
+
+    const dismiss = () => {
+      ghostWelcome.classList.add('leaving');
+      setTimeout(() => ghostWelcome.classList.add('hidden'), 400);
+    };
+
+    ghostWelcome.onclick = dismiss;
+    ghostTimeout = setTimeout(dismiss, 5000);
+  }
+
   function statusLabel(status) {
     const labels = {
       pending: 'Pendiente',
@@ -277,6 +299,7 @@
     loadData();
     initSocket();
     autoCleanOldOrders();
+    showGhostWelcome();
     // Request notification permission + subscribe to push
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
