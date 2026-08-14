@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/css/assistant.css">
   <link rel="stylesheet" href="/css/place-picker.css">
   <link rel="stylesheet" href="/css/ghosty.css">
+  <link rel="stylesheet" href="/css/panel-dashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -63,10 +64,19 @@
       </div>
       <div class="navbar-right">
         <span class="conn-indicator" id="conn-dot" title="Estado de conexion"></span>
-        <a href="/customer.html" class="navbar-link" title="Seguimiento de Pedido">Seguimiento</a>
-        <a href="/restaurant.html" class="navbar-link" title="Portal de Restaurantes" target="_blank" rel="noopener">Restaurantes</a>
-        <button id="btn-ai-assistant" class="btn btn-outline btn-sm ai-trigger" title="Abrir asistente operativo">✦ IA</button>
-        <button id="btn-ghosty-voice" class="btn btn-outline btn-sm ghosty-voice-trigger" title="Ghosty Voice (Ctrl+Shift+G)">👻 Voz</button>
+
+        <div class="navbar-dropdown" id="tools-dropdown">
+          <button class="btn btn-outline btn-sm" id="btn-tools-toggle" aria-haspopup="true" aria-expanded="false">
+            Herramientas <span class="dropdown-caret">▾</span>
+          </button>
+          <div class="navbar-dropdown-menu" id="tools-menu">
+            <a href="/customer.html" class="dropdown-item" title="Seguimiento de Pedido">📍 Seguimiento</a>
+            <a href="/restaurant.html" class="dropdown-item" title="Portal de Restaurantes" target="_blank" rel="noopener">🍴 Restaurantes</a>
+            <button id="btn-ai-assistant" class="dropdown-item ai-trigger" title="Abrir asistente operativo">✦ Asistente IA</button>
+            <button id="btn-ghosty-voice" class="dropdown-item ghosty-voice-trigger" title="Ghosty Voice (Ctrl+Shift+G)">👻 Ghosty Voz</button>
+          </div>
+        </div>
+
         <button id="btn-refresh" class="icon-btn" title="Refrescar datos">🔄</button>
         <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
         <span id="user-name" class="navbar-user"></span>

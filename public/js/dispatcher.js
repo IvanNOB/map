@@ -377,6 +377,29 @@
     logout();
   });
 
+  // ─── Navbar Tools Dropdown ──────────────────────────────────────────────────
+
+  const toolsDropdown = document.getElementById('tools-dropdown');
+  const btnToolsToggle = document.getElementById('btn-tools-toggle');
+  if (toolsDropdown && btnToolsToggle) {
+    btnToolsToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = toolsDropdown.classList.toggle('open');
+      btnToolsToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', (e) => {
+      if (!toolsDropdown.contains(e.target)) {
+        toolsDropdown.classList.remove('open');
+        btnToolsToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+    // Cierra el menu al elegir una opcion (los botones internos abren sus propios paneles)
+    document.getElementById('tools-menu')?.addEventListener('click', () => {
+      toolsDropdown.classList.remove('open');
+      btnToolsToggle.setAttribute('aria-expanded', 'false');
+    });
+  }
+
   // ─── Refresh Button ─────────────────────────────────────────────────────────
 
   const btnRefresh = document.getElementById('btn-refresh');
