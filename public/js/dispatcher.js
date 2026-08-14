@@ -25,6 +25,7 @@
   const userName = document.getElementById('user-name');
   const btnLogout = document.getElementById('btn-logout');
   const toastContainer = document.getElementById('toast-container');
+  const ghostWelcome = document.getElementById('ghost-welcome');
 
   // Views
   const viewPedidos = document.getElementById('view-pedidos');
@@ -105,6 +106,29 @@
       spinnerEl.remove();
       spinnerEl = null;
     }
+  }
+
+  // ─── Ghost Welcome ──────────────────────────────────────────────────────────
+
+  let ghostTimeout = null;
+
+  function showGhostWelcome() {
+    if (!ghostWelcome) return;
+    clearTimeout(ghostTimeout);
+    ghostWelcome.classList.remove('hidden', 'leaving');
+    // Restart the entrance animation if it's already been shown before
+    ghostWelcome.style.animation = 'none';
+    // Force reflow so the animation restarts cleanly
+    void ghostWelcome.offsetWidth;
+    ghostWelcome.style.animation = '';
+
+    const dismiss = () => {
+      ghostWelcome.classList.add('leaving');
+      setTimeout(() => ghostWelcome.classList.add('hidden'), 400);
+    };
+
+    ghostWelcome.onclick = dismiss;
+    ghostTimeout = setTimeout(dismiss, 5000);
   }
 
   function showToast(message, type = 'info') {
@@ -296,6 +320,7 @@
     userName.textContent = currentUser.name;
     loadData();
     initSocket();
+    showGhostWelcome();
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
