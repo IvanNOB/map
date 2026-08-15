@@ -321,3 +321,39 @@
 }
 .order-map-toggle.open .order-map-toggle-caret { transform: rotate(90deg); }
 
+/* ─── Íconos Lucide: alineación y color heredado del texto ──────────────── */
+[data-lucide] {
+  width: 1em;
+  height: 1em;
+  stroke-width: 2;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+
+/* Labels y títulos con ícono + texto en línea */
+label:has([data-lucide]),
+h2:has([data-lucide]),
+.mini-lbl:has([data-lucide]),
+.order-import-label:has([data-lucide]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.dropdown-item:has([data-lucide]),
+.btn:has([data-lucide]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.icon-btn [data-lucide] {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* Los íconos en botones dorados/oscuros heredan bien con currentColor,
+   pero se afinan un poco de grosor para que no se vean muy delgados
+   sobre fondos pequeños */
+.btn-sm [data-lucide] { stroke-width: 2.25; }
+

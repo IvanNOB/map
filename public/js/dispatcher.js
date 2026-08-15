@@ -3,6 +3,9 @@
 (function () {
   'use strict';
 
+  // ─── Icons ──────────────────────────────────────────────────────────────────
+  if (window.lucide) lucide.createIcons();
+
   // ─── State ──────────────────────────────────────────────────────────────────
   let token = localStorage.getItem('token') || '';
   let currentUser = null;
@@ -2184,8 +2187,17 @@
   function setOrderModalMode(editing) {
     const title = document.getElementById('order-modal-title');
     const btn = document.getElementById('btn-submit-order');
-    if (title) title.textContent = editing ? '✏️ Editar Pedido' : 'Nuevo Pedido';
-    if (btn) btn.textContent = editing ? 'Guardar cambios' : 'Crear Pedido';
+    if (title) {
+      title.innerHTML = editing
+        ? '<i data-lucide="pencil"></i> Editar Pedido'
+        : '<i data-lucide="zap"></i> Nuevo Pedido';
+    }
+    if (btn) {
+      btn.innerHTML = editing
+        ? '<i data-lucide="check"></i> Guardar cambios'
+        : '<i data-lucide="check"></i> Crear Pedido';
+    }
+    if (window.lucide) lucide.createIcons();
   }
 
   function openOrderModal() {

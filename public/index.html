@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="/css/place-picker.css">
   <link rel="stylesheet" href="/css/ghosty.css">
   <link rel="stylesheet" href="/css/panel-dashboard.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -70,15 +71,15 @@
             Herramientas <span class="dropdown-caret">▾</span>
           </button>
           <div class="navbar-dropdown-menu" id="tools-menu">
-            <a href="/customer.html" class="dropdown-item" title="Seguimiento de Pedido">📍 Seguimiento</a>
-            <a href="/restaurant.html" class="dropdown-item" title="Portal de Restaurantes" target="_blank" rel="noopener">🍴 Restaurantes</a>
-            <button id="btn-ai-assistant" class="dropdown-item ai-trigger" title="Abrir asistente operativo">✦ Asistente IA</button>
+            <a href="/customer.html" class="dropdown-item" title="Seguimiento de Pedido"><i data-lucide="map-pin"></i> Seguimiento</a>
+            <a href="/restaurant.html" class="dropdown-item" title="Portal de Restaurantes" target="_blank" rel="noopener"><i data-lucide="utensils"></i> Restaurantes</a>
+            <button id="btn-ai-assistant" class="dropdown-item ai-trigger" title="Abrir asistente operativo"><i data-lucide="sparkles"></i> Asistente IA</button>
             <button id="btn-ghosty-voice" class="dropdown-item ghosty-voice-trigger" title="Ghosty Voice (Ctrl+Shift+G)">👻 Ghosty Voz</button>
           </div>
         </div>
 
-        <button id="btn-refresh" class="icon-btn" title="Refrescar datos">🔄</button>
-        <button id="btn-theme" class="icon-btn" title="Cambiar tema">🌙</button>
+        <button id="btn-refresh" class="icon-btn" title="Refrescar datos"><i data-lucide="refresh-cw"></i></button>
+        <button id="btn-theme" class="icon-btn" title="Cambiar tema"><i data-lucide="moon"></i></button>
         <span id="user-name" class="navbar-user"></span>
         <button id="btn-logout" class="btn btn-outline btn-sm">Cerrar Sesion</button>
       </div>
@@ -95,15 +96,15 @@
               <h2>📦 Pedidos</h2>
               <div class="dispatch-actions">
                 <button class="btn btn-primary btn-sm" id="btn-new-order">+ Nuevo</button>
-                <button class="btn btn-outline btn-sm" id="btn-clear-orders" title="Eliminar pedidos">🧹</button>
+                <button class="btn btn-outline btn-sm" id="btn-clear-orders" title="Eliminar pedidos"><i data-lucide="trash-2"></i></button>
               </div>
             </div>
 
             <div class="dispatch-stats">
-              <div class="mini-stat primary"><span class="mini-val" id="stat-active">0</span><span class="mini-lbl">📦 Activos</span></div>
-              <div class="mini-stat success"><span class="mini-val" id="stat-drivers">0</span><span class="mini-lbl">🛵 Disponibles</span></div>
-              <div class="mini-stat warning"><span class="mini-val" id="stat-deliveries">0</span><span class="mini-lbl">✅ Entregas hoy</span></div>
-              <div class="mini-stat purple"><span class="mini-val" id="stat-revenue">$0</span><span class="mini-lbl">💰 Ingresos hoy</span></div>
+              <div class="mini-stat primary"><span class="mini-val" id="stat-active">0</span><span class="mini-lbl"><i data-lucide="package"></i> Activos</span></div>
+              <div class="mini-stat success"><span class="mini-val" id="stat-drivers">0</span><span class="mini-lbl"><i data-lucide="bike"></i> Disponibles</span></div>
+              <div class="mini-stat warning"><span class="mini-val" id="stat-deliveries">0</span><span class="mini-lbl"><i data-lucide="circle-check-big"></i> Entregas hoy</span></div>
+              <div class="mini-stat purple"><span class="mini-val" id="stat-revenue">$0</span><span class="mini-lbl"><i data-lucide="wallet"></i> Ingresos hoy</span></div>
             </div>
 
             <div class="search-box">
@@ -159,7 +160,7 @@
             </div>
             <!-- Restaurantes WhatsApp rápido -->
             <div style="border-top:1px solid var(--border);padding:0.5rem;margin-top:0.5rem;">
-              <div style="font-size:0.8rem;font-weight:bold;margin-bottom:0.4rem;">🍴 Restaurantes</div>
+              <div style="font-size:0.8rem;font-weight:bold;margin-bottom:0.4rem;display:flex;align-items:center;gap:6px;"><i data-lucide="utensils"></i> Restaurantes</div>
               <div id="restaurant-wa-list" style="display:flex;flex-direction:column;gap:0.3rem;max-height:120px;overflow-y:auto;"></div>
             </div>
           </aside>
@@ -291,10 +292,10 @@
 
       <!-- Config View -->
       <section id="view-config" class="hidden">
-        <div class="view-header"><h2>⚙️ Configuración</h2><p>Ajustes del negocio, seguridad, zonas, sucursales y lugares.</p></div>
+        <div class="view-header"><h2><i data-lucide="settings"></i> Configuración</h2><p>Ajustes del negocio, seguridad, zonas, sucursales y lugares.</p></div>
         <div class="config-grid">
         <div class="config-card">
-          <h2 style="font-size:1.05rem;margin-bottom:1rem;">⚙️ Configuración general</h2>
+          <h2 style="font-size:1.05rem;margin-bottom:1rem;display:flex;align-items:center;gap:6px;"><i data-lucide="settings"></i> Configuración general</h2>
           <div class="form-group">
             <label>Nombre de la agencia</label>
             <input type="text" id="cfg-agency_name">
@@ -362,7 +363,7 @@
         </div>
 
         <div class="config-card config-wide">
-          <h2 style="font-size:1.05rem;margin-bottom:0.5rem;">📍 Lugares / Puntos de interés</h2>
+          <h2 style="font-size:1.05rem;margin-bottom:0.5rem;display:flex;align-items:center;gap:6px;"><i data-lucide="map-pin"></i> Lugares / Puntos de interés</h2>
           <p style="color:var(--text-muted);font-size:0.83rem;margin-bottom:0.6rem;">
             Haz clic en el mapa para fijar el punto, escribe el nombre, elige la categoría y guarda.
             Aparecerán en el mapa del panel y podrás usarlos al crear pedidos.
@@ -427,7 +428,7 @@
         </div>
 
         <div class="config-card config-wide">
-          <h2 style="font-size:1.05rem;margin-bottom:0.5rem;">🍴 Restaurantes</h2>
+          <h2 style="font-size:1.05rem;margin-bottom:0.5rem;display:flex;align-items:center;gap:6px;"><i data-lucide="utensils"></i> Restaurantes</h2>
           <p style="color:var(--text-muted);font-size:0.83rem;margin-bottom:0.6rem;">
             Crea cuentas para tus restaurantes aliados. Ellos entran a
             <a href="/restaurant.html" target="_blank" rel="noopener">/restaurant.html</a> y envían sus domicilios al despacho.
@@ -462,8 +463,8 @@
     <!-- Ghosty Voice Panel -->
     <div id="ghosty-voice-panel" class="ghosty-voice-panel hidden">
       <div class="ghosty-voice-header">
-        <span>👻 Ghosty Voice</span>
-        <button id="btn-ghosty-voice-close" class="icon-btn" type="button">✕</button>
+        <span><span class="brand-logo">👻</span> Ghosty Voice</span>
+        <button id="btn-ghosty-voice-close" class="icon-btn" type="button"><i data-lucide="x"></i></button>
       </div>
       <div class="ghosty-voice-body">
         <div id="ghosty-voice-status" class="ghosty-voice-status idle">Listo</div>
@@ -479,7 +480,7 @@
           <span class="ai-eyebrow">COPILOTO OPERATIVO</span>
           <h2 id="ai-assistant-title">Asistente IA</h2>
         </div>
-        <button id="btn-close-ai" class="icon-btn" type="button" aria-label="Cerrar asistente">✕</button>
+        <button id="btn-close-ai" class="icon-btn" type="button" aria-label="Cerrar asistente"><i data-lucide="x"></i></button>
       </div>
       <div class="ai-assistant-body">
         <div class="ai-intro">
@@ -512,11 +513,11 @@
   <!-- New Order Modal -->
   <div id="modal-new-order" class="modal-overlay hidden">
     <div class="modal" style="max-width:680px;">
-      <h2 id="order-modal-title">⚡ Nuevo Pedido</h2>
+      <h2 id="order-modal-title"><i data-lucide="zap"></i> Nuevo Pedido</h2>
       <form id="form-new-order" class="order-wizard">
         <!-- Pegar desde WhatsApp -->
         <div class="order-import-row">
-          <span class="order-import-label">📋 Pegar mensaje de WhatsApp</span>
+          <span class="order-import-label"><i data-lucide="clipboard-paste"></i> Pegar mensaje de WhatsApp</span>
           <button type="button" id="btn-paste-order" class="btn btn-primary btn-sm">Pegar</button>
           <button type="button" id="btn-parse-order" class="btn btn-outline btn-sm">Importar</button>
         </div>
@@ -526,12 +527,12 @@
         <div class="order-step" data-step="cliente">
           <div class="form-row">
             <div class="form-group" style="flex:2;">
-              <label>👤 Cliente</label>
+              <label><i data-lucide="user"></i> Cliente</label>
               <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required placeholder="Nombre del cliente" autofocus>
               <datalist id="customers-list"></datalist>
             </div>
             <div class="form-group" style="flex:1;">
-              <label>📱 Celular</label>
+              <label><i data-lucide="smartphone"></i> Celular</label>
               <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
             </div>
           </div>
@@ -541,11 +542,11 @@
         <div class="order-step" data-step="recogida" id="wizard-recogida">
           <div class="form-row">
             <div class="form-group" style="flex:1;">
-              <label>🏪 Recogida guardada</label>
+              <label><i data-lucide="store"></i> Recogida guardada</label>
               <select id="order-place"><option value="">— Ninguno / entrada manual —</option></select>
             </div>
             <div class="form-group" style="flex:1;">
-              <label>🏢 Negocio / dirección</label>
+              <label><i data-lucide="building-2"></i> Negocio / dirección</label>
               <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre o dirección">
             </div>
           </div>
@@ -555,11 +556,11 @@
         <div class="order-step" data-step="entrega" id="wizard-entrega">
           <div class="form-row">
             <div class="form-group" style="flex:1;">
-              <label>📍 Entrega guardada</label>
+              <label><i data-lucide="map-pin"></i> Entrega guardada</label>
               <select id="order-dropoff-place"><option value="">— Ninguno / entrada manual —</option></select>
             </div>
             <div class="form-group" style="flex:1;">
-              <label>📍 Dirección de entrega</label>
+              <label><i data-lucide="map-pin"></i> Dirección de entrega</label>
               <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Dirección de entrega">
             </div>
           </div>
@@ -569,30 +570,30 @@
         <div class="order-step" data-step="pago" id="wizard-pago">
           <div class="form-row">
             <div class="form-group" style="flex:1;">
-              <label>💰 Valor ($)</label>
+              <label><i data-lucide="dollar-sign"></i> Valor ($)</label>
               <input type="number" name="amount" step="100" min="0" value="0">
             </div>
             <div class="form-group" style="flex:1;">
-              <label>💳 Pago</label>
+              <label><i data-lucide="credit-card"></i> Pago</label>
               <select name="payment_method">
                 <option value="cash">Efectivo</option>
                 <option value="card">Transferencia</option>
               </select>
             </div>
             <div class="form-group" style="flex:2;">
-              <label>📦 Artículos</label>
+              <label><i data-lucide="package"></i> Artículos</label>
               <input type="text" name="items" placeholder="Qué se lleva...">
             </div>
           </div>
           <div class="form-group">
-            <label>📝 Notas</label>
+            <label><i data-lucide="file-text"></i> Notas</label>
             <input type="text" name="notes" placeholder="Indicaciones especiales (timbre, portería, etc.)">
           </div>
         </div>
 
         <!-- Mapa: opcional, se despliega con un toggle -->
         <button type="button" class="order-map-toggle" id="btn-toggle-map">
-          <span class="order-map-toggle-caret">▸</span> 🗺️ Ubicar en el mapa <span class="order-section-hint">(opcional)</span>
+          <span class="order-map-toggle-caret">▸</span> <i data-lucide="map"></i> Ubicar en el mapa <span class="order-section-hint">(opcional)</span>
         </button>
         <div class="order-step" data-step="mapa" id="wizard-mapa">
           <div id="picker-map" class="picker-map"></div>
@@ -612,7 +613,7 @@
         <!-- Acciones -->
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" id="btn-cancel-order-form">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-order">✅ Crear Pedido</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-order"><i data-lucide="check"></i> Crear Pedido</button>
         </div>
       </form>
     </div>
@@ -664,22 +665,22 @@
   <!-- Clear Orders Modal -->
   <div id="modal-clear" class="modal-overlay hidden">
     <div class="modal" style="max-width:500px;">
-      <h2>🧹 Limpiar pedidos</h2>
+      <h2><i data-lucide="trash-2"></i> Limpiar pedidos</h2>
       <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
         Selecciona que pedidos quieres eliminar. Esta accion es permanente.
       </p>
       <!-- Opciones rápidas -->
       <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem;">
-        <button class="btn btn-outline" data-clear="delivered">🗑️ Eliminar todos los entregados</button>
-        <button class="btn btn-outline" data-clear="cancelled">🗑️ Eliminar todos los cancelados</button>
-        <button class="btn btn-outline" data-clear="old">🗑️ Eliminar pedidos de dias anteriores</button>
+        <button class="btn btn-outline" data-clear="delivered"><i data-lucide="trash-2"></i> Eliminar todos los entregados</button>
+        <button class="btn btn-outline" data-clear="cancelled"><i data-lucide="trash-2"></i> Eliminar todos los cancelados</button>
+        <button class="btn btn-outline" data-clear="old"><i data-lucide="trash-2"></i> Eliminar pedidos de dias anteriores</button>
         <button class="btn btn-danger" data-clear="all">⚠️ Eliminar TODOS los pedidos</button>
       </div>
       <!-- Selección individual -->
       <div style="border-top:1px solid var(--border);padding-top:0.8rem;">
         <p style="font-size:0.82rem;font-weight:600;margin-bottom:0.5rem;">O selecciona pedidos individuales:</p>
         <div id="clear-orders-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem;"></div>
-        <button class="btn btn-danger btn-sm" id="btn-delete-selected" style="margin-top:0.7rem;width:100%;display:none;">🗑️ Eliminar seleccionados</button>
+        <button class="btn btn-danger btn-sm" id="btn-delete-selected" style="margin-top:0.7rem;width:100%;display:none;"><i data-lucide="trash-2"></i> Eliminar seleccionados</button>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" id="btn-cancel-clear">Cerrar</button>
