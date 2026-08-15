@@ -2119,6 +2119,54 @@
 
   let editingOrderId = null;
 
+  // ─── Order wizard: revelado progresivo de pasos ─────────────────────────────
+  function revealOrderStep(step) {
+    const el = document.querySelector('.order-step[data-step="' + step + '"]');
+    if (el) el.classList.add('revealed');
+  }
+  function revealAllOrderSteps() {
+    ['recogida', 'entrega', 'pago', 'mapa'].forEach(revealOrderStep);
+    const toggle = document.getElementById('btn-toggle-map');
+    if (toggle) toggle.classList.add('open');
+  }
+  function resetOrderWizard() {
+    document.querySelectorAll('.order-step.revealed').forEach((el) => el.classList.remove('revealed'));
+    const toggle = document.getElementById('btn-toggle-map');
+    if (toggle) toggle.classList.remove('open');
+  }
+  (function bindOrderWizardReveal() {
+    const nameInput = document.getElementById('customer_name');
+    const pickupInput = document.getElementById('pickup_address');
+    const pickupSelect = document.getElementById('order-place');
+    const dropoffInput = document.getElementById('dropoff_address');
+    const dropoffSelect = document.getElementById('order-dropoff-place');
+    const mapToggle = document.getElementById('btn-toggle-map');
+
+    if (nameInput) nameInput.addEventListener('input', () => {
+      if (nameInput.value.trim()) revealOrderStep('recogida');
+    });
+    if (pickupInput) pickupInput.addEventListener('input', () => {
+      if (pickupInput.value.trim()) revealOrderStep('entrega');
+    });
+    if (pickupSelect) pickupSelect.addEventListener('change', () => {
+      if (pickupSelect.value) revealOrderStep('entrega');
+    });
+    if (dropoffInput) dropoffInput.addEventListener('input', () => {
+      if (dropoffInput.value.trim()) revealOrderStep('pago');
+    });
+    if (dropoffSelect) dropoffSelect.addEventListener('change', () => {
+      if (dropoffSelect.value) revealOrderStep('pago');
+    });
+    if (mapToggle) mapToggle.addEventListener('click', () => {
+      const isOpen = mapToggle.classList.toggle('open');
+      const mapStep = document.querySelector('.order-step[data-step="mapa"]');
+      if (mapStep) {
+        mapStep.classList.toggle('revealed', isOpen);
+        if (isOpen) setTimeout(ensurePickerMap, 200);
+      }
+    });
+  })();
+
   function ensurePickerMap() {
     if (!pickerMap) {
       pickerMap = L.map('picker-map').setView([4.6097, -74.0817], 12);
@@ -2146,6 +2194,7 @@
     formNewOrder.reset();
     modalNewOrder.classList.remove('hidden');
     resetPicker();
+    resetOrderWizard();
     loadCustomers();
     setTimeout(ensurePickerMap, 200);
   }
@@ -2159,6 +2208,8 @@
     formNewOrder.reset();
     modalNewOrder.classList.remove('hidden');
     resetPicker();
+    resetOrderWizard();
+    revealAllOrderSteps();
     loadCustomers();
 
     const setVal = (name, val) => {
@@ -2409,6 +2460,7 @@
       if (amountField) amountField.value = parseFloat(p.amount.replace(/,/g, '')) || 0;
     }
     const got = [p.name, p.phone, p.address, p.items, p.payment, p.amount, p.notes].filter(Boolean).length;
+    if (got) revealAllOrderSteps();
     showToast(got ? '✅ ' + got + ' datos importados. Revisa y crea el pedido.' : 'No se reconocieron datos, llénalos manual.', got ? 'success' : 'warning');
   }
 

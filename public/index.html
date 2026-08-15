@@ -511,94 +511,90 @@
 
   <!-- New Order Modal -->
   <div id="modal-new-order" class="modal-overlay hidden">
-    <div class="modal" style="max-width:720px;">
+    <div class="modal" style="max-width:680px;">
       <h2 id="order-modal-title">⚡ Nuevo Pedido</h2>
-      <form id="form-new-order">
-        <!-- Importar desde WhatsApp -->
-        <div class="order-form-section order-form-section--import">
-          <div class="order-import-row">
-            <span class="order-import-label">📋 Pegar mensaje de WhatsApp</span>
-            <button type="button" id="btn-paste-order" class="btn btn-primary btn-sm">Pegar</button>
-            <button type="button" id="btn-parse-order" class="btn btn-outline btn-sm">Importar</button>
-          </div>
-          <textarea id="order-import" rows="2" placeholder="Pega aquí el mensaje del cliente (nombre, dirección, teléfono...)"></textarea>
+      <form id="form-new-order" class="order-wizard">
+        <!-- Pegar desde WhatsApp -->
+        <div class="order-import-row">
+          <span class="order-import-label">📋 Pegar mensaje de WhatsApp</span>
+          <button type="button" id="btn-paste-order" class="btn btn-primary btn-sm">Pegar</button>
+          <button type="button" id="btn-parse-order" class="btn btn-outline btn-sm">Importar</button>
         </div>
+        <textarea id="order-import" rows="1" placeholder="Pega aquí el mensaje del cliente y llena todo de un tiro..."></textarea>
 
-        <!-- Sección: Cliente -->
-        <div class="order-form-section">
-          <div class="order-section-title">👤 Cliente</div>
+        <!-- Cliente (siempre visible, punto de partida) -->
+        <div class="order-step" data-step="cliente">
           <div class="form-row">
             <div class="form-group" style="flex:2;">
-              <label>Nombre</label>
-              <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required placeholder="Nombre del cliente">
+              <label>👤 Cliente</label>
+              <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required placeholder="Nombre del cliente" autofocus>
               <datalist id="customers-list"></datalist>
             </div>
             <div class="form-group" style="flex:1;">
-              <label>Celular</label>
+              <label>📱 Celular</label>
               <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
             </div>
           </div>
         </div>
 
-        <!-- Sección: Recogida -->
-        <div class="order-form-section">
-          <div class="order-section-title">🏪 Recogida</div>
+        <!-- Recogida (aparece al escribir el cliente) -->
+        <div class="order-step" data-step="recogida" id="wizard-recogida">
           <div class="form-row">
             <div class="form-group" style="flex:1;">
-              <label>Guardada</label>
+              <label>🏪 Recogida guardada</label>
               <select id="order-place"><option value="">— Ninguno / entrada manual —</option></select>
             </div>
             <div class="form-group" style="flex:1;">
-              <label>Negocio / dirección</label>
+              <label>🏢 Negocio / dirección</label>
               <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre o dirección">
             </div>
           </div>
         </div>
 
-        <!-- Sección: Entrega -->
-        <div class="order-form-section">
-          <div class="order-section-title">📍 Entrega</div>
+        <!-- Entrega (aparece al llenar recogida) -->
+        <div class="order-step" data-step="entrega" id="wizard-entrega">
           <div class="form-row">
             <div class="form-group" style="flex:1;">
-              <label>Guardada</label>
+              <label>📍 Entrega guardada</label>
               <select id="order-dropoff-place"><option value="">— Ninguno / entrada manual —</option></select>
             </div>
             <div class="form-group" style="flex:1;">
-              <label>Dirección</label>
+              <label>📍 Dirección de entrega</label>
               <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Dirección de entrega">
             </div>
           </div>
         </div>
 
-        <!-- Sección: Pago y detalle -->
-        <div class="order-form-section">
-          <div class="order-section-title">💰 Pago y detalle</div>
+        <!-- Pago y detalle (aparece al llenar entrega) -->
+        <div class="order-step" data-step="pago" id="wizard-pago">
           <div class="form-row">
             <div class="form-group" style="flex:1;">
-              <label>Valor ($)</label>
+              <label>💰 Valor ($)</label>
               <input type="number" name="amount" step="100" min="0" value="0">
             </div>
             <div class="form-group" style="flex:1;">
-              <label>Pago</label>
+              <label>💳 Pago</label>
               <select name="payment_method">
                 <option value="cash">Efectivo</option>
                 <option value="card">Transferencia</option>
               </select>
             </div>
             <div class="form-group" style="flex:2;">
-              <label>Artículos</label>
+              <label>📦 Artículos</label>
               <input type="text" name="items" placeholder="Qué se lleva...">
             </div>
           </div>
           <div class="form-group">
-            <label>Notas</label>
+            <label>📝 Notas</label>
             <input type="text" name="notes" placeholder="Indicaciones especiales (timbre, portería, etc.)">
           </div>
         </div>
 
-        <!-- Sección: Mapa -->
-        <div class="order-form-section">
-          <div class="order-section-title">🗺️ Ubicar en el mapa <span class="order-section-hint">(opcional)</span></div>
+        <!-- Mapa: opcional, se despliega con un toggle -->
+        <button type="button" class="order-map-toggle" id="btn-toggle-map">
+          <span class="order-map-toggle-caret">▸</span> 🗺️ Ubicar en el mapa <span class="order-section-hint">(opcional)</span>
+        </button>
+        <div class="order-step" data-step="mapa" id="wizard-mapa">
           <div id="picker-map" class="picker-map"></div>
           <div class="picker-hint">
             Clic: primero <span class="step-pickup">recogida</span> 🟢, luego <span class="step-dropoff">entrega</span> 🔴.

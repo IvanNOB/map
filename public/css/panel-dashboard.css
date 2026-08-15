@@ -247,43 +247,77 @@
   #app .mini-stat.purple  { grid-column: 1 / 3; grid-row: 3; }
 }
 
-/* ─── Formulario "Nuevo Pedido": secciones organizadas ───────────────────── */
-.order-form-section {
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--border);
-}
-.order-form-section:last-of-type { border-bottom: none; }
-
-.order-form-section--import {
-  background: var(--bg-alt);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-2);
-}
-
-.order-section-title {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted, #9aa0b0);
-  margin-bottom: var(--space-2);
-}
-
-.order-section-hint {
-  font-weight: 400;
-  text-transform: none;
-  opacity: 0.7;
-  letter-spacing: 0;
-}
+/* ─── Formulario "Nuevo Pedido": asistente fluido y progresivo ──────────── */
+.order-wizard { display: flex; flex-direction: column; }
 
 .order-import-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-2);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  margin-bottom: 4px;
 }
 .order-import-row .btn { font-size: 0.7rem; }
-.order-form-section--import textarea { font-size: 0.8rem; }
+.order-wizard textarea#order-import {
+  font-size: 0.8rem;
+  min-height: 32px;
+  margin-bottom: var(--space-2);
+  transition: min-height 0.2s ease;
+}
+.order-wizard textarea#order-import:focus { min-height: 70px; }
+
+/* Cada paso entra con una transicion suave de alto+opacidad, sin bordes
+   duros entre bloques -- se siente como un solo formulario que crece. */
+.order-step {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-4px);
+  transition: max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease, margin 0.3s ease;
+  margin-top: 0;
+}
+.order-step[data-step="cliente"] {
+  /* El primer paso siempre esta visible, es el punto de partida */
+  max-height: none;
+  opacity: 1;
+  transform: none;
+  overflow: visible;
+}
+.order-step.revealed {
+  max-height: 220px;
+  opacity: 1;
+  transform: none;
+  margin-top: var(--space-2);
+}
+.order-step[data-step="pago"].revealed { max-height: 260px; }
+.order-step[data-step="mapa"].revealed { max-height: 420px; margin-top: var(--space-2); }
+
+.order-section-hint {
+  font-weight: 400;
+  opacity: 0.65;
+  font-size: 0.78rem;
+}
+
+.order-map-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted, #9aa0b0);
+  font-size: 0.82rem;
+  font-family: inherit;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+.order-map-toggle:hover { color: var(--gold, var(--primary)); }
+.order-map-toggle-caret {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.7rem;
+}
+.order-map-toggle.open .order-map-toggle-caret { transform: rotate(90deg); }
+
