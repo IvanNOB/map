@@ -2277,7 +2277,7 @@
     });
   }
 
-  // ─── Customer autocomplete ──────────────────────────────────────────────────
+  // ─── Customer name suggestions (solo lista de nombres, sin autollenado) ─────
   let customersCache = [];
   async function loadCustomers() {
     try {
@@ -2292,23 +2292,6 @@
       }
     } catch {}
   }
-  (function bindCustomerAutofill() {
-    const nameInput = document.getElementById('customer_name');
-    if (!nameInput) return;
-    nameInput.addEventListener('change', () => {
-      const match = customersCache.find(
-        (c) => c.name.trim().toLowerCase() === nameInput.value.trim().toLowerCase()
-      );
-      if (!match) return;
-      const phone = document.getElementById('customer_phone');
-      const drop = document.getElementById('dropoff_address');
-      const pick = document.getElementById('pickup_address');
-      if (phone && !phone.value) phone.value = match.phone || '';
-      if (drop && !drop.value) drop.value = match.last_dropoff || '';
-      if (pick && !pick.value) pick.value = match.last_pickup || '';
-      if ((pick && pick.value) || (drop && drop.value)) showToast('Datos del cliente autocompletados', 'info');
-    });
-  })();
 
   document.getElementById('btn-reset-pins').addEventListener('click', resetPicker);
   document.getElementById('btn-geocode').addEventListener('click', async () => {

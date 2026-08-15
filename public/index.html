@@ -515,71 +515,90 @@
       <h2 id="order-modal-title">⚡ Nuevo Pedido</h2>
       <form id="form-new-order">
         <!-- Importar desde WhatsApp -->
-        <div class="form-group" style="background:var(--bg-alt);border:1px dashed var(--border);border-radius:8px;padding:0.6rem;">
-          <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem;">
-            <span style="font-size:0.85rem;">📋 Pegar mensaje de WhatsApp</span>
-            <button type="button" id="btn-paste-order" class="btn btn-primary btn-sm" style="font-size:0.7rem;">Pegar</button>
-            <button type="button" id="btn-parse-order" class="btn btn-outline btn-sm" style="font-size:0.7rem;">Importar</button>
+        <div class="order-form-section order-form-section--import">
+          <div class="order-import-row">
+            <span class="order-import-label">📋 Pegar mensaje de WhatsApp</span>
+            <button type="button" id="btn-paste-order" class="btn btn-primary btn-sm">Pegar</button>
+            <button type="button" id="btn-parse-order" class="btn btn-outline btn-sm">Importar</button>
           </div>
-          <textarea id="order-import" rows="2" placeholder="Pega aquí el mensaje del cliente (nombre, dirección, teléfono...)" style="font-size:0.8rem;"></textarea>
+          <textarea id="order-import" rows="2" placeholder="Pega aquí el mensaje del cliente (nombre, dirección, teléfono...)"></textarea>
         </div>
-        <!-- Fila 1: Cliente + Celular -->
-        <div class="form-row">
-          <div class="form-group" style="flex:2;">
-            <label>👤 Cliente</label>
-            <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required placeholder="Nombre del cliente">
-            <datalist id="customers-list"></datalist>
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>📱 Celular</label>
-            <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
-          </div>
-        </div>
-        <!-- Fila 2: Lugar guardado + Negocio + Destino guardado + Destino -->
-        <div class="form-row">
-          <div class="form-group" style="flex:1;">
-            <label>🏪 Recogida guardada</label>
-            <select id="order-place"><option value="">— Ninguno / entrada manual —</option></select>
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>🏢 Negocio</label>
-            <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre o dirección">
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>📍 Entrega guardada</label>
-            <select id="order-dropoff-place"><option value="">— Ninguno / entrada manual —</option></select>
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>📍 Destino</label>
-            <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Dirección de entrega">
+
+        <!-- Sección: Cliente -->
+        <div class="order-form-section">
+          <div class="order-section-title">👤 Cliente</div>
+          <div class="form-row">
+            <div class="form-group" style="flex:2;">
+              <label>Nombre</label>
+              <input type="text" name="customer_name" id="customer_name" list="customers-list" autocomplete="off" required placeholder="Nombre del cliente">
+              <datalist id="customers-list"></datalist>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Celular</label>
+              <input type="tel" name="customer_phone" id="customer_phone" placeholder="321 428 6626">
+            </div>
           </div>
         </div>
-        <!-- Fila 3: Monto + Pago + Articulos -->
-        <div class="form-row">
-          <div class="form-group" style="flex:1;">
-            <label>💰 Valor ($)</label>
-            <input type="number" name="amount" step="100" min="0" value="0">
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>💳 Pago</label>
-            <select name="payment_method">
-              <option value="cash">Efectivo</option>
-              <option value="card">Transferencia</option>
-            </select>
-          </div>
-          <div class="form-group" style="flex:2;">
-            <label>📦 Artículos</label>
-            <input type="text" name="items" placeholder="Qué se lleva...">
+
+        <!-- Sección: Recogida -->
+        <div class="order-form-section">
+          <div class="order-section-title">🏪 Recogida</div>
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>Guardada</label>
+              <select id="order-place"><option value="">— Ninguno / entrada manual —</option></select>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Negocio / dirección</label>
+              <input type="text" name="pickup_address" id="pickup_address" placeholder="Nombre o dirección">
+            </div>
           </div>
         </div>
-        <!-- Fila 4: Notas -->
-        <div class="form-group">
-          <label>📝 Notas</label>
-          <input type="text" name="notes" placeholder="Indicaciones especiales (timbre, portería, etc.)">
+
+        <!-- Sección: Entrega -->
+        <div class="order-form-section">
+          <div class="order-section-title">📍 Entrega</div>
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>Guardada</label>
+              <select id="order-dropoff-place"><option value="">— Ninguno / entrada manual —</option></select>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Dirección</label>
+              <input type="text" name="dropoff_address" id="dropoff_address" placeholder="Dirección de entrega">
+            </div>
+          </div>
         </div>
-        <!-- Mapa -->
-        <div class="form-group">
-          <label>🗺️ Ubicar en el mapa (opcional)</label>
+
+        <!-- Sección: Pago y detalle -->
+        <div class="order-form-section">
+          <div class="order-section-title">💰 Pago y detalle</div>
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>Valor ($)</label>
+              <input type="number" name="amount" step="100" min="0" value="0">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Pago</label>
+              <select name="payment_method">
+                <option value="cash">Efectivo</option>
+                <option value="card">Transferencia</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:2;">
+              <label>Artículos</label>
+              <input type="text" name="items" placeholder="Qué se lleva...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notas</label>
+            <input type="text" name="notes" placeholder="Indicaciones especiales (timbre, portería, etc.)">
+          </div>
+        </div>
+
+        <!-- Sección: Mapa -->
+        <div class="order-form-section">
+          <div class="order-section-title">🗺️ Ubicar en el mapa <span class="order-section-hint">(opcional)</span></div>
           <div id="picker-map" class="picker-map"></div>
           <div class="picker-hint">
             Clic: primero <span class="step-pickup">recogida</span> 🟢, luego <span class="step-dropoff">entrega</span> 🔴.
@@ -588,6 +607,7 @@
           </div>
           <div id="fare-hint" class="fare-hint"></div>
         </div>
+
         <input type="hidden" name="pickup_lat" id="pickup_lat">
         <input type="hidden" name="pickup_lng" id="pickup_lng">
         <input type="hidden" name="dropoff_lat" id="dropoff_lat">
