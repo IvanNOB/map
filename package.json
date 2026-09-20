@@ -7,7 +7,15 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed": "node db/seed.js"
+    "seed": "node db/seed.js",
+    "backup:status": "node scripts/firestore-backup.mjs status",
+    "backup:firestore": "node scripts/firestore-backup.mjs backup",
+    "restore:firestore": "node scripts/firestore-backup.mjs restore",
+    "verify:firestore": "node scripts/verify-backup.mjs",
+    "test:backup-local": "node scripts/test-backup-local.mjs"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "keywords": [
     "delivery",
@@ -23,6 +31,7 @@
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "express": "^4.19.2",
+    "firebase-admin": "^14.4.0",
     "jsonwebtoken": "^9.0.2",
     "pdfkit": "^0.19.1",
     "pg": "^8.13.0",

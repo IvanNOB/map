@@ -1,12 +1,16 @@
 import bcrypt from "bcryptjs";
+import { pathToFileURL } from "url";
 import db, { init } from "./database.js";
 
 /**
  * Seeds the database with a demo admin and a few drivers.
  * Idempotent: skips users/drivers/orders that already exist, so it is safe
  * to run on every deploy WITHOUT wiping real data.
+ *
+ * @param {{ close?: boolean }} options close=false cuando se llama desde el
+ *        servidor (la conexión la cierra el propio servidor, no el seed).
  */
-async function seed() {
+export async function seed({ close = true } = {}) {
   await init();
 
   const hash = (pwd) => bcrypt.hashSync(pwd, 10);
@@ -131,12 +135,25 @@ async function seed() {
     console.log("  (Datos de prueba activados con SEED_DEMO=true)");
   }
 
-  await db.end();
+  if (close) await db.end();
 }
 
-seed()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error("Error en seed:", err);
-    process.exit(1);
-  });
+/** Siembra solo si todavía no hay usuarios (primer arranque de todo). */
+export async function seedIfEmpty() {
+  const row = await db.get("SELECT COUNT(*) AS count FROM users");
+  if (Number(row && row.count) > 0) return false;
+  await seed({ close: false });
+  return true;
+}
+
+// Ejecución directa (`npm run seed`) o vía Docker: siembra y termina.
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectRun) {
+  seed()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error("Error en seed:", err);
+      process.exit(1);
+    });
+}

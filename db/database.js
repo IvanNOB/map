@@ -7,6 +7,53 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATABASE_URL = process.env.DATABASE_URL;
 export const isPostgres = !!DATABASE_URL;
 
+// ─── Apagado ordenado ────────────────────────────────────────────────────────
+// Los módulos que necesitan hacer algo antes de que el proceso muera (por
+// ejemplo guardar una copia de seguridad en la nube) se registran aquí.
+// Sin esto, el handler de SIGTERM de SQLite saldría antes de tiempo y la copia
+// final nunca se completaría.
+const shutdownHooks = [];
+let shutdownRegistered = false;
+let shuttingDown = false;
+
+/** Registra una tarea a ejecutar antes de apagar el servidor. */
+export function onShutdown(hook) {
+  if (typeof hook === "function") shutdownHooks.push(hook);
+}
+
+/** Ejecuta los hooks, cierra la base y termina el proceso. */
+export async function shutdown(reason = "SIGTERM") {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[db] ${reason}: guardando lo pendiente...`);
+
+  // Red de seguridad: nunca quedarse colgado más de 25 s (Render corta a los 30 s).
+  const hardExit = setTimeout(() => process.exit(0), 25000);
+  if (hardExit.unref) hardExit.unref();
+
+  for (const hook of shutdownHooks) {
+    try {
+      await hook(reason);
+    } catch (err) {
+      console.error(`[db] Error en el apagado (${reason}):`, err.message);
+    }
+  }
+
+  try {
+    await impl.end();
+  } catch (_) {
+    /* la conexión ya estaba cerrada */
+  }
+  process.exit(0);
+}
+
+function registerShutdownHandlers() {
+  if (shutdownRegistered) return;
+  shutdownRegistered = true;
+  process.on("SIGTERM", () => { shutdown("SIGTERM"); });
+  process.on("SIGINT", () => { shutdown("SIGINT"); });
+}
+
 /**
  * Unified async database layer.
  *
@@ -152,13 +199,14 @@ if (isPostgres) {
     _save: save,
   };
 
+  // El guardado final al apagar lo hace shutdown() (registrado en init()), que
+  // además espera a los hooks, como la copia de seguridad en Firestore.
   process.on("exit", save);
-  process.on("SIGINT", () => { save(); process.exit(0); });
-  process.on("SIGTERM", () => { save(); process.exit(0); });
 }
 
 /** Create tables and indexes. Call once at startup. */
 export async function init() {
+  registerShutdownHandlers();
   if (isPostgres) {
     await impl.exec(`
       CREATE TABLE IF NOT EXISTS users (

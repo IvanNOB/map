@@ -55,6 +55,11 @@ import voiceApiRouter from "./src/ghosty/voice-api.js";
 import { setupSocketHandlers } from "./src/socket/handler.js";
 import { startCronJobs } from "./src/cron-jobs.js";
 
+// ─── Copias de seguridad en Firestore ───────────────────────────────────────
+import { startBackup, backupStatus } from "./db/backup-firestore.js";
+import backupRouter from "./src/backup.js";
+import { seedIfEmpty } from "./db/seed.js";
+
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -120,6 +125,9 @@ app.use("/api/ghosty/twilio", twilioConnectorRouter);
 app.use("/api/ghosty/dispatch", dispatcherSuggestRouter);
 app.use("/api/ghosty/voice", voiceApiRouter);
 
+// Copias de seguridad de la base en Firestore (solo admin)
+app.use("/api/backup", backupRouter);
+
 // ─── Health Check ────────────────────────────────────────────────────────────
 
 app.get("/api/health", async (req, res) => {
@@ -142,6 +150,7 @@ app.get("/api/health", async (req, res) => {
     memory: { rss_mb: Math.round(mem.rss / 1024 / 1024), heap_mb: Math.round(mem.heapUsed / 1024 / 1024) },
     connections: { websocket: metrics.getMetrics().socket.active_connections },
     redis: config.redisEnabled ? "configured" : "not_configured",
+    backup: backupStatus(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -164,6 +173,18 @@ setupSocketHandlers(io);
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 await init();
+
+// Copias de seguridad en Firestore: restaura la base si está vacía (por ejemplo
+// tras crear una base nueva) y programa las copias periódicas, más una copia
+// final cuando el host envía SIGTERM.
+await startBackup();
+
+// Si sigue vacía (primer arranque de todo), asegura el administrador para poder
+// iniciar sesión. Es idempotente y nunca toca datos existentes.
+if (await seedIfEmpty()) {
+  logger.info("Base sembrada con el administrador inicial");
+}
+
 await initClientMemory();
 initDispatcher(io);
 startGhostyPolling(io);

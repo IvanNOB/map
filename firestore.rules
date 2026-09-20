@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reglas de Cloud Firestore para las copias de seguridad de la base de datos.
+//
+// Estos documentos los lee y escribe ÚNICAMENTE el servidor Node con la Admin
+// SDK (que ignora estas reglas). El navegador nunca habla con Firestore, así que
+// se niega todo acceso desde clientes: si alguien descubre el proyecto, no puede
+// leer ni escribir las copias.
+//
+// Aplicar en: Firebase Console → Firestore Database → Reglas (pestaña Rules).
+// ─────────────────────────────────────────────────────────────────────────────
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
