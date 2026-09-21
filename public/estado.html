@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Estado del sistema — Servicio Ghost</title>
+  <meta name="theme-color" content="#0f1117">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --bg-alt: #151821;
+      --panel: #1a1e2b;
+      --panel-hover: #222738;
+      --border: #2a2f3d;
+      --text: #e8eaed;
+      --text-muted: #9ca3af;
+      --gold: #d4af37;
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --success-soft: rgba(34, 197, 94, 0.15);
+      --warning: #eab308;
+      --warning-soft: rgba(234, 179, 8, 0.15);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.15);
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      padding: 20px;
+    }
+    header {
+      max-width: 1100px;
+      margin: 0 auto 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+    .brand span { color: var(--gold); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      transition: 0.2s ease;
+    }
+    button:hover { background: var(--panel-hover); }
+    button.gold {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #101010;
+      font-weight: 700;
+    }
+    button.gold:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.55; cursor: progress; }
+    main { max-width: 1100px; margin: 0 auto; }
+    .banner {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 18px 20px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: var(--panel);
+      margin-bottom: 18px;
+    }
+    .banner.ok { background: var(--success-soft); border-color: rgba(34,197,94,0.4); }
+    .banner.bad { background: var(--danger-soft); border-color: rgba(239,68,68,0.45); }
+    .banner .icon { font-size: 34px; line-height: 1; }
+    .banner h1 { margin: 0 0 4px; font-size: 19px; }
+    .banner p { margin: 0; color: var(--text-muted); font-size: 14px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+    }
+    .card .label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .card .value { font-size: 22px; font-weight: 700; }
+    .card .hint { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); flex: 0 0 auto; }
+    .dot.ok { background: var(--success); box-shadow: 0 0 8px rgba(34,197,94,0.7); }
+    .dot.bad { background: var(--danger); box-shadow: 0 0 8px rgba(239,68,68,0.7); }
+    .dot.warn { background: var(--warning); box-shadow: 0 0 8px rgba(234,179,8,0.7); }
+    .ok-text { color: var(--success); }
+    .bad-text { color: var(--danger); }
+    .warn-text { color: var(--warning); }
+    details {
+      margin-top: 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+    }
+    summary { cursor: pointer; color: var(--text-muted); font-size: 14px; }
+    pre {
+      margin: 12px 0 0;
+      max-height: 320px;
+      overflow: auto;
+      font-size: 12px;
+      color: #b9c0cc;
+      background: var(--bg-alt);
+      padding: 12px;
+      border-radius: var(--radius);
+    }
+    .login {
+      display: none;
+      margin-top: 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+    }
+    .login.show { display: block; }
+    .login h2 { margin: 0 0 4px; font-size: 16px; }
+    .login p { margin: 0 0 12px; font-size: 13px; color: var(--text-muted); }
+    .login form { display: flex; flex-wrap: wrap; gap: 10px; }
+    input {
+      font: inherit;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      min-width: 200px;
+    }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--success);
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      opacity: 0;
+      transition: 0.25s ease;
+      max-width: 90vw;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { border-left-color: var(--danger); }
+    footer { max-width: 1100px; margin: 22px auto 0; color: var(--text-muted); font-size: 12px; line-height: 1.7; }
+    footer a { color: var(--gold); }
+    @media (max-width: 520px) { .card .value { font-size: 19px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">👻 Servicio <span>Ghost</span> · Estado del sistema</div>
+    <div class="actions">
+      <button id="btn-refresh" type="button">🔄 Actualizar</button>
+      <button id="btn-backup" class="gold" type="button">💾 Hacer copia ahora</button>
+      <a href="/" style="color:var(--gold);font-size:14px;text-decoration:none;">Ir al panel →</a>
+    </div>
+  </header>
+
+  <main>
+    <section id="banner" class="banner">
+      <div class="icon" id="banner-icon">⏳</div>
+      <div>
+        <h1 id="banner-title">Comprobando el sistema…</h1>
+        <p id="banner-text">Un momento, estoy leyendo el estado.</p>
+      </div>
+    </section>
+
+    <div class="grid">
+      <article class="card">
+        <div class="label"><span class="dot" id="dot-server"></span>Servidor</div>
+        <div class="value" id="val-server">—</div>
+        <div class="hint" id="hint-server">Encendido desde…</div>
+      </article>
+
+      <article class="card">
+        <div class="label"><span class="dot" id="dot-db"></span>Base de datos</div>
+        <div class="value" id="val-db">—</div>
+        <div class="hint" id="hint-db">Tipo y velocidad de respuesta</div>
+      </article>
+
+      <article class="card">
+        <div class="label"><span class="dot" id="dot-backup"></span>Copias de seguridad</div>
+        <div class="value" id="val-backup">—</div>
+        <div class="hint" id="hint-backup">Guardadas en Firebase (gratis)</div>
+      </article>
+
+      <article class="card">
+        <div class="label"><span class="dot" id="dot-last"></span>Última copia</div>
+        <div class="value" id="val-last">—</div>
+        <div class="hint" id="hint-last">Cuándo se guardó por última vez</div>
+      </article>
+
+      <article class="card">
+        <div class="label"><span class="dot ok"></span>Registros guardados</div>
+        <div class="value" id="val-rows">—</div>
+        <div class="hint" id="hint-rows">Todo lo que hay en tu base</div>
+      </article>
+
+      <article class="card">
+        <div class="label"><span class="dot ok"></span>Copia en Firebase</div>
+        <div class="value" id="val-snap">—</div>
+        <div class="hint" id="hint-snap">Identificador de la última copia</div>
+      </article>
+    </div>
+
+    <section class="login" id="login">
+      <h2>Para hacer una copia ahora necesito tu usuario de administrador</h2>
+      <p>Se guarda solo en este navegador. Es el mismo usuario con el que entras al panel.</p>
+      <form id="login-form">
+        <input id="login-email" type="email" placeholder="correo@ejemplo.com" autocomplete="username" required>
+        <input id="login-pass" type="password" placeholder="contraseña" autocomplete="current-password" required>
+        <button class="gold" type="submit" id="login-submit">Entrar</button>
+      </form>
+    </section>
+
+    <details>
+      <summary>Ver detalles técnicos (para soporte)</summary>
+      <pre id="raw">—</pre>
+    </details>
+
+    <footer>
+      Esta página se actualiza sola cada 60 segundos. ·
+      <a href="/api/health" target="_blank" rel="noopener">Respuesta técnica en bruto</a>
+      <br>
+      Recuerda: si usas la base <strong>gratuita</strong> de Render, esa base caduca a los 30 días.
+      Con las copias activas tus datos se recuperan solos en una base nueva; con Neon (gratis y sin caducidad) el trámite desaparece.
+    </footer>
+  </main>
+
+  <div class="toast" id="toast">Listo</div>
+
+  <script>
+    var healthTimer = null;
+    var lastHealth = null;
+    var backupRunning = false;
+
+    function $(id) { return document.getElementById(id); }
+
+    function minutesAgo(iso) {
+      if (!iso) return null;
+      var diff = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+      if (diff < 1) return "hace menos de 1 minuto";
+      if (diff === 1) return "hace 1 minuto";
+      if (diff < 60) return "hace " + diff + " minutos";
+      var h = Math.floor(diff / 60);
+      return "hace " + h + " hora" + (h === 1 ? "" : "s") + (diff % 60 ? " y " + (diff % 60) + " min" : "");
+    }
+
+    function prettyDate(iso) {
+      if (!iso) return "—";
+      try {
+        return new Date(iso).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      } catch (_) { return iso; }
+    }
+
+    function humansSize(bytes) {
+      if (!bytes) return "0 KB";
+      return bytes > 1048576 ? (bytes / 1048576).toFixed(1) + " MB" : Math.round(bytes / 1024) + " KB";
+    }
+
+    function setDot(id, state) { var el = $(id); if (el) el.className = "dot " + state; }
+
+    function toast(msg, isError) {
+      var t = $("toast");
+      t.textContent = msg;
+      t.className = "toast show" + (isError ? " error" : "");
+      clearTimeout(t._timer);
+      t._timer = setTimeout(function () { t.className = "toast"; }, 5000);
+    }
+
+    function renderHealth(h) {
+      lastHealth = h;
+      var b = h.backup || {};
+      var serverOk = h.status === "healthy";
+      var dbOk = h.database && h.database.status === "connected";
+      var backupsOn = b.enabled === true;
+      var lastCopy = b.last_backup_at || null;
+      var stale = backupsOn && lastCopy && (Date.now() - new Date(lastCopy).getTime()) > 2 * 3600 * 1000;
+
+      var problems = [];
+      if (!serverOk) problems.push("el servidor reporta problemas");
+      if (!dbOk) problems.push("la base de datos no responde");
+      if (!backupsOn) problems.push("las copias de seguridad están desactivadas");
+      if (stale) problems.push("la última copia tiene más de 2 horas");
+
+      if (problems.length === 0) {
+        $("banner").className = "banner ok";
+        $("banner-icon").textContent = "✅";
+        $("banner-title").textContent = "Todo funcionando correctamente";
+        $("banner-text").textContent = "Tu app está en línea, la base de datos responde y las copias de seguridad están activas.";
+      } else {
+        $("banner").className = "banner bad";
+        $("banner-icon").textContent = "⚠️";
+        $("banner-title").textContent = "Hay algo que revisar";
+        $("banner-text").textContent = "Atención: " + problems.join(", ") + ".";
+      }
+
+      setDot("dot-server", serverOk ? "ok" : "bad");
+      $("val-server").textContent = serverOk ? "En línea" : "Con problemas";
+      $("val-server").className = "value " + (serverOk ? "ok-text" : "bad-text");
+      $("hint-server").textContent = "Encendido desde " + (h.uptime_human || "—") + (h.connections ? " · " + h.connections.websocket + " conectados" : "");
+
+      setDot("dot-db", dbOk ? "ok" : "bad");
+      $("val-db").textContent = dbOk ? (h.database.type === "postgresql" ? "PostgreSQL" : "SQLite") : "Sin respuesta";
+      $("val-db").className = "value " + (dbOk ? "ok-text" : "bad-text");
+      $("hint-db").textContent = dbOk
+        ? "Responde en " + h.database.latency_ms + " ms" + (h.memory ? " · memoria " + h.memory.rss_mb + " MB" : "")
+        : "No se pudo consultar la base";
+
+      setDot("dot-backup", backupsOn ? "ok" : "bad");
+      $("val-backup").textContent = backupsOn ? "Activadas" : "Desactivadas";
+      $("val-backup").className = "value " + (backupsOn ? "ok-text" : "bad-text");
+      $("hint-backup").textContent = backupsOn
+        ? "Automáticas cada " + b.interval_minutes + " min, al arrancar y al apagar"
+        : "Faltan las credenciales de Firebase";
+
+      var reasons = { startup: "al arrancar el servicio", shutdown: "al apagar el servicio", manual: "manual", interval: "automática", cli: "desde la terminal", verify: "de prueba" };
+      setDot("dot-last", lastCopy ? (stale ? "warn" : "ok") : "warn");
+      $("val-last").textContent = lastCopy ? (minutesAgo(lastCopy) || "—") : "Aún no hay copia";
+      $("val-last").className = "value " + (lastCopy && !stale ? "ok-text" : "warn-text");
+      $("hint-last").textContent = lastCopy
+        ? prettyDate(lastCopy) + " · " + (reasons[b.last_backup_reason] || "automática")
+        : (backupsOn ? "Se hará en breve automáticamente" : "Sin copias configuradas");
+
+      $("val-rows").textContent = (b.last_backup_rows || 0).toLocaleString("es-CO");
+      $("hint-rows").textContent = "Tamaño de la copia: " + humansSize(b.last_backup_bytes) + (b.skipped ? " · " + b.skipped + " sin cambios" : "");
+
+      $("val-snap").textContent = b.last_snapshot || "—";
+      $("hint-snap").textContent = b.current_generation
+        ? "Generación " + b.current_generation + (b.last_error ? " · error: " + b.last_error : " · sin errores")
+        : "Todavía no se ha guardado ninguna";
+
+      $("raw").textContent = JSON.stringify(h, null, 2);
+    }
+
+    async function loadHealth() {
+      try {
+        var res = await fetch("/api/health?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        renderHealth(await res.json());
+      } catch (err) {
+        $("banner").className = "banner bad";
+        $("banner-icon").textContent = "🔌";
+        $("banner-title").textContent = "No pude comunicarme con la app";
+        $("banner-text").textContent = "El servidor puede estar despertando (Render lo duerme tras 15 min sin uso). Intenta de nuevo en unos segundos. Detalle: " + err.message;
+      }
+    }
+
+    function token() { return localStorage.getItem("token") || ""; }
+
+    async function makeBackup() {
+      if (backupRunning) return;
+      if (!token()) {
+        $("login").className = "login show";
+        toast("Entra con tu usuario de administrador para hacer la copia", true);
+        return;
+      }
+      backupRunning = true;
+      var btn = $("btn-backup");
+      btn.disabled = true;
+      btn.textContent = "⏳ Copiando…";
+      try {
+        var res = await fetch("/api/backup/run", { method: "POST", headers: { Authorization: "Bearer " + token() } });
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem("token");
+          $("login").className = "login show";
+          toast("Tu sesión caducó: vuelve a entrar", true);
+        } else {
+          var data = await res.json();
+          if (data.ok) {
+            toast("✅ Copia guardada: " + (data.result.rows || 0) + " registros · " + humansSize(data.result.bytes));
+          } else if (data.status && data.status.enabled === false) {
+            toast("Las copias están desactivadas: faltan las credenciales de Firebase", true);
+          } else {
+            toast("Tus datos ya estaban guardados: no hacía falta copiar de nuevo");
+          }
+          await loadHealth();
+        }
+      } catch (err) {
+        toast("No se pudo hacer la copia: " + err.message, true);
+      } finally {
+        backupRunning = false;
+        btn.disabled = false;
+        btn.textContent = "💾 Hacer copia ahora";
+      }
+    }
+
+    $("btn-refresh").addEventListener("click", loadHealth);
+    $("btn-backup").addEventListener("click", makeBackup);
+
+    $("login-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var btn = $("login-submit");
+      btn.disabled = true;
+      btn.textContent = "Entrando…";
+      try {
+        var res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: $("login-email").value, password: $("login-pass").value }),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.token) {
+          toast(data.error || "No se pudo entrar", true);
+        } else {
+          localStorage.setItem("token", data.token);
+          $("login").className = "login";
+          $("login-pass").value = "";
+          toast("Bienvenido " + ((data.user && data.user.name) || "") + ". Haciendo la copia…");
+          makeBackup();
+        }
+      } catch (err) {
+        toast("Error de conexión: " + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+      }
+    });
+
+    loadHealth();
+    healthTimer = setInterval(loadHealth, 60000);
+  </script>
+</body>
+</html>
