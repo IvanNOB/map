@@ -85,6 +85,7 @@ const stats = {
   last_backup_reason: null,
   last_backup_bytes: 0,
   last_backup_rows: 0,
+  last_check_at: null,
   last_restore_at: null,
   last_restore_rows: 0,
   last_error: null,
@@ -420,7 +421,7 @@ async function readMeta() {
  * así la copia buena permanece intacta hasta que la nueva está completa.
  * @returns {Promise<boolean>} true si se publicó una copia nueva
  */
-async function uploadDump(text, { reason, rows }) {
+async function uploadDump(text, { reason, rows, contentHash }) {
   const bytes = Buffer.byteLength(text, "utf8");
   const hash = sha256(text);
   const meta = await readMeta();
@@ -431,9 +432,16 @@ async function uploadDump(text, { reason, rows }) {
     logger.error("Copia cancelada: volcado demasiado grande", { bytes, maxMb: MAX_BYTES / 1024 / 1024 });
     return false;
   }
+  // Los datos son los mismos que la última copia (el sello de tiempo no cuenta):
+  // no se escribe NADA en Firestore. Así cada arranque del servicio no gasta cuota.
+  if (previous && contentHash && previous.content_hash === contentHash) {
+    stats.skipped++;
+    logger.info("Sin cambios en los datos desde la última copia: no se escribió nada en Firestore", { reason });
+    return false;
+  }
   if (previous && previous.sha256 === hash) {
     stats.skipped++;
-    logger.info("Sin cambios desde la última copia: no se escribió nada en Firestore", { reason });
+    logger.info("La copia es idéntica a la anterior: no se escribió nada en Firestore", { reason });
     return false;
   }
   // Red de seguridad: nunca reemplazar una copia con datos por una base vacía.
@@ -478,6 +486,7 @@ async function uploadDump(text, { reason, rows }) {
         count: chunks.length,
         size: bytes,
         sha256: hash,
+        content_hash: contentHash || null,
         rows: rows || 0,
         backend: stats.backend,
         chunk_chars: CHUNK_CHARS,
@@ -580,7 +589,10 @@ export async function runBackup({ reason = "manual", dump = null } = {}) {
     try {
       const snapshot = dump || (await dumpDatabase());
       const text = serializeDump(snapshot);
-      const published = await uploadDump(text, { reason, rows: snapshot.totals.rows });
+      // Hash del contenido real (ignorando el sello de tiempo) para saber si algo cambió.
+      const contentHash = sha256(JSON.stringify({ ...snapshot, exported_at: null }));
+      stats.last_check_at = new Date().toISOString();
+      const published = await uploadDump(text, { reason, rows: snapshot.totals.rows, contentHash });
       return {
         published,
         bytes: Buffer.byteLength(text, "utf8"),
@@ -693,18 +705,12 @@ export async function startBackup() {
     await flushBackup();
   });
 
-  // Si la última copia es más vieja que el intervalo, hacer una en breve.
-  try {
-    const meta = await readMeta();
-    const info = meta && meta.generations ? meta.generations[meta.current] : null;
-    const createdAt = info && info.created_at ? Date.parse(info.created_at) : 0;
-    if (!createdAt || Date.now() - createdAt > INTERVAL_MS) {
-      const timer = setTimeout(() => runBackup({ reason: "startup" }).catch(() => {}), 20000);
-      if (timer.unref) timer.unref();
-    }
-  } catch (_) {
-    /* si falla la lectura del meta, el intervalo normal se encarga */
-  }
+  // Copia de arranque: SIEMPRE se intenta poco después de levantar el servicio.
+  // Si los datos no cambiaron respecto a la última copia, no se escribe nada en
+  // Firestore (se compara el hash del contenido), así que cada despertar/dormida
+  // de Render no gasta cuota. Si la base es nueva o cambió, sí copia.
+  const startupTimer = setTimeout(() => runBackup({ reason: "startup" }).catch(() => {}), 30000);
+  if (startupTimer.unref) startupTimer.unref();
 
   return true;
 }
