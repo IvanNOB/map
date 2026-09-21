@@ -5,6 +5,10 @@ yarn-error.log*
 .DS_Store
 .env
 .env.local
+.env.firebase
+firebase-key.json
+serviceAccount*.json
+firebase-keys/
 *.log
 db/data.sqlite
 db/data.sqlite-shm
