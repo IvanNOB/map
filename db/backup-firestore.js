@@ -680,6 +680,30 @@ export async function startBackup() {
   const ready = await initBackup();
   if (!ready) return false;
 
+  // Reflejar en el estado la copia que YA existe en Firestore: así, tras un
+  // reinicio (o un despertar del servicio), el panel de estado muestra la fecha
+  // y el tamaño de la última copia real en lugar de "aún no hay copia".
+  try {
+    const meta = await readMeta();
+    const info = meta && meta.generations ? meta.generations[meta.current] : null;
+    if (info) {
+      currentGeneration = meta.current || null;
+      currentSha = info.sha256 || null;
+      stats.last_backup_at = info.created_at || null;
+      stats.last_backup_reason = info.reason || null;
+      stats.last_backup_bytes = info.size || 0;
+      stats.last_backup_rows = info.rows || 0;
+      logger.info("Copia existente en Firestore detectada", {
+        generation: meta.current,
+        created_at: info.created_at,
+        rows: info.rows,
+        backend: info.backend,
+      });
+    }
+  } catch (err) {
+    logger.warn("No se pudo leer la copia existente en Firestore", { error: err.message });
+  }
+
   if (RESTORE_MODE !== "off") {
     try {
       if (RESTORE_MODE === "force") {
