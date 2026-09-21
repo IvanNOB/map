@@ -3,7 +3,10 @@ services:
   - type: web
     name: agencia-domicilios
     runtime: node
-    buildCommand: npm install && npm run seed
+    # IMPORTANTE: NO ejecutar `npm run seed` en el build. El servidor siembra
+    # solo si la base está vacía (ver server.js → seedIfEmpty()), así un deploy
+    # nunca puede pisar datos reales.
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -12,6 +15,15 @@ services:
         generateValue: true
       - key: PORT
         value: "3000"
+      # Copias de seguridad de la base en Cloud Firestore (plan gratuito Spark).
+      # Los 3 valores se pegan a mano en el dashboard de Render (Environment).
+      # Guía paso a paso: FIREBASE-BACKUPS.md
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL

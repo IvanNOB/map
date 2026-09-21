@@ -1,0 +1,10 @@
+{
+  "name": "firebase-admin",
+  "version": "0.0.0-stub-local",
+  "description": "Stub de firebase-admin usado solo por scripts/test-persistence-local.mjs (nunca se despliega)",
+  "main": "index.js",
+  "exports": {
+    "./app": "./index.js",
+    "./firestore": "./index.js"
+  }
+}

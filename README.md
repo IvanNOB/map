@@ -50,6 +50,9 @@ fleet-tracker/
 
 - Autenticación de repartidores y despachadores.
 - Persistencia en base de datos (Postgres / Redis).
+- 🔐 **Copias de seguridad automáticas de la base en Firebase (gratis)**:
+  `GET /api/health` → bloque `backup`; guía en
+  [FIREBASE-BACKUPS.md](./FIREBASE-BACKUPS.md).
 - Historial de rutas y geofencing/alertas.
 
 ## Privacidad

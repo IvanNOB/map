@@ -191,6 +191,11 @@ los pedidos persistan, conecta una base de datos PostgreSQL gratuita de Render.
 
 ### Cómo funciona
 - Si la variable de entorno `DATABASE_URL` está definida → la app usa **PostgreSQL**.
+  > ⚠️ **Las bases gratuitas de Render caducan a los 30 días y Render las borra con
+  > todos sus datos** (y no admiten backups). Para que la información no se pierda:
+  > 1) apunta `DATABASE_URL` a un Postgres gratuito que no expire (Neon), y
+  > 2) activa las copias automáticas en Firebase → paso a paso en
+  > [FIREBASE-BACKUPS.md](./FIREBASE-BACKUPS.md).
 - Si NO está definida → la app usa **SQLite** (ideal para desarrollo local; no
   necesitas instalar PostgreSQL en tu computadora).
 
