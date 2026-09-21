@@ -564,9 +564,11 @@ export async function isDatabaseEmpty() {
 /**
  * Hace un volcado y lo sube a Firestore. Es seguro llamarlo varias veces: si
  * ya hay una copia en curso, se encola una segunda al terminar.
+ * @param {{ reason?: string, dump?: object }} options `dump` permite subir un
+ *        volcado ya calculado (así la verificación compara el mismo contenido).
  * @returns {Promise<object|null>} resumen de la copia (null si está desactivado o falló)
  */
-export async function runBackup({ reason = "manual" } = {}) {
+export async function runBackup({ reason = "manual", dump = null } = {}) {
   if (!enabled) return null;
   if (inFlight) {
     pendingReason = reason;
@@ -576,14 +578,15 @@ export async function runBackup({ reason = "manual" } = {}) {
   inFlight = (async () => {
     const startedAt = Date.now();
     try {
-      const dump = await dumpDatabase();
-      const text = serializeDump(dump);
-      const published = await uploadDump(text, { reason, rows: dump.totals.rows });
+      const snapshot = dump || (await dumpDatabase());
+      const text = serializeDump(snapshot);
+      const published = await uploadDump(text, { reason, rows: snapshot.totals.rows });
       return {
         published,
         bytes: Buffer.byteLength(text, "utf8"),
-        rows: dump.totals.rows,
-        tables: dump.totals.tables,
+        rows: snapshot.totals.rows,
+        tables: snapshot.totals.tables,
+        sha256: sha256(text),
         ms: Date.now() - startedAt,
       };
     } catch (err) {

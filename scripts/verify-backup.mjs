@@ -73,12 +73,16 @@ const dump = await dumpDatabase();
 const text = serializeDump(dump);
 check("Volcado generado", dump.totals.tables > 0, `${dump.totals.tables} tablas, ${dump.totals.rows} filas`);
 
-const result = await runBackup({ reason: "verify" });
+const result = await runBackup({ reason: "verify", dump });
 check("Copia subida a Firestore", result && result.published === true, `${Math.round((result?.bytes || 0) / 1024)} KiB`);
 
 const downloaded = await downloadDump();
 check("Copia descargada", Boolean(downloaded));
-check("El contenido coincide byte a byte", Boolean(downloaded) && downloaded.text === text);
+check(
+  "El contenido coincide byte a byte",
+  Boolean(downloaded) && downloaded.text === text,
+  `sha subido ${String(result?.sha256).slice(0, 12)} / descargado ${String(downloaded?.info?.sha256).slice(0, 12)}`
+);
 check(
   "Troceado correcto (Firestore limita 1 MiB por documento)",
   Boolean(downloaded) && downloaded.info.count === Math.ceil(Buffer.from(text, "utf8").toString("base64").length / 600000),
