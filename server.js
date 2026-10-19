@@ -30,6 +30,7 @@ import { sanitizeBody } from "./src/middleware/sanitize.js";
 import authRouter from "./src/auth.js";
 import driversRouter from "./src/drivers.js";
 import createOrdersRouter from "./src/orders.js";
+import createGhostIntegrationRouter from "./src/ghost-integration.js";
 import createLocationRouter from "./src/location.js";
 import trackingRouter from "./src/tracking.js";
 import reportsRouter from "./src/reports.js";
@@ -103,6 +104,8 @@ app.use("/api/drivers", driversRouter);
 
 const ordersRouter = createOrdersRouter(io);
 app.use("/api/orders", ordersRouter);
+// Pedidos que llegan solos desde Servicios Ghost (Supabase → map, con clave secreta)
+app.use("/api/integraciones", createGhostIntegrationRouter(io));
 app.use("/api/stats", (req, res, next) => { req.url = "/stats"; ordersRouter(req, res, next); });
 
 app.use("/api/location", createLocationRouter(io));

@@ -24,6 +24,9 @@ services:
         sync: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
+      # Clave compartida con Supabase de Servicios Ghost (pedidos automáticos).
+      - key: GHOST_WEBHOOK_SECRET
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
