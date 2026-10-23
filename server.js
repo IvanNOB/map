@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
+import config, { validateConfig } from "./src/config.js";
 import db from "./db/database.js";
 import authRouter, { verifyToken } from "./src/auth.js";
 import driversRouter from "./src/drivers.js";
@@ -19,8 +20,12 @@ import {
   cors,
   requestLogger,
   cacheControl,
+  securityHeaders,
   logger,
 } from "./src/middleware.js";
+
+// ─── Validate configuration before starting ──────────────────────────────────
+validateConfig();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,14 +33,23 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: config.cors.origin,
     credentials: true,
   },
+  // Production Socket.IO settings
+  pingTimeout: 20000,
+  pingInterval: 25000,
 });
 
-const PORT = process.env.PORT || 3000;
+// ─── Trust proxy (needed behind reverse proxy / Docker) ──────────────────────
+if (config.isProduction) {
+  app.set("trust proxy", 1);
+}
 
 // ─── Global Middleware ───────────────────────────────────────────────────────
+
+// Security headers (CSP, HSTS, X-Frame-Options, etc.)
+app.use(securityHeaders());
 
 // CORS
 app.use(cors());
@@ -44,11 +58,11 @@ app.use(cors());
 app.use(requestLogger);
 
 // Body parsing
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 // Cache headers for static assets
-app.use(cacheControl(86400)); // 24 hours
+app.use(cacheControl(config.cache.staticMaxAge));
 
 // Static files
 app.use(express.static(join(__dirname, "public")));
@@ -61,13 +75,24 @@ app.set("io", io);
 app.get("/api/health", (req, res) => {
   const uptime = process.uptime();
   const memUsage = process.memoryUsage();
+  const dbStats = db.getStats();
+
   res.json({
     status: "ok",
+    env: config.env,
     uptime: Math.round(uptime),
     uptime_human: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
     memory: {
       rss: Math.round(memUsage.rss / 1024 / 1024) + " MB",
       heap_used: Math.round(memUsage.heapUsed / 1024 / 1024) + " MB",
+    },
+    database: {
+      saves: dbStats.saves,
+      errors: dbStats.errors,
+      last_save: dbStats.lastSave,
+    },
+    connections: {
+      sockets: io.engine?.clientsCount || 0,
     },
     timestamp: new Date().toISOString(),
   });
@@ -101,6 +126,21 @@ app.use("/api/track", trackingRouter);
 
 // Reports (admin only)
 app.use("/api/reports", reportsRouter);
+
+// ─── 404 handler ─────────────────────────────────────────────────────────────
+
+app.use("/api/*", (req, res) => {
+  res.status(404).json({ error: "Endpoint no encontrado" });
+});
+
+// ─── Global error handler ────────────────────────────────────────────────────
+
+app.use((err, req, res, _next) => {
+  logger.error(`Error no manejado: ${err.message}`, { stack: err.stack, url: req.originalUrl });
+  res.status(500).json({
+    error: config.isProduction ? "Error interno del servidor" : err.message,
+  });
+});
 
 // ─── Socket.IO Authentication Middleware ─────────────────────────────────────
 
@@ -223,9 +263,8 @@ io.on("connection", (socket) => {
 
 // ─── Offline Detection Interval ──────────────────────────────────────────────
 
-const OFFLINE_AFTER_MS = 30_000;
-setInterval(() => {
-  const cutoff = new Date(Date.now() - OFFLINE_AFTER_MS).toISOString();
+const offlineInterval = setInterval(() => {
+  const cutoff = new Date(Date.now() - config.tracking.offlineAfterMs).toISOString();
   const stale = db
     .prepare("SELECT user_id FROM drivers WHERE status != 'offline' AND last_seen < ?")
     .all(cutoff);
@@ -234,34 +273,107 @@ setInterval(() => {
     db.prepare("UPDATE drivers SET status = 'offline' WHERE user_id = ?").run(user_id);
     io.to("admins").emit("driver:offline", { id: user_id });
   }
-}, 10_000);
+}, config.tracking.offlineCheckIntervalMs);
 
-// ─── Location History Cleanup (30-day retention) ─────────────────────────────
-
-const RETENTION_DAYS = parseInt(process.env.LOCATION_HISTORY_RETENTION_DAYS || "30", 10);
+// ─── Location History Cleanup ────────────────────────────────────────────────
 
 function cleanupLocationHistory() {
   try {
-    const cutoffDate = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const cutoffDate = new Date(
+      Date.now() - config.tracking.locationHistoryRetentionDays * 24 * 60 * 60 * 1000
+    ).toISOString();
     const result = db.prepare("DELETE FROM location_history WHERE timestamp < ?").run(cutoffDate);
     if (result.changes > 0) {
-      logger.info(`Limpieza de location_history: ${result.changes} registros eliminados (> ${RETENTION_DAYS} dias)`);
+      logger.info(
+        `Limpieza de location_history: ${result.changes} registros eliminados (> ${config.tracking.locationHistoryRetentionDays} dias)`
+      );
     }
   } catch (err) {
     logger.error("Error limpiando location_history", { error: err.message });
   }
 }
 
-// Run cleanup every 6 hours
-setInterval(cleanupLocationHistory, 6 * 60 * 60 * 1000);
-// Also run once on startup (after 30 seconds)
-setTimeout(cleanupLocationHistory, 30_000);
+const cleanupInterval = setInterval(cleanupLocationHistory, config.tracking.locationCleanupIntervalMs);
+const cleanupTimeout = setTimeout(cleanupLocationHistory, config.tracking.locationCleanupDelayMs);
+
+// ─── Graceful Shutdown ───────────────────────────────────────────────────────
+
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  logger.info(`Recibida senal ${signal}. Iniciando apagado graceful...`);
+
+  // Stop accepting new connections
+  httpServer.close(() => {
+    logger.info("Servidor HTTP cerrado (no mas conexiones nuevas)");
+  });
+
+  // Clear intervals and timeouts
+  clearInterval(offlineInterval);
+  clearInterval(cleanupInterval);
+  clearTimeout(cleanupTimeout);
+
+  // Notify connected clients
+  io.emit("server:shutdown", { message: "Servidor reiniciandose. Reconecta en unos segundos." });
+
+  // Close all Socket.IO connections gracefully
+  try {
+    const sockets = await io.fetchSockets();
+    for (const socket of sockets) {
+      socket.disconnect(true);
+    }
+    logger.info(`${sockets.length} conexiones WebSocket cerradas`);
+  } catch (err) {
+    logger.warn("Error cerrando sockets", { error: err.message });
+  }
+
+  // Close Socket.IO server
+  io.close();
+
+  // Close database (ensures final save)
+  try {
+    db.close();
+    logger.info("Base de datos cerrada y guardada");
+  } catch (err) {
+    logger.error("Error cerrando base de datos", { error: err.message });
+  }
+
+  logger.info("Apagado graceful completado");
+  process.exit(0);
+}
+
+// Force exit if graceful shutdown takes too long
+function forceShutdown(signal) {
+  setTimeout(() => {
+    logger.error(`Apagado forzado despues de ${config.shutdown.timeoutMs}ms (senal: ${signal})`);
+    process.exit(1);
+  }, config.shutdown.timeoutMs).unref();
+
+  gracefulShutdown(signal);
+}
+
+// Handle shutdown signals
+process.on("SIGTERM", () => forceShutdown("SIGTERM"));
+process.on("SIGINT", () => forceShutdown("SIGINT"));
+
+// Handle uncaught errors
+process.on("uncaughtException", (err) => {
+  logger.error("Excepcion no capturada", { error: err.message, stack: err.stack });
+  forceShutdown("uncaughtException");
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Promesa rechazada no manejada", { reason: String(reason) });
+});
 
 // ─── Start Server ────────────────────────────────────────────────────────────
 
-httpServer.listen(PORT, () => {
-  logger.info(`Delivery Platform corriendo en http://localhost:${PORT}`);
-  logger.info(`Panel de control:   http://localhost:${PORT}/`);
-  logger.info(`App del repartidor: http://localhost:${PORT}/driver.html`);
-  logger.info(`Health check:       http://localhost:${PORT}/api/health`);
+httpServer.listen(config.port, () => {
+  logger.info(`Delivery Platform corriendo en http://localhost:${config.port} [${config.env}]`);
+  logger.info(`Panel de control:   http://localhost:${config.port}/`);
+  logger.info(`App del repartidor: http://localhost:${config.port}/driver.html`);
+  logger.info(`Health check:       http://localhost:${config.port}/api/health`);
 });

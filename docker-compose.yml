@@ -1,0 +1,35 @@
+# ─── Docker Compose - Agencia de Domicilios ──────────────────────────────────
+# Uso:
+#   Desarrollo:  docker compose up
+#   Producción:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agencia-domicilios
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DB_PATH=/app/db/data/data.sqlite
+      - LOCATION_HISTORY_RETENTION_DAYS=${LOCATION_HISTORY_RETENTION_DAYS:-30}
+    volumes:
+      # Persist SQLite database across container restarts
+      - db-data:/app/db/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  db-data:
+    driver: local

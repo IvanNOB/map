@@ -1,6 +1,14 @@
 node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
 db/data.sqlite
-db/data.sqlite-shm
-db/data.sqlite-wal
+db/data.sqlite.tmp
+db/data/
 .git
-.agents
+.gitignore
+README.md
+.DS_Store
+*.md
+!package*.json

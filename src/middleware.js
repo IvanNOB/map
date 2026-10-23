@@ -1,7 +1,9 @@
 /**
- * Custom middleware: Rate Limiting, CORS, Compression, Logging.
- * No external dependencies needed for rate limiting.
+ * Custom middleware: Rate Limiting, CORS, Security Headers, Compression, Logging.
+ * No external dependencies needed for rate limiting or security headers.
  */
+
+import config from "./config.js";
 
 // ─── Simple In-Memory Rate Limiter ───────────────────────────────────────────
 
@@ -54,8 +56,8 @@ export function rateLimit({ windowMs = 60000, max = 100, message = "Demasiadas s
  * Stricter rate limiter for auth endpoints.
  */
 export const authRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per 15 min
+  windowMs: config.rateLimit.auth.windowMs,
+  max: config.rateLimit.auth.max,
   message: "Demasiados intentos de inicio de sesion. Intenta en 15 minutos.",
 });
 
@@ -63,8 +65,8 @@ export const authRateLimit = rateLimit({
  * General API rate limiter.
  */
 export const apiRateLimit = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 120, // 120 requests per minute
+  windowMs: config.rateLimit.api.windowMs,
+  max: config.rateLimit.api.max,
   message: "Demasiadas solicitudes. Intenta de nuevo en un momento.",
 });
 
@@ -123,7 +125,7 @@ export function cors({
 // ─── Structured Logger ───────────────────────────────────────────────────────
 
 const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
-const currentLevel = LOG_LEVELS[process.env.LOG_LEVEL || "info"] ?? 2;
+const currentLevel = LOG_LEVELS[config.log.level] ?? 2;
 
 function formatLog(level, message, meta = {}) {
   const timestamp = new Date().toISOString();
@@ -233,6 +235,68 @@ export function cacheControl(maxAge = 86400) {
 
     if (cacheableExts.includes(ext)) {
       res.setHeader("Cache-Control", `public, max-age=${maxAge}`);
+    }
+
+    next();
+  };
+}
+
+
+
+// ─── Security Headers ────────────────────────────────────────────────────────
+
+/**
+ * Security headers middleware (replaces helmet for zero-dependency approach).
+ * Sets industry-standard security headers to protect against common attacks.
+ */
+export function securityHeaders() {
+  return (req, res, next) => {
+    // Prevent clickjacking
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+
+    // Prevent MIME sniffing
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
+    // XSS Protection (legacy browsers)
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+
+    // Referrer policy - don't leak full URL to external sites
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+    // Permissions policy - restrict browser features
+    res.setHeader(
+      "Permissions-Policy",
+      "camera=(), microphone=(), payment=(), usb=()"
+    );
+
+    // HSTS - force HTTPS in production (1 year, include subdomains)
+    if (config.isProduction) {
+      res.setHeader(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains; preload"
+      );
+    }
+
+    // Content Security Policy
+    // Allow Leaflet tiles from OpenStreetMap, socket.io connections, and inline styles for map
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://unpkg.com",
+      "img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com",
+      "connect-src 'self' ws: wss:",
+      "font-src 'self'",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ");
+
+    res.setHeader("Content-Security-Policy", csp);
+
+    // Prevent caching of API responses (HTML/static assets have their own cache policy)
+    if (req.path.startsWith("/api/")) {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+      res.setHeader("Pragma", "no-cache");
     }
 
     next();
