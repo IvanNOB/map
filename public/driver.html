@@ -11,6 +11,263 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+  <style>
+    /* ─── Background Tracking Styles ─────────────────────────────── */
+    .tracking-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    .tracking-status.hidden { display: none; }
+    .tracking-status-active {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #10b981;
+    }
+    .tracking-status-starting {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #f59e0b;
+    }
+    .tracking-status-stopped {
+      background: rgba(107, 114, 128, 0.1);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      color: #6b7280;
+    }
+
+    .tracking-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .tracking-dot-active {
+      background: #10b981;
+      animation: pulse-dot 2s infinite;
+    }
+    .tracking-dot-starting {
+      background: #f59e0b;
+      animation: pulse-dot 1s infinite;
+    }
+    .tracking-dot-stopped {
+      background: #6b7280;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+      50% { opacity: 0.7; box-shadow: 0 0 0 6px transparent; }
+    }
+
+    /* Diagnostics panel */
+    .tracking-diagnostics {
+      background: var(--bg-card, #1a1d27);
+      border: 1px solid var(--border, #2d3140);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      margin-top: 0.8rem;
+      font-size: 0.78rem;
+    }
+    .tracking-diagnostics.hidden { display: none; }
+    .tracking-diagnostics h4 {
+      margin: 0 0 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted, #9ca3af);
+      font-weight: 600;
+    }
+    .diag-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem 1rem;
+    }
+    .diag-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .diag-label {
+      color: var(--text-muted, #9ca3af);
+    }
+    .diag-value {
+      font-weight: 600;
+    }
+    .diag-ok { color: #10b981; }
+    .diag-warn { color: #f59e0b; }
+    .diag-error { color: #ef4444; }
+
+    /* Background info banner */
+    .bg-info-banner {
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted, #9ca3af);
+      line-height: 1.4;
+    }
+    .bg-info-banner strong {
+      color: #3b82f6;
+      display: block;
+      margin-bottom: 0.3rem;
+      font-size: 0.85rem;
+    }
+
+    /* Location section improvements */
+    .location-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 0.8rem 0;
+    }
+
+    /* ─── Available Order Modal Styles ────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-overlay.hidden { display: none; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-available-order {
+      background: var(--bg-card, #1a1d27);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.3s ease;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .avail-order-header {
+      background: linear-gradient(135deg, #10b981, #059669);
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .avail-order-header h3 {
+      margin: 0;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .avail-order-pulse {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulse-ring 1.5s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+
+    .avail-order-body {
+      padding: 1.2rem;
+    }
+
+    .avail-order-code {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #3b82f6;
+      text-align: center;
+      margin-bottom: 1rem;
+      letter-spacing: 1px;
+    }
+
+    .avail-order-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .avail-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .avail-detail-label {
+      color: var(--text-muted, #9ca3af);
+      font-size: 0.82rem;
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+
+    .avail-detail-value {
+      color: var(--text, #e5e7eb);
+      font-size: 0.85rem;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .avail-detail-amount {
+      color: #10b981;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .avail-order-actions {
+      padding: 0 1.2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .avail-btn-accept {
+      padding: 0.9rem 1rem !important;
+      font-size: 1.05rem !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.5px;
+      border-radius: 10px !important;
+    }
+
+    .avail-btn-reject {
+      padding: 0.6rem 1rem !important;
+      font-size: 0.85rem !important;
+      border-radius: 10px !important;
+      opacity: 0.7;
+    }
+
+    .avail-order-timer {
+      text-align: center;
+      padding: 0 1.2rem 1rem;
+      color: var(--text-muted, #9ca3af);
+      font-size: 0.75rem;
+    }
+  </style>
 </head>
 <body>
   <!-- Toast Container -->
@@ -91,32 +348,131 @@
     <!-- Location Section -->
     <section class="driver-section">
       <h3>Mi Ubicacion</h3>
-      <div class="location-controls">
-        <label class="consent-check">
-          <input type="checkbox" id="consent-location">
-          Acepto compartir mi ubicacion en tiempo real
-        </label>
+
+      <!-- Background tracking info banner -->
+      <div class="bg-info-banner">
+        <strong>Tracking en segundo plano</strong>
+        Al activar tu ubicacion, esta se seguira compartiendo incluso si minimizas la app, 
+        bloqueas la pantalla o cambias de aplicacion. Recibiras una notificacion persistente 
+        mientras la ubicacion este activa.
       </div>
-      <div class="location-controls">
-        <button id="btn-share-location" class="btn btn-primary btn-sm" disabled>Compartir Ubicacion</button>
-        <button id="btn-stop-location" class="btn btn-danger btn-sm hidden">Dejar de Compartir</button>
+
+      <!-- Tracking status indicator -->
+      <div id="tracking-status" class="tracking-status hidden">
+        <span id="tracking-indicator" class="tracking-dot"></span>
+        <span id="tracking-status-text">--</span>
       </div>
+
+      <!-- Location action buttons -->
+      <div class="location-actions">
+        <button id="btn-share-location" class="btn btn-primary btn-sm">
+          Activar Ubicacion
+        </button>
+        <button id="btn-stop-location" class="btn btn-danger btn-sm hidden">
+          Detener Ubicacion
+        </button>
+      </div>
+
+      <!-- GPS readout -->
       <div id="gps-readout" class="gps-readout">
-        Lat: -- | Lng: -- | Velocidad: -- | Precision: -- | Ultima actualizacion: --
+        Lat: -- | Lng: -- | Velocidad: -- | Precision: -- | Ultima: --
       </div>
+
+      <!-- Diagnostics panel (visible when tracking active) -->
+      <div id="tracking-diagnostics" class="tracking-diagnostics hidden">
+        <h4>Estado del sistema</h4>
+        <div class="diag-grid">
+          <div class="diag-item">
+            <span class="diag-label">Wake Lock:</span>
+            <span id="diag-wakelock" class="diag-value diag-warn">--</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">GPS:</span>
+            <span id="diag-gps" class="diag-value diag-warn">--</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Socket:</span>
+            <span id="diag-socket" class="diag-value diag-warn">--</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Modo:</span>
+            <span id="diag-background" class="diag-value diag-warn">--</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Ultimo envio:</span>
+            <span id="diag-last-update" class="diag-value diag-warn">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map -->
       <div id="driver-map" class="map-container-mini"></div>
     </section>
   </div>
 
+  <!-- Modal: Nuevo Pedido Disponible -->
+  <div id="modal-available-order" class="modal-overlay hidden">
+    <div class="modal-content modal-available-order">
+      <div class="avail-order-header">
+        <span class="avail-order-pulse"></span>
+        <h3>Nuevo Pedido Disponible!</h3>
+      </div>
+      <div class="avail-order-body">
+        <div class="avail-order-code" id="avail-order-code">ORD-XXXX</div>
+        <div class="avail-order-details">
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Cliente:</span>
+            <span class="avail-detail-value" id="avail-order-customer">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Recoger en:</span>
+            <span class="avail-detail-value" id="avail-order-pickup">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Entregar en:</span>
+            <span class="avail-detail-value" id="avail-order-dropoff">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Articulos:</span>
+            <span class="avail-detail-value" id="avail-order-items">--</span>
+          </div>
+          <div class="avail-detail-row">
+            <span class="avail-detail-label">Valor:</span>
+            <span class="avail-detail-value avail-detail-amount" id="avail-order-amount">--</span>
+          </div>
+        </div>
+      </div>
+      <div class="avail-order-actions">
+        <button id="btn-accept-order" class="btn btn-success btn-block avail-btn-accept">
+          Aceptar Pedido
+        </button>
+        <button id="btn-reject-order" class="btn btn-outline btn-block avail-btn-reject">
+          Ignorar
+        </button>
+      </div>
+      <div class="avail-order-timer">
+        <small>Se oculta automaticamente en 60 segundos</small>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/background-location.js"></script>
   <script src="/js/driver.js"></script>
   <script src="/js/compass.js"></script>
   <script>
-    // Register Service Worker for PWA
+    // Register Service Worker for PWA + Background Tracking
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
-        .then(function(reg) { console.log('SW registrado:', reg.scope); })
+        .then(function(reg) {
+          console.log('SW registrado:', reg.scope);
+
+          // Check for updates periodically
+          setInterval(function() {
+            reg.update();
+          }, 60 * 60 * 1000); // Every hour
+        })
         .catch(function(err) { console.warn('SW error:', err); });
     }
   </script>
