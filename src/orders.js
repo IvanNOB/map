@@ -224,6 +224,9 @@ export default function createOrdersRouter(io) {
     io.to("admins").emit("order:new", order);
     notifyAdmins(io, "order_new", order);
 
+    // Emit to ALL online drivers so they can compete to accept it
+    io.to("drivers").emit("order:available", order);
+
     res.status(201).json(order);
   });
 
@@ -290,6 +293,66 @@ export default function createOrdersRouter(io) {
 
     const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
     res.json(order);
+  });
+
+  // ─── POST /api/orders/:id/accept ─────────────────────────────────────────
+  // Driver accepts an available (pending) order — first come, first served.
+  // Uses a "compare-and-swap" pattern to handle race conditions safely.
+
+  router.post("/:id/accept", requireAuth, (req, res) => {
+    if (req.user.role !== "driver") {
+      return res.status(403).json({ error: "Solo repartidores pueden aceptar pedidos" });
+    }
+
+    const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+    if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
+    // Only pending orders can be accepted
+    if (order.status !== "pending") {
+      return res.status(409).json({
+        error: "Este pedido ya fue tomado por otro repartidor",
+        current_status: order.status,
+      });
+    }
+
+    // Atomic update: only succeeds if status is still 'pending' (race-condition safe)
+    const result = db.prepare(
+      `UPDATE orders SET driver_id = ?, status = 'assigned', assigned_at = datetime('now')
+       WHERE id = ? AND status = 'pending'`
+    ).run(req.user.id, req.params.id);
+
+    // If no rows were changed, another driver already took it
+    if (result.changes === 0) {
+      return res.status(409).json({
+        error: "Este pedido ya fue tomado por otro repartidor",
+      });
+    }
+
+    const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
+
+    // Notify admins that the order was accepted
+    io.to("admins").emit("order:assigned", updated);
+    io.to("admins").emit("order:accepted", {
+      order: updated,
+      driver_name: req.user.name,
+    });
+
+    // Notify the driver who accepted
+    io.to(`driver:${req.user.id}`).emit("order:assigned", updated);
+
+    // Notify ALL drivers that this order is no longer available
+    io.to("drivers").emit("order:taken", {
+      order_id: updated.id,
+      code: updated.code,
+      driver_name: req.user.name,
+    });
+
+    // Emit to tracking room
+    io.to(`tracking:${updated.code}`).emit("order:assigned", updated);
+
+    notifyAdmins(io, "order_accepted", { ...updated, accepted_by: req.user.name });
+
+    res.json(updated);
   });
 
   // ─── POST /api/orders/:id/assign ───────────────────────────────────────────

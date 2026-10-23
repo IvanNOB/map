@@ -1,12 +1,16 @@
 {
   "name": "Agencia de Domicilios - Repartidor",
   "short_name": "Repartidor",
-  "description": "App del repartidor para la agencia de domicilios. Comparte tu ubicacion y gestiona pedidos en tiempo real.",
+  "description": "App del repartidor con tracking de ubicacion en segundo plano. Gestiona pedidos y comparte tu ubicacion en tiempo real.",
   "start_url": "/driver.html",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f1117",
   "theme_color": "#3b82f6",
+  "categories": ["business", "navigation"],
+  "lang": "es",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-192.svg",
@@ -20,5 +24,19 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "permissions_policy": {
+    "geolocation": ["self"],
+    "notifications": ["self"],
+    "wake-lock": ["self"]
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "serviceworker": {
+    "src": "/sw.js",
+    "scope": "/",
+    "type": "module"
+  }
 }
