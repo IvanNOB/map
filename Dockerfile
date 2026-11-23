@@ -13,7 +13,5 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
-# Sembrar (idempotente) y arrancar EN TIEMPO DE EJECUCION, cuando DATABASE_URL
-# ya esta disponible y la base de datos es alcanzable. Si el seed falla, el
-# servidor arranca de todos modos para no tumbar el servicio.
-CMD ["sh", "-c", "node db/seed.js || true; node server.js"]
+# server.js restaura la copia antes de inicializar una base nueva.
+CMD ["node", "server.js"]
